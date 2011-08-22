@@ -4,8 +4,8 @@
 #define __DAQ_UTILS_H
 
 void sigint_func(int sig); //!< handles ctrl-C
-void start_logging();
-void stop_logging();
+int start_logging();
+int stop_logging();
 void SwapLongBlock(void* p, int32_t n); //!< handles changing endianness
 void SwapShortBlock(void* p, int32_t n); //!< handles changing endianness
 

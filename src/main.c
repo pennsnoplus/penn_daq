@@ -85,7 +85,32 @@ int main(int argc, char *argv[])
   printsend("SBC/MTC\t\t%d\n", SBC_PORT);
   printsend("CONTROLLER\t%d\n", CONT_PORT);
   printsend("VIEWERs\t\t%d\n\n", VIEW_PORT);
+  printsend("waiting for connections...\n");
 
 
+  // main loop
+  while(1){
+    // reset our fdsets
+    main_readable_fdset = main_fdset;
+    main_writeable_fdset = main_fdset;
+    // now we do the select
+    int s = select(fdmax+1,&main_readable_fdset,&main_writeable_fdset,NULL,0);
+    if (s == -1){
+      printf("Select error in main loop\n");
+      sigint_func(SIGINT);
+    }else if (s > 0){
+      // we've got something to read or write
+      // loop over all the fds in our set, check which are readable and read them
+      int cur_fd;
+      for (cur_fd = 0;cur_fd <= fdmax;cur_fd++){
+        // check if its readable 
+        if (FD_ISSET(cur_fd,&main_readable_fdset)){
+          read_socket(cur_fd);
+        } // end if fd is readable
+      } // end loop over all fds
+    } // end if select returns > 0
+  } // end main loop
+
+  sigint_func(SIGINT);
   return 0;
 }

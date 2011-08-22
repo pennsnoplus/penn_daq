@@ -7,32 +7,27 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
-void sigint_func(int sig) //FIXME
+void sigint_func(int sig) 
 {
-  /*
-     printsend("\nnew_daq: beginning shutdown\n");
-     printsend("new_daq: closing connections\n");
-     int u;
-     for(u = 0; u <= fdmax; u++){
-     if(FD_ISSET(u, &all_fdset)){
-     close(u);
-     }
-     }
-     stop_logging();
-     if(write_log){
-     printsend("new_daq: closing log\n");
-     if(ps_log_file){
-     stop_logging();
-     }
-     else{
-     printsend("No log file to close\n");
-     }
-     }
-     */
+  printsend("\nBeginning shutdown\n");
+  printsend("Closing all connections\n");
+  int u;
+  for(u = 0; u <= fdmax; u++){
+    if(FD_ISSET(u, &main_fdset)){
+      close(u);
+    }
+  }
+  if(write_log){
+    printsend("Closing log\n");
+    if(ps_log_file){
+      stop_logging();
+    }
+  }
+
   exit(0);
 }
 
-void start_logging(){
+int start_logging(){
   if(!write_log){
     write_log = 1;
     char log_name[256] = {'\0'};  // random size, it's a pretty nice number though.
@@ -51,9 +46,10 @@ void start_logging(){
   else{
     printsend("Logging already enabled\n");
   }
+  return 1;
 }
 
-void stop_logging(){
+int stop_logging(){
   if(write_log){
     write_log = 0;
     printsend("Disabled logging\n");
@@ -69,6 +65,7 @@ void stop_logging(){
   else{
     printsend("Logging is already disabled\n");
   }
+  return 1;
 }
 
 void SwapLongBlock(void* p, int32_t n){

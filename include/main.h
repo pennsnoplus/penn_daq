@@ -11,6 +11,9 @@
 #define DB_BASE_NAME "penndb1"
 #define DB_VIEWDOC "_design/view_doc/_view"
 
+#define MAX_PACKET_SIZE 1444
+#define XL3_MAX_PAYLOAD_SIZE 1440
+
 int current_location; //!< Where penn_daq is running (for database use)
 int write_log; //!< flags whether to write to log or not
 FILE *ps_log_file; //!< log of anything that would go to viewer terminal
