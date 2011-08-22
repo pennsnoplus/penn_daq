@@ -12,8 +12,9 @@
 
 #include "xl3_types.h"
 
-#include "net_utils.h"
 #include "main.h"
+#include "net_utils.h"
+#include "xl3_utils.h"
 
 int read_xl3_data(int fd)
 {
@@ -71,14 +72,19 @@ int read_control_command(int fd)
   }
   // otherwise process the packet
   int ack = process_control_command(buffer);
-  // int ack = 1;
   // send response
-  if (ack){
-    if (FD_ISSET(fd,&main_writeable_fdset)){
+  if (ack == 1){
+    // command was processed successfully
+    if (FD_ISSET(fd,&main_writeable_fdset))
       write(fd,CONT_CMD_ACK,strlen(CONT_CMD_ACK));
-    }else{
+    else
       printsend("Could not send response to controller - check connection\n");
-    }
+  }else if (ack == -1){
+    // one of the sockets was locked already or no threads available
+    if (FD_ISSET(fd,&main_writeable_fdset))
+      write(fd,CONT_CMD_BSY,strlen(CONT_CMD_BSY));
+    else
+      printsend("Could not send response to controller - check connection\n");
   }
   return 0;
 }
@@ -126,6 +132,10 @@ int process_control_command(char *buffer)
     result = stop_logging();
   }else if (strncmp(buffer,"start_logging",13)==0){
     result = start_logging();
+  }else if (strncmp(buffer,"debugging_on",12)==0){
+    result = debugging_mode(buffer,1);
+  }else if (strncmp(buffer,"debugging_off",13)==0){
+    result = debugging_mode(buffer,0);
   }
   //_!_end_commands_!_
   else
@@ -322,6 +332,11 @@ void setup_sockets()
   views_connected = 0;
   for (i=0;i<MAX_XL3_CON;i++)
     xl3_connected[i] = 0;
+
+  // set up locks
+  sbc_lock = 0;
+  for (i=0;i<MAX_XL3_CON;i++)
+    xl3_lock[i] = 0;
 
   new_connection_fdset = main_fdset;
 }

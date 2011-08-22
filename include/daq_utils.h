@@ -3,6 +3,7 @@
 #ifndef __DAQ_UTILS_H
 #define __DAQ_UTILS_H
 
+int cleanup_threads();
 void sigint_func(int sig); //!< handles ctrl-C
 int start_logging();
 int stop_logging();

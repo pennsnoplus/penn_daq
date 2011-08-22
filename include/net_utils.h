@@ -17,7 +17,8 @@
 
 #define MAX_PENDING_CONS 20
 
-#define CONT_CMD_ACK "_!_"
+#define CONT_CMD_ACK "_._"
+#define CONT_CMD_BSY "_!_"
 
 // listening fds
 int listen_cont_fd;
@@ -43,8 +44,6 @@ int fdmax;
 
 // locks
 int sbc_lock;
-int cont_lock;
-int view_lock;
 int xl3_lock[MAX_XL3_CON];
 
 // connection flag
@@ -55,16 +54,19 @@ int xl3_connected[MAX_XL3_CON];
 
 char buffer[MAX_PACKET_SIZE];
 
-void read_socket(int fd);
-int accept_connection(int fd);
 void setup_sockets();
 int bind_socket(char *host, int port);
-int printsend(char *fmt, ... );
-void *get_in_addr(struct sockaddr *sa);
+
+void read_socket(int fd);
+int accept_connection(int fd);
+
 int read_xl3_data(int fd);
 int read_control_command(int fd);
 int read_viewer_data(int fd);
-int process_control_command(char *buffer);
-int print_connected();
 
+int process_control_command(char *buffer);
+
+int print_connected();
+void *get_in_addr(struct sockaddr *sa);
+int printsend(char *fmt, ... );
 #endif

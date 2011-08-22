@@ -7,6 +7,19 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
+int cleanup_threads()
+{
+  int i;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_done[i]){
+      free(thread_pool[i]);
+      thread_pool[i] = NULL;
+      thread_done[i] = 0;
+    }
+  }
+  return 0;
+}
+
 void sigint_func(int sig) 
 {
   printsend("\nBeginning shutdown\n");
@@ -21,6 +34,13 @@ void sigint_func(int sig)
     printsend("Closing log\n");
     if(ps_log_file){
       stop_logging();
+    }
+  }
+  printsend("Killing any remaining threads\n");
+  for (u=0;u<MAX_THREADS;u++){
+    if (thread_pool[u] != NULL){
+      pthread_cancel(*thread_pool[u]);
+      free(thread_pool[u]);
     }
   }
 

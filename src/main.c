@@ -15,6 +15,9 @@ int main(int argc, char *argv[])
 
   current_location = 0;
   write_log = 0;
+  int i;
+  for (i=0;i<MAX_THREADS;i++)
+    thread_done[i] = 0;
 
   // get command line options
   int c;
@@ -93,6 +96,8 @@ int main(int argc, char *argv[])
     // reset our fdsets
     main_readable_fdset = main_fdset;
     main_writeable_fdset = main_fdset;
+    // free any threads that have finished
+    cleanup_threads();
     // now we do the select
     int s = select(fdmax+1,&main_readable_fdset,&main_writeable_fdset,NULL,0);
     if (s == -1){

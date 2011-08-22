@@ -4,6 +4,7 @@
 #define __MAIN_H
 
 #include <stdio.h>
+#include <pthread.h>
 
 #define DB_SERVER "http://localhost:5984"
 #define DB_ADDRESS "localhost"
@@ -13,6 +14,11 @@
 
 #define MAX_PACKET_SIZE 1444
 #define XL3_MAX_PAYLOAD_SIZE 1440
+
+#define MAX_THREADS 2
+
+pthread_t *thread_pool[MAX_THREADS];
+int thread_done[MAX_THREADS];
 
 int current_location; //!< Where penn_daq is running (for database use)
 int write_log; //!< flags whether to write to log or not
