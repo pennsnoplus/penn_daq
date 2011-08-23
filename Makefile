@@ -6,17 +6,24 @@ CC = gcc
 CFLAGS = -I$(IDIR)
 LIBS = -levent -lcurl -lpthread
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o xl3_utils.o
+CDIRS = $(CDIR)
+
+vpath %.h $(CDIR)
+vpath %.c $(CDIR)
+
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 _DEPS = $(_OBJ:.o=.h) xl3_types.h 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-
-$(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
+$(ODIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: penn_daq tut
+$(IDIR)/%: %
+	cp $^ $(IDIR)/.
+
+all: penn_daq tut $(DEPS)
 
 penn_daq: $(OBJ)
 	$(CC) -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 
@@ -26,4 +33,4 @@ tut:
 	$(CC) -lreadline -lncurses -o $(BDIR)/tut $(CDIR)/tut.c $(CFLAGS)
     
 clean: 
-	rm -f $(ODIR)/*.o $(CDIR)/*~ core $(IDIR)/*~ $(BDIR)/*
+	rm -f $(ODIR)/*.o $(CDIR)/*~ core $(IDIR)/* $(BDIR)/*
