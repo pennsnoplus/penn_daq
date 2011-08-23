@@ -1,3 +1,6 @@
+#ifndef __POUCH_H
+#define __POUCH_H
+
 #include <curl/curl.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -86,3 +89,5 @@ pouch_request *doc_copy(pouch_request *pr, char *server, char *db, char *id, cha
 pouch_request *doc_delete(pouch_request *pr, char *server, char *db, char *id, char *rev);
 char *doc_get_cur_rev(pouch_request *pr, char *server, char *db, char *id);
 pouch_request *doc_add_attachment(pouch_request *pr, char *server, char *db, char *doc, char *filename);
+
+#endif

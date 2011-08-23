@@ -1,8 +1,11 @@
 #include <getopt.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <string.h>
 
 #include "pouch.h"
+#include "xl3_types.h"
 
 #include "daq_utils.h"
 #include "net_utils.h"
@@ -15,9 +18,18 @@ int main(int argc, char *argv[])
 
   current_location = 0;
   write_log = 0;
-  int i;
+  int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;
+  pthread_mutex_init(&printsend_buffer_lock,NULL);
+  pthread_mutex_init(&main_fdset_lock,NULL);
+  memset(printsend_buffer,'\0',sizeof(printsend_buffer));
+  command_number = 0;
+  memset(crate_config,0,sizeof(crate_config));
+  if (strcmp(DB_USERNAME,"") != 0)
+    sprintf(DB_SERVER,"http://%s:%s@%s:%s",DB_USERNAME,DB_PASSWORD,DB_ADDRESS,DB_PORT);
+  else
+    sprintf(DB_SERVER,"http://%s:%s",DB_ADDRESS,DB_PORT);
 
   // get command line options
   int c;
@@ -93,13 +105,27 @@ int main(int argc, char *argv[])
 
   // main loop
   while(1){
+    // first send messages queued up by threads
+    send_queued_msgs();
     // reset our fdsets
-    main_readable_fdset = main_fdset;
-    main_writeable_fdset = main_fdset;
+    pthread_mutex_lock(&main_fdset_lock);
+    fd_set temp = main_fdset;
+    if (sbc_lock)
+      FD_CLR(rw_sbc_fd,&temp);
+    for (i=0;i<MAX_XL3_CON;i++)
+      if (xl3_lock[i])
+        FD_CLR(rw_xl3_fd[i],&temp);
+    main_readable_fdset = temp;
+    main_writeable_fdset = temp;
+    //for (i=0;i<=fdmax;i++){
+    //  if (FD_ISSET(i,&main_readable_fdset))
+    //    printf("%d\n",i);
+    //}
     // free any threads that have finished
     cleanup_threads();
     // now we do the select
     int s = select(fdmax+1,&main_readable_fdset,&main_writeable_fdset,NULL,0);
+    pthread_mutex_unlock(&main_fdset_lock);
     if (s == -1){
       printf("Select error in main loop\n");
       sigint_func(SIGINT);

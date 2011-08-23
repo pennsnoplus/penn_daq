@@ -57,6 +57,10 @@ COMMAND commands[] = {
     { "start_logging", (Function *)NULL, (char *)NULL },
     { "debugging_on", (Function *)NULL, (char *)NULL },
     { "debugging_off", (Function *)NULL, (char *)NULL },
+    { "set_location", (Function *)NULL, (char *)NULL },
+    { "change_mode", (Function *)NULL, (char *)NULL },
+    { "crate_init", (Function *)NULL, (char *)NULL },
+    { "sbc_control", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };
@@ -362,13 +366,13 @@ int main(int argc, char *argv[])
                     moretime.tv_usec=100000;
                     write(1, "********************", 20);
                     select(0, NULL, NULL, NULL, &moretime);
-                    write(1, "\r                    \r", 22);
+                    write(1, "\r                            \r", 30);
                 }else if (strncmp(response, CONT_CMD_BSY,strlen(CONT_CMD_BSY))==0){
                     moretime.tv_sec=1;
                     moretime.tv_usec=100000;
                     write(1, "command rejected - busy", 23);
                     select(0, NULL, NULL, NULL, &moretime);
-                    write(1, "\r                    \r", 22);
+                    write(1, "\r                            \r", 30);
                 }else{
                     write(1, "> ", 2);
                     write(1, response, numbytes);

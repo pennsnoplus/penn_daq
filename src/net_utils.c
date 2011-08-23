@@ -13,8 +13,9 @@
 #include "xl3_types.h"
 
 #include "main.h"
-#include "net_utils.h"
 #include "xl3_utils.h"
+#include "mtc_utils.h"
+#include "net_utils.h"
 
 int read_xl3_data(int fd)
 {
@@ -28,17 +29,21 @@ int read_xl3_data(int fd)
   // check if theres any errors or an EOF packet
   if (numbytes < 0){
     printsend("Error receiving data from XL3 #%d\n",crate);
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&xl3_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     xl3_connected[i] = 0;
     rw_xl3_fd[i] = -1;
     return -1;
   }else if (numbytes == 0){
-    printsend("Closing XL3 #%d\n",crate);
+    printsend("Got a zero byte packet, Closing XL3 #%d\n",crate);
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&xl3_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     xl3_connected[i] = 0;
     rw_xl3_fd[i] = -1;
     return -1;
@@ -55,34 +60,38 @@ int read_control_command(int fd)
   // check if theres any errors or an EOF packet
   if (numbytes < 0){
     printsend("Error receiving command from controller\n");
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&cont_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     cont_connected = 0;
     rw_cont_fd = -1;
     return -1;
   }else if (numbytes == 0){
     printsend("Closing controller connection.\n");
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&cont_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     cont_connected = 0;
     rw_cont_fd = -1;
     return -1;
   }
   // otherwise process the packet
-  int ack = process_control_command(buffer);
+  int error = process_control_command(buffer);
   // send response
-  if (ack == 1){
-    // command was processed successfully
-    if (FD_ISSET(fd,&main_writeable_fdset))
-      write(fd,CONT_CMD_ACK,strlen(CONT_CMD_ACK));
-    else
-      printsend("Could not send response to controller - check connection\n");
-  }else if (ack == -1){
+  if (error != 0){
     // one of the sockets was locked already or no threads available
     if (FD_ISSET(fd,&main_writeable_fdset))
       write(fd,CONT_CMD_BSY,strlen(CONT_CMD_BSY));
+    else
+      printsend("Could not send response to controller - check connection\n");
+  }else{
+    // command was processed successfully
+    if (FD_ISSET(fd,&main_writeable_fdset))
+      write(fd,CONT_CMD_ACK,strlen(CONT_CMD_ACK));
     else
       printsend("Could not send response to controller - check connection\n");
   }
@@ -97,9 +106,11 @@ int read_viewer_data(int fd)
   // check if theres any errors or an EOF packet
   if (numbytes < 0){
     printsend("Error receiving packet from viewer\n");
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&view_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     for (i=0;i<views_connected;i++)
       if (rw_view_fd[i] == fd)
         rw_view_fd[i] = -1;
@@ -107,9 +118,11 @@ int read_viewer_data(int fd)
     return -1;
   }else if (numbytes == 0){
     printsend("Closing viewer connection.\n");
+    pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&view_fdset);
     FD_CLR(fd,&main_fdset);
     close(fd);
+    pthread_mutex_unlock(&main_fdset_lock);
     for (i=0;i<views_connected;i++)
       if (rw_view_fd[i] == fd)
         rw_view_fd[i] = -1;
@@ -136,6 +149,14 @@ int process_control_command(char *buffer)
     result = debugging_mode(buffer,1);
   }else if (strncmp(buffer,"debugging_off",13)==0){
     result = debugging_mode(buffer,0);
+  }else if (strncmp(buffer,"set_location",12)==0){
+    result = set_location(buffer);
+  }else if (strncmp(buffer,"change_mode",11)==0){
+    result = change_mode(buffer);
+  }else if (strncmp(buffer,"crate_init",10)==0){
+    result = crate_init(buffer);
+  }else if (strncmp(buffer,"sbc_control",11)==0){
+    result = sbc_control(buffer);
   }
   //_!_end_commands_!_
   else
@@ -170,7 +191,7 @@ int print_connected()
   }
   if (y == 0)
     printsend("\t No connected boards\n");
-  return 1;
+  return 0;
 }
 
 
@@ -189,6 +210,7 @@ void read_socket(int fd)
 
 int accept_connection(int fd)
 {
+  pthread_mutex_lock(&main_fdset_lock);
   struct sockaddr_storage remoteaddr;
   socklen_t addrlen;
   char remoteIP[INET6_ADDRSTRLEN]; // character array to hold the remote IP address
@@ -253,10 +275,14 @@ int accept_connection(int fd)
         if (xl3_connected[i]){
           // xl3s dont close their connections,
           // so we assume this means its reconnecting
-          printsend("Closed XL3 #%d connection.\n",i);
-          close(rw_xl3_fd[i]);
-          FD_CLR(new_fd,&xl3_fdset);
-          FD_CLR(new_fd,&main_fdset);
+          printsend("Going to reconnect - Closed XL3 #%d connection.\n",i);
+          if (rw_xl3_fd[i] != new_fd){
+            // dont close it if its the same socket we
+            // just reopened on!
+            close(rw_xl3_fd[i]);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+          }
         }
         printsend("New connection: XL3 #%d\n",i); 
         rw_xl3_fd[i] = new_fd;
@@ -269,6 +295,7 @@ int accept_connection(int fd)
   if (new_fd > fdmax)
     fdmax = new_fd;
   FD_SET(new_fd,&main_fdset);
+  pthread_mutex_unlock(&main_fdset_lock);
 }
 
 
@@ -383,6 +410,31 @@ int bind_socket(char *host, int port)
     return listener;
   }
   freeaddrinfo(ai); // all done with this
+}
+
+int send_queued_msgs()
+{
+  pthread_mutex_lock(&printsend_buffer_lock);
+  if (strlen(printsend_buffer) > 0){
+    printsend("%s",printsend_buffer);
+    memset(printsend_buffer,'\0',sizeof(printsend_buffer));
+  }
+  pthread_mutex_unlock(&printsend_buffer_lock);
+
+}
+
+int pt_printsend(char *fmt, ...)
+{
+  int ret;
+  va_list arg;
+  char psb[5000];
+  va_start(arg, fmt);
+  ret = vsprintf(psb,fmt, arg);
+  printf("%s",psb);
+  //pthread_mutex_lock(&printsend_buffer_lock);
+  //sprintf(printsend_buffer+strlen(printsend_buffer),"%s",psb);
+  //pthread_mutex_unlock(&printsend_buffer_lock);
+  return 0;
 }
 
 int printsend(char *fmt, ... )

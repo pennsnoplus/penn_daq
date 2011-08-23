@@ -7,6 +7,35 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
+int set_location(char *buffer)
+{
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'p'){
+        printsend("location set to penn test stand\n");
+        current_location = 2;
+      }
+      if (words[1] == 'u'){
+        printsend("location set to underground\n");
+        current_location = 1;
+      }
+      if (words[1] == 'a'){
+        printsend("location set to above ground test stand\n");
+        current_location = 0;
+      }
+      if (words[1] == 'h'){
+        printsend("Usage: set_location"
+            "-a (above ground) -u (under ground) -p (penn)\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+  return 0;
+}
+
 int cleanup_threads()
 {
   int i;
@@ -66,7 +95,7 @@ int start_logging(){
   else{
     printsend("Logging already enabled\n");
   }
-  return 1;
+  return 0;
 }
 
 int stop_logging(){
@@ -85,7 +114,7 @@ int stop_logging(){
   else{
     printsend("Logging is already disabled\n");
   }
-  return 1;
+  return 0;
 }
 
 void SwapLongBlock(void* p, int32_t n){
