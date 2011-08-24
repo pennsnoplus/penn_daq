@@ -1,0 +1,70 @@
+\hypertarget{structJsonNode}{
+\section{JsonNode Struct Reference}
+\label{structJsonNode}\index{JsonNode@{JsonNode}}
+}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{structJsonNode_a9b1b7a1004f99ea67b954cda6bfc4152}{
+\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries parent}}
+\label{structJsonNode_a9b1b7a1004f99ea67b954cda6bfc4152}
+
+\item 
+\hypertarget{structJsonNode_a9f4541626163aee3ffb7112b79cf9bd0}{
+\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries prev}}
+\label{structJsonNode_a9f4541626163aee3ffb7112b79cf9bd0}
+
+\item 
+\hypertarget{structJsonNode_a1ba30b02167eb6b2c46228c1ae424bf6}{
+\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries next}}
+\label{structJsonNode_a1ba30b02167eb6b2c46228c1ae424bf6}
+
+\item 
+\hypertarget{structJsonNode_adca1422e0c838c3ba626cb5185907c59}{
+char $\ast$ {\bfseries key}}
+\label{structJsonNode_adca1422e0c838c3ba626cb5185907c59}
+
+\item 
+\hypertarget{structJsonNode_a17bd4ce2cf83fd03a0fc2b31aa50a551}{
+JsonTag {\bfseries tag}}
+\label{structJsonNode_a17bd4ce2cf83fd03a0fc2b31aa50a551}
+
+\item 
+\hypertarget{structJsonNode_a4e454ebf3be0312b346dc3410c7d45ce}{
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+union \{\\
+\>bool {\bfseries bool\_}\\
+\>char $\ast$ {\bfseries string\_}\\
+\>double {\bfseries number\_}\\
+\>struct \{\\
+\>\>\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries head}\\
+\>\>\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries tail}\\
+\>\} {\bfseries children}\\
+\}; }
+\label{structJsonNode_a4e454ebf3be0312b346dc3410c7d45ce}
+\\
+
+\end{tabbing}\item 
+\hypertarget{structJsonNode_a0de863b04858ba30f7d1d358f78b7175}{
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+union \{\\
+\>bool {\bfseries bool\_}\\
+\>char $\ast$ {\bfseries string\_}\\
+\>double {\bfseries number\_}\\
+\>struct \{\\
+\>\>\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries head}\\
+\>\>\hyperlink{structJsonNode}{JsonNode} $\ast$ {\bfseries tail}\\
+\>\} {\bfseries children}\\
+\}; }
+\label{structJsonNode_a0de863b04858ba30f7d1d358f78b7175}
+\\
+
+\end{tabbing}\end{DoxyCompactItemize}
+
+
+The documentation for this struct was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/db/json.h\item 
+include/json.h\end{DoxyCompactItemize}

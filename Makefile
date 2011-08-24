@@ -3,21 +3,24 @@ ODIR = build
 CDIR = src
 BDIR = bin
 CC = gcc
-CFLAGS = -I$(IDIR)
+#CFLAGS = -I$(IDIR)
+CFLAGS = $(patsubst %,-I%,$(CDIRS))
 LIBS = -levent -lcurl -lpthread
 
-CDIRS = $(CDIR)
+_CDIRS = core utils db net crate xl3 fec mtc tut
+CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))
 
-vpath %.h $(CDIR)
-vpath %.c $(CDIR)
+vpath %.h $(CDIRS)
+vpath %.c $(CDIRS)
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o net.o process_packet.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_DEPS = $(_OBJ:.o=.h) xl3_types.h 
+_DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-$(ODIR)/%.o: %.c $(DEPS)
+#$(ODIR)/%.o: %.c $(DEPS)
+$(ODIR)/%.o: %.c $(_DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(IDIR)/%: %
@@ -29,8 +32,8 @@ penn_daq: $(OBJ)
 	$(CC) -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 
 
 tut:
-	python ./tut_gen.py
-	$(CC) -lreadline -lncurses -o $(BDIR)/tut $(CDIR)/tut.c $(CFLAGS)
+	python $(CDIR)/tut/tut_gen.py
+	$(CC) -lreadline -lncurses -o $(BDIR)/tut $(CDIR)/tut/tut.c $(CFLAGS)
     
 clean: 
-	rm -f $(ODIR)/*.o $(CDIR)/*~ core $(IDIR)/* $(BDIR)/*
+	rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*
