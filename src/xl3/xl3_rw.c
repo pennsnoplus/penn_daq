@@ -10,8 +10,8 @@
 
 int do_xl3_cmd(XL3_Packet *packet,int xl3num)
 {
-  if (rw_xl3_fd[xl3num] == -1){
-    pt_printsend("Invalid crate number (%d): socket value is NULL\n",xl3num);
+  if (rw_xl3_fd[xl3num] <= 0){
+    pt_printsend("do_xl3_cmd: Invalid crate number (%d): socket value is NULL\n",xl3num);
     return -1;
   }
   
@@ -21,7 +21,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num)
 
   int n = write(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE);
   if (n < 0){
-    pt_printsend("Error writing to socket.\n");
+    pt_printsend("do_xl3_cmd: Error writing to socket.\n");
     return -1;
   }
   int sent_command_number = command_number;
@@ -39,41 +39,40 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num)
     int data = select(fdmax+1,&readable_fdset,NULL,NULL,&delay_value);
     // check for errors
     if (data == -1){
-      pt_printsend("Error in select in do_xl3_cmd()\n");
+      pt_printsend("do_xl3_cmd: Error in select\n");
       return -2;
     }else if (data == 0){
-      pt_printsend("Timeout in select in do_xl3_cmd()\n");
+      pt_printsend("do_xl3_cmd: Timeout in select\n");
       return -3;
     }
     // lets see whats readable
     if (FD_ISSET(rw_xl3_fd[xl3num],&readable_fdset)){
       n = recv(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE,0); 
       if (n < 0){
-        printsend("do_xl3_cmd: Error receiving data from XL3 #%d\n",xl3num);
+        pt_printsend("do_xl3_cmd: Error receiving data from XL3 #%d. Closing connection\n",xl3num);
         pthread_mutex_lock(&main_fdset_lock);
         FD_CLR(rw_xl3_fd[xl3num],&xl3_fdset);
         FD_CLR(rw_xl3_fd[xl3num],&main_fdset);
         close(rw_xl3_fd[xl3num]);
-        pthread_mutex_unlock(&main_fdset_lock);
         xl3_connected[xl3num] = 0;
         rw_xl3_fd[xl3num] = -1;
+        pthread_mutex_unlock(&main_fdset_lock);
         return -1;
       }else if (n == 0){
-        printsend("Got a zero byte packet, Closing XL3 #%d\n",xl3num);
+        pt_printsend("Got a zero byte packet, Closing XL3 #%d\n",xl3num);
         pthread_mutex_lock(&main_fdset_lock);
         FD_CLR(rw_xl3_fd[xl3num],&xl3_fdset);
         FD_CLR(rw_xl3_fd[xl3num],&main_fdset);
         close(rw_xl3_fd[xl3num]);
-        pthread_mutex_unlock(&main_fdset_lock);
         xl3_connected[xl3num] = 0;
         rw_xl3_fd[xl3num] = -1;
+        pthread_mutex_unlock(&main_fdset_lock);
         return -1;
       }
 
       SwapShortBlock(&(packet->cmdHeader.packet_num),1);
       // if its a message we'll print it out and loop around again
       if (packet->cmdHeader.packet_type == MESSAGE_ID){
-        printf("got a message\n");
         pt_printsend("%s",packet->payload);
       }else if (packet->cmdHeader.packet_type == sent_packet_type){
         // its the right packet type, make sure number is correct
@@ -99,8 +98,8 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num)
 
 int do_xl3_cmd_no_response(XL3_Packet *packet,int xl3num)
 {
-  if (rw_xl3_fd[xl3num] == -1){
-    pt_printsend("Invalid crate number (%d): socket value is NULL\n",xl3num);
+  if (rw_xl3_fd[xl3num] <= 0){
+    pt_printsend("do_xl3_cmd_no_response: Invalid crate number (%d): socket value is NULL\n",xl3num);
     return -1;
   }
   
@@ -110,7 +109,7 @@ int do_xl3_cmd_no_response(XL3_Packet *packet,int xl3num)
 
   int n = write(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE);
   if (n < 0){
-    pt_printsend("Error writing to socket.\n");
+    pt_printsend("do_xl3_cmd_no_response: Error writing to socket.\n");
     return -1;
   }
   return 0;

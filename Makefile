@@ -13,20 +13,21 @@ CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))
 vpath %.h $(CDIRS)
 vpath %.c $(CDIRS)
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o net.o process_packet.o
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o net.o process_packet.o mtc_init.o mtc_rw.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h
+_DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h mtc_registers.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 #$(ODIR)/%.o: %.c $(DEPS)
 $(ODIR)/%.o: %.c $(_DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(IDIR)/%: %
-	cp $^ $(IDIR)/.
+#$(IDIR)/%: %
+#	cp $^ $(IDIR)/.
 
-all: penn_daq tut $(DEPS)
+#all: penn_daq tut $(DEPS)
+all: penn_daq tut
 
 penn_daq: $(OBJ)
 	$(CC) -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 
@@ -36,4 +37,5 @@ tut:
 	$(CC) -lreadline -lncurses -o $(BDIR)/tut $(CDIR)/tut/tut.c $(CFLAGS)
     
 clean: 
-	rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*
+	rm -f $(ODIR)/*.o core $(BDIR)/*
+	#rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*

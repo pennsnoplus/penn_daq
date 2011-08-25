@@ -15,6 +15,8 @@
 #include "main.h"
 #include "xl3_utils.h"
 #include "mtc_utils.h"
+#include "mtc_init.h"
+#include "crate_init.h"
 #include "net_utils.h"
 #include "net.h"
 #include "process_packet.h"
@@ -159,6 +161,8 @@ int process_control_command(char *buffer)
     result = crate_init(buffer);
   }else if (strncmp(buffer,"sbc_control",11)==0){
     result = sbc_control(buffer);
+  }else if (strncmp(buffer,"mtc_init",8)==0){
+    result = mtc_init(buffer);
   }
   //_!_end_commands_!_
   else

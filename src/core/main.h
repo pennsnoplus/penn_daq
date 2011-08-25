@@ -13,6 +13,8 @@
 
 #define NeedToSwap
 
+#define MTC_XILINX_LOCATION "data/mtcxilinx.rbt" 
+
 pthread_t *thread_pool[MAX_THREADS]; //!< Pool of threads to make new tests in
 int thread_done[MAX_THREADS]; //!< Flags that a thread has finished and can be cleared
 

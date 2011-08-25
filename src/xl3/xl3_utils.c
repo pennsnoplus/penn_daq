@@ -55,36 +55,39 @@ int debugging_mode(char *buffer, int onoff)
     }
     words = strtok(NULL, " ");
   }
-  
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[crate_num] == 0){
-    // spawn a thread to do it
-    xl3_lock[crate_num] = 1;
 
-    pthread_t *new_thread;
-    new_thread = malloc(sizeof(pthread_t));
-    int i,thread_num = -1;
-    for (i=0;i<MAX_THREADS;i++){
-      if (thread_pool[i] == NULL){
-        thread_pool[i] = new_thread;
-        thread_num = i;
-        break;
-      }
-    }
-    if (thread_num == -1){
-      printsend("All threads busy currently\n");
-      return -1;
-    }
-    uint32_t *args;
-    args = malloc(3*sizeof(uint32_t));
-    args[0] = (uint32_t) thread_num;
-    args[1] = (uint32_t) crate_num;
-    args[2] = (uint32_t) onoff;
-    pthread_create(new_thread,NULL,pt_debugging_mode,(void *)args);
-  }else{
+  // now check and see if everything needed is unlocked
+  if (xl3_lock[crate_num] != 0){
     // this xl3 is locked, we cant do this right now
     return -1;
   }
+  if (xl3_connected[crate_num] == 0){
+    printsend("XL3 #%d is not connected! Aborting\n",crate_num);
+    return 0;
+  }
+  // spawn a thread to do it
+  xl3_lock[crate_num] = 1;
+
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+  uint32_t *args;
+  args = malloc(3*sizeof(uint32_t));
+  args[0] = (uint32_t) thread_num;
+  args[1] = (uint32_t) crate_num;
+  args[2] = (uint32_t) onoff;
+  pthread_create(new_thread,NULL,pt_debugging_mode,(void *)args);
   return 0; 
 }
 
@@ -138,7 +141,7 @@ int change_mode(char *buffer)
           davail_mask = strtoul(words2,(char**)NULL,16);
       }else if (words[1] == 'h'){
         printsend("Usage: change_mode -c [crate num (int)]"
-          "-n (normal mode) -i (init mode) -s [data available mask (hex)]\n");
+            "-n (normal mode) -i (init mode) -s [data available mask (hex)]\n");
         return 0;
       }
     }
@@ -146,35 +149,39 @@ int change_mode(char *buffer)
   }
 
   // now check and see if everything needed is unlocked
-  if (xl3_lock[crate_num] == 0){
-    // spawn a thread to do it
-    xl3_lock[crate_num] = 1;
-
-    pthread_t *new_thread;
-    new_thread = malloc(sizeof(pthread_t));
-    int i,thread_num = -1;
-    for (i=0;i<MAX_THREADS;i++){
-      if (thread_pool[i] == NULL){
-        thread_pool[i] = new_thread;
-        thread_num = i;
-        break;
-      }
-    }
-    if (thread_num == -1){
-      printsend("All threads busy currently\n");
-      return -1;
-    }
-    uint32_t *args;
-    args = malloc(3*sizeof(uint32_t));
-    args[0] = (uint32_t) thread_num;
-    args[1] = (uint32_t) crate_num;
-    args[2] = (uint32_t) mode;
-    args[3] = (uint32_t) davail_mask;
-    pthread_create(new_thread,NULL,pt_change_mode,(void *)args);
-  }else{
+  if (xl3_lock[crate_num] != 0){
     // this xl3 is locked, we cant do this right now
     return -1;
   }
+  if (xl3_connected[crate_num] == 0){
+    printsend("XL3 #%d is not connected! Aborting\n",crate_num);
+    return 0;
+  }
+
+  // spawn a thread to do it
+  xl3_lock[crate_num] = 1;
+
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+  uint32_t *args;
+  args = malloc(3*sizeof(uint32_t));
+  args[0] = (uint32_t) thread_num;
+  args[1] = (uint32_t) crate_num;
+  args[2] = (uint32_t) mode;
+  args[3] = (uint32_t) davail_mask;
+  pthread_create(new_thread,NULL,pt_change_mode,(void *)args);
   return 0; 
 }
 
