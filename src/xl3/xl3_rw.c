@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 #include "packet_types.h"
 

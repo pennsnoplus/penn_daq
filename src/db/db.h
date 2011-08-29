@@ -6,12 +6,12 @@
 #include "json.h"
 #include "db_types.h"
 
-#define DB_ADDRESS "localhost"
-#define DB_PORT "5984"
-#define DB_USERNAME ""
-#define DB_PASSWORD ""
-#define DB_BASE_NAME "penndb1"
-#define DB_VIEWDOC "_design/view_doc/_view"
+#define DEF_DB_ADDRESS "localhost"
+#define DEF_DB_PORT "5984"
+#define DEF_DB_USERNAME ""
+#define DEF_DB_PASSWORD ""
+#define DEF_DB_BASE_NAME "penndb1"
+#define DEF_DB_VIEWDOC "_design/view_doc/_view"
 
 int parse_fec_hw(JsonNode* value,mb_t* mb);
 int parse_fec_debug(JsonNode* value,mb_t* mb);

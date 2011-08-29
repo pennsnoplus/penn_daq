@@ -27,7 +27,7 @@ int sbc_control(char *buffer)
 
   args->sbc_action = 0;
   args->manual = 0;
-  strcpy(args->identity_file,"");
+  strcpy(args->identity_file,DEFAULT_SSHKEY);
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -118,6 +118,7 @@ void *pt_sbc_control(void *args)
   // if connecting or reconnecting, do that now
   if (sbc_action == 0 || sbc_action == 1)
   {
+    printf("connecting or reconnecting\n");
     pt_printsend("sbc_control: Connecting to the SBC\n");
     if (rw_sbc_fd > 0){
       pt_printsend("sbc_control: Already was connected (socket %d)\n",rw_sbc_fd);
@@ -142,6 +143,8 @@ void *pt_sbc_control(void *args)
       thread_done[thread_num] = 1;
       return;
     }
+  
+    usleep(1000);
 
     // we can connect, set up the address
     struct sockaddr_in sbc_addr;
@@ -194,13 +197,14 @@ int mtc_xilinx_load()
     return -1;
   }
 
-  SBC_Packet packet; 
+  SBC_Packet *packet; 
+  packet = malloc(sizeof(SBC_Packet));
 
-  packet.cmdHeader.destination = 0x3;
-  packet.cmdHeader.cmdID = 0x1;
-  packet.cmdHeader.numberBytesinPayload = sizeof(SNOMtc_XilinxLoadStruct) + howManybits;
-  packet.numBytes = packet.cmdHeader.numberBytesinPayload+256+16;
-  SNOMtc_XilinxLoadStruct *payloadPtr = (SNOMtc_XilinxLoadStruct *)packet.payload;
+  packet->cmdHeader.destination = 0x3;
+  packet->cmdHeader.cmdID = 0x1;
+  packet->cmdHeader.numberBytesinPayload = sizeof(SNOMtc_XilinxLoadStruct) + howManybits;
+  packet->numBytes = packet->cmdHeader.numberBytesinPayload+256+16;
+  SNOMtc_XilinxLoadStruct *payloadPtr = (SNOMtc_XilinxLoadStruct *)packet->payload;
   payloadPtr->baseAddress = 0x7000;
   payloadPtr->addressModifier = 0x29;
   payloadPtr->errorCode = 0;
@@ -209,8 +213,6 @@ int mtc_xilinx_load()
   char *p = (char *)payloadPtr + sizeof(SNOMtc_XilinxLoadStruct);
   strncpy(p, data, howManybits);
   
-  printf("sending do_cmd a packet of size %d\n",sizeof(packet));
-
   do_mtc_xilinx_cmd(packet);
   long errorCode = payloadPtr->errorCode;
   if (errorCode){

@@ -3,6 +3,8 @@
 #ifndef __DAQ_UTILS_H
 #define __DAQ_UTILS_H
 
+#define CONFIG_FILE_LOC "data/config.cfg"
+
 int set_location(char *buffer); //!< Changes the global location variable, which is used when posting to debug database
 int start_logging(); //!< Starts printing anything that would go to viewer terminal to a file
 int stop_logging(); //!< Stops printing to log file

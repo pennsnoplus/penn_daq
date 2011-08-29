@@ -5,6 +5,6 @@
 
 #include "packet_types.h"
 
-int do_mtc_xilinx_cmd(SBC_Packet packet);
+int do_mtc_xilinx_cmd(SBC_Packet *packet);
 
 #endif

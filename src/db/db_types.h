@@ -12,49 +12,49 @@ typedef struct {
 
 typedef struct {
     /* index definitions [0=ch0-3; 1=ch4-7; 2=ch8-11, etc] */
-    u_char     rmp[8];    // back edge timing ramp    
-    u_char     rmpup[8];  // front edge timing ramp    
-    u_char     vsi[8];    // short integrate voltage     
-    u_char     vli[8];    // long integrate voltage
+    unsigned char     rmp[8];    // back edge timing ramp    
+    unsigned char     rmpup[8];  // front edge timing ramp    
+    unsigned char     vsi[8];    // short integrate voltage     
+    unsigned char     vli[8];    // long integrate voltage
 } tdisc_t;
 
 typedef struct {
     /* the folowing are motherboard wide constants */
-    u_char     vmax;           // upper TAC reference voltage
-    u_char     tacref;         // lower TAC reference voltage
-    u_char     isetm[2];       // primary   timing current [0= tac0; 1= tac1]
-    u_char     iseta[2];       // secondary timing current [0= tac0; 1= tac1]
-    /* there is one u_char of TAC bits for each channel */
-    u_char     tac_shift[32];  // TAC shift register load bits (see 
+    unsigned char     vmax;           // upper TAC reference voltage
+    unsigned char     tacref;         // lower TAC reference voltage
+    unsigned char     isetm[2];       // primary   timing current [0= tac0; 1= tac1]
+    unsigned char     iseta[2];       // secondary timing current [0= tac0; 1= tac1]
+    /* there is one unsigned char of TAC bits for each channel */
+    unsigned char     tac_shift[32];  // TAC shift register load bits (see 
     // loadcmosshift.c for details)
     // [channel 0 to 31]      
 } tcmos_t;
 
 /* CMOS shift register 100nsec trigger setup */
 typedef struct {
-    u_char      mask[32];   
-    u_char      tdelay[32];    // tr100 width (see loadcmosshift.c for details)
+    unsigned char      mask[32];   
+    unsigned char      tdelay[32];    // tr100 width (see loadcmosshift.c for details)
     // [channel 0 to 31], only bits 0 to 6 defined
 } tr100_t;
 
 /* CMOS shift register 20nsec trigger setup */
 typedef struct {
-    u_char      mask[32];    
-    u_char      twidth[32];    //tr20 width (see loadcmosshift.c for details)
+    unsigned char      mask[32];    
+    unsigned char      twidth[32];    //tr20 width (see loadcmosshift.c for details)
     // [channel 0 to 31], only bits 0 to 6 defined
-    u_char      tdelay[32];    //tr20 delay (see loadcmosshift.c for details)
+    unsigned char      tdelay[32];    //tr20 delay (see loadcmosshift.c for details)
     // [channel 0 to 31], only buts 0 to 4 defined
 } tr20_t;
 
 typedef struct {
     uint16_t mb_id;
     uint16_t dc_id[4];
-    u_char vbal[2][32];
-    u_char vthr[32];
+    unsigned char vbal[2][32];
+    unsigned char vthr[32];
     tdisc_t tdisc;
     tcmos_t tcmos;
-    u_char vint;       // integrator output voltage 
-    u_char hvref;     // MB control voltage 
+    unsigned char vint;       // integrator output voltage 
+    unsigned char hvref;     // MB control voltage 
     tr100_t tr100;
     tr20_t tr20;
     uint16_t scmos[32];     // remaining 10 bits (see loadcmosshift.c for 

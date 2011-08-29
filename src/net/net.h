@@ -10,24 +10,24 @@
 
 #include "main.h"
 
-#define MAX_PENDING_CONS 20
+#define DEF_MAX_PENDING_CONS 20
 
 //XL3
-#define XL3_PORT 44601
+#define DEF_XL3_PORT 44601
 #define MAX_XL3_CON 19
 
 //SBC
-#define SBC_PORT 44630
-#define SBC_USER "daq"
-#define SBC_SERVER "10.0.0.30"
+#define DEF_SBC_PORT 44630
+#define DEF_SBC_USER "daq"
+#define DEF_SBC_SERVER "10.0.0.30"
 
 //CONTROLLER
-#define CONT_PORT 44600
-#define CONT_CMD_ACK "_._"
-#define CONT_CMD_BSY "_!_"
+#define DEF_CONT_PORT 44600
+#define DEF_CONT_CMD_ACK "_._"
+#define DEF_CONT_CMD_BSY "_!_"
 
 //VIEWER
-#define VIEW_PORT 44599
+#define DEF_VIEW_PORT 44599
 #define MAX_VIEW_CON 3
 
 // listening fds

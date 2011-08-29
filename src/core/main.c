@@ -27,10 +27,10 @@ int main(int argc, char *argv[])
   memset(printsend_buffer,'\0',sizeof(printsend_buffer));
   command_number = 0;
   memset(crate_config,0,sizeof(crate_config));
-  if (strcmp(DB_USERNAME,"") != 0)
+
+  // update configuration from config file
+  read_configuration_file();
     sprintf(DB_SERVER,"http://%s:%s@%s:%s",DB_USERNAME,DB_PASSWORD,DB_ADDRESS,DB_PORT);
-  else
-    sprintf(DB_SERVER,"http://%s:%s",DB_ADDRESS,DB_PORT);
 
   // get command line options
   int c;
@@ -78,7 +78,6 @@ int main(int argc, char *argv[])
     }
   }
 
-  printsend("current location is %d\n",current_location);
 
   // make sure the database is up and running
   pouch_request *pr = pr_init();
@@ -87,12 +86,14 @@ int main(int argc, char *argv[])
   if(pr->httpresponse != 200){
     printsend("Unable to connect to database. error code %d\n",(int)pr->httpresponse);
     printsend("CURL error code: %d\n", pr->curlcode);
-    //exit(0);
+    exit(0);
   }
   else{
     printsend("Connected to database: http response code %d\n",(int)pr->httpresponse);
   }
   pr_free(pr);
+
+  printsend("current location is %d\n",current_location);
 
   // set up sockets to listen for new connections
   setup_sockets();
@@ -111,7 +112,7 @@ int main(int argc, char *argv[])
     // reset our fdsets
     pthread_mutex_lock(&main_fdset_lock);
     fd_set temp = main_fdset;
-    if (sbc_lock)
+    if (sbc_lock && sbc_connected)
       FD_CLR(rw_sbc_fd,&temp);
     for (i=0;i<MAX_XL3_CON;i++)
       if (xl3_lock[i])

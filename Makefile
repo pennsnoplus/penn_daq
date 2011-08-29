@@ -2,10 +2,10 @@ IDIR = include
 ODIR = build
 CDIR = src
 BDIR = bin
-CC = gcc
+CC = gcc -g
 #CFLAGS = -I$(IDIR)
 CFLAGS = $(patsubst %,-I%,$(CDIRS))
-LIBS = -levent -lcurl -lpthread
+LIBS = -lcurl -lpthread
 
 _CDIRS = core utils db net crate xl3 fec mtc tut
 CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))

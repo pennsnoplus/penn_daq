@@ -8,140 +8,213 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
-int set_location(char *buffer)
+int read_configuration_file()
 {
-  char *words,*words2;
-  words = strtok(buffer, " ");
-  while (words != NULL){
-    if (words[0] == '-'){
-      if (words[1] == 'p'){
-        printsend("location set to penn test stand\n");
-        current_location = 2;
+  FILE *config_file;
+  config_file = fopen(CONFIG_FILE_LOC,"r");
+  int i,n = 0;
+  char line_in[100][100];
+  memset(DB_USERNAME,0,100);
+  memset(DB_PASSWORD,0,100);
+  memset(DEFAULT_SSHKEY,0,100);
+  while (fscanf(config_file,"%s",line_in[n]) == 1){
+    n++;
+  }
+  for (i=0;i<n;i++){
+    char *var_name,*var_value;
+    var_name = strtok(line_in[i],"=");
+    if (var_name != NULL){
+      var_value = strtok(NULL,"=");
+      if (var_name[0] != '#' && var_value != NULL){
+        //      if (strcmp(var_name,"MAX_THREADS")==0){
+        //        MAX_THREADS = atoi(var_value);
+        if (strcmp(var_name,"NEED_TO_SWAP")==0){
+          NEED_TO_SWAP = atoi(var_value);
+        }else if (strcmp(var_name,"MTC_XILINX_LOCATION")==0){
+          strcpy(MTC_XILINX_LOCATION,var_value);
+        }else if (strcmp(var_name,"DEFAULT_SSHKEY")==0){
+          strcpy(DEFAULT_SSHKEY,var_value);
+        }else if (strcmp(var_name,"DB_ADDRESS")==0){
+          strcpy(DB_ADDRESS,var_value);
+        }else if (strcmp(var_name,"DB_PORT")==0){
+          strcpy(DB_PORT,var_value);
+        }else if (strcmp(var_name,"DB_USERNAME")==0){
+          strcpy(DB_USERNAME,var_value);
+        }else if (strcmp(var_name,"DB_PASSWORD")==0){
+          strcpy(DB_PASSWORD,var_value);
+        }else if (strcmp(var_name,"DB_BASE_NAME")==0){
+          strcpy(DB_BASE_NAME,var_value);
+        }else if (strcmp(var_name,"DB_VIEW_DOC")==0){
+          strcpy(DB_VIEWDOC,var_value);
+        }else if (strcmp(var_name,"MAX_PENDING_CONS")==0){
+          MAX_PENDING_CONS = atoi(var_value);
+        }else if (strcmp(var_name,"XL3_PORT")==0){
+          XL3_PORT = atoi(var_value);
+        }else if (strcmp(var_name,"SBC_PORT")==0){
+          SBC_PORT = atoi(var_value);
+        }else if (strcmp(var_name,"SBC_USER")==0){
+          strcpy(SBC_USER,var_value);
+        }else if (strcmp(var_name,"SBC_SERVER")==0){
+          strcpy(SBC_SERVER,var_value);
+        }else if (strcmp(var_name,"CONT_PORT")==0){
+          CONT_PORT = atoi(var_value);
+        }else if (strcmp(var_name,"CONT_CMD_ACK")==0){
+          strcpy(CONT_CMD_ACK,var_value);
+        }else if (strcmp(var_name,"CONT_CMD_BSY")==0){
+          strcpy(CONT_CMD_BSY,var_value);
+        }else if (strcmp(var_name,"VIEW_PORT")==0){
+          VIEW_PORT = atoi(var_value);
+          //      }else if (strcmp(var_name,"MAX_VIEW_CON")==0){
+          //        MAX_VIEW_CON = atoi(var_value);
+          //      }else if (strcmp(var_name,"XL3_MAX_PAYOAD_SIZE")==0){
+          //        XL3_MAX_PAYLOAD_SIZE = atoi(var_value);
+          //      }else if (strcmp(var_name,"XL3_HEADER_SIZE")==0){
+          //        XL3_HEADER_SIZE = atoi(var_value);
+          //      }else if (strcmp(var_name,"MAX_PACKET_SIZE")==0){
+          //        MAX_PACKET_SIZE = atoi(var_value);
       }
-      if (words[1] == 'u'){
-        printsend("location set to underground\n");
-        current_location = 1;
       }
-      if (words[1] == 'a'){
-        printsend("location set to above ground test stand\n");
-        current_location = 0;
-      }
-      if (words[1] == 'h'){
-        printsend("Usage: set_location"
-            "-a (above ground) -u (under ground) -p (penn)\n");
-        return 0;
       }
     }
-    words = strtok(NULL, " ");
+    fclose(config_file);
+    printf("done reading config\n");
+    return 0; 
   }
-  return 0;
-}
 
-int cleanup_threads()
-{
-  int i;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_done[i]){
-      free(thread_pool[i]);
-      thread_pool[i] = NULL;
-      thread_done[i] = 0;
+  int set_location(char *buffer)
+  {
+    char *words,*words2;
+    words = strtok(buffer, " ");
+    while (words != NULL){
+      if (words[0] == '-'){
+        if (words[1] == 'p'){
+          printsend("location set to penn test stand\n");
+          current_location = 2;
+        }
+        if (words[1] == 'u'){
+          printsend("location set to underground\n");
+          current_location = 1;
+        }
+        if (words[1] == 'a'){
+          printsend("location set to above ground test stand\n");
+          current_location = 0;
+        }
+        if (words[1] == 'h'){
+          printsend("Usage: set_location"
+              "-a (above ground) -u (under ground) -p (penn)\n");
+          return 0;
+        }
+      }
+      words = strtok(NULL, " ");
     }
+    return 0;
   }
-  return 0;
-}
 
-void sigint_func(int sig) 
-{
-  printsend("\nBeginning shutdown\n");
-  printsend("Closing all connections\n");
-  int u;
-  for(u = 0; u <= fdmax; u++){
-    if(FD_ISSET(u, &main_fdset)){
-      close(u);
+  int cleanup_threads()
+  {
+    int i;
+    for (i=0;i<MAX_THREADS;i++){
+      if (thread_done[i]){
+        free(thread_pool[i]);
+        thread_pool[i] = NULL;
+        thread_done[i] = 0;
+      }
     }
+    return 0;
   }
-  if(write_log){
-    printsend("Closing log\n");
-    if(ps_log_file){
-      stop_logging();
+
+  void sigint_func(int sig) 
+  {
+    printsend("\nBeginning shutdown\n");
+    printsend("Closing all connections\n");
+    int u;
+    for(u = 0; u <= fdmax; u++){
+      if(FD_ISSET(u, &main_fdset)){
+        close(u);
+      }
     }
-  }
-  printsend("Killing any remaining threads\n");
-  for (u=0;u<MAX_THREADS;u++){
-    if (thread_pool[u] != NULL){
-      pthread_cancel(*thread_pool[u]);
-      free(thread_pool[u]);
+    if(write_log){
+      printsend("Closing log\n");
+      if(ps_log_file){
+        stop_logging();
+      }
     }
+    printsend("Killing any remaining threads\n");
+    for (u=0;u<MAX_THREADS;u++){
+      if (thread_pool[u] != NULL){
+        pthread_cancel(*thread_pool[u]);
+        free(thread_pool[u]);
+      }
+    }
+
+    exit(0);
   }
 
-  exit(0);
-}
+  int start_logging(){
+    if(!write_log){
+      write_log = 1;
+      char log_name[256] = {'\0'};  // random size, it's a pretty nice number though.
+      time_t curtime = time(NULL);
+      struct timeval moretime;
+      gettimeofday(&moretime,0);
+      struct tm *loctime = localtime(&curtime);
 
-int start_logging(){
-  if(!write_log){
-    write_log = 1;
-    char log_name[256] = {'\0'};  // random size, it's a pretty nice number though.
-    time_t curtime = time(NULL);
-    struct timeval moretime;
-    gettimeofday(&moretime,0);
-    struct tm *loctime = localtime(&curtime);
+      strftime(log_name, 256, "%Y_%m_%d_%H_%M_%S_", loctime);
+      sprintf(log_name+strlen(log_name), "%d.log", (int)moretime.tv_usec);
+      ps_log_file = fopen(log_name, "a+");
+      printsend( "Enabled logging\n");
+      printsend( "Opened log file: %s\n", log_name);
 
-    strftime(log_name, 256, "%Y_%m_%d_%H_%M_%S_", loctime);
-    sprintf(log_name+strlen(log_name), "%d.log", (int)moretime.tv_usec);
-    ps_log_file = fopen(log_name, "a+");
-    printsend( "Enabled logging\n");
-    printsend( "Opened log file: %s\n", log_name);
-
-  }
-  else{
-    printsend("Logging already enabled\n");
-  }
-  return 0;
-}
-
-int stop_logging(){
-  if(write_log){
-    write_log = 0;
-    printsend("Disabled logging\n");
-    if(ps_log_file){
-      printsend("Closed log file\n");
-      fclose(ps_log_file);
-      system("mv *.log ./logs");
     }
     else{
-      printsend("\tNo log file to close\n");
+      printsend("Logging already enabled\n");
+    }
+    return 0;
+  }
+
+  int stop_logging(){
+    if(write_log){
+      write_log = 0;
+      printsend("Disabled logging\n");
+      if(ps_log_file){
+        printsend("Closed log file\n");
+        fclose(ps_log_file);
+        system("mv *.log ./logs");
+      }
+      else{
+        printsend("\tNo log file to close\n");
+      }
+    }
+    else{
+      printsend("Logging is already disabled\n");
+    }
+    return 0;
+  }
+
+  void SwapLongBlock(void* p, int32_t n){
+    if (NEED_TO_SWAP){
+      int32_t* lp = (int32_t*)p;
+      int32_t i;
+      for(i=0;i<n;i++){
+        int32_t x = *lp;
+        *lp = (((x) & 0x000000FF) << 24) |
+          (((x) & 0x0000FF00) << 8) |
+          (((x) & 0x00FF0000) >> 8) |
+          (((x) & 0xFF000000) >> 24);
+        lp++;
+      }
     }
   }
-  else{
-    printsend("Logging is already disabled\n");
-  }
-  return 0;
-}
 
-void SwapLongBlock(void* p, int32_t n){
-#ifdef NeedToSwap
-  int32_t* lp = (int32_t*)p;
-  int32_t i;
-  for(i=0;i<n;i++){
-    int32_t x = *lp;
-    *lp = (((x) & 0x000000FF) << 24) |
-      (((x) & 0x0000FF00) << 8) |
-      (((x) & 0x00FF0000) >> 8) |
-      (((x) & 0xFF000000) >> 24);
-    lp++;
+  void SwapShortBlock(void* p, int32_t n){
+    if (NEED_TO_SWAP){
+      int16_t* sp = (int16_t*)p;
+      int32_t i;
+      for(i=0;i<n;i++){
+        int16_t x = *sp;
+        *sp = ((x & 0x00FF) << 8) |
+          ((x & 0xFF00) >> 8) ;
+        sp++;
+      }
+    }
   }
-#endif
-}
-
-void SwapShortBlock(void* p, int32_t n){
-#ifdef NeedToSwap
-  int16_t* sp = (int16_t*)p;
-  int32_t i;
-  for(i=0;i<n;i++){
-    int16_t x = *sp;
-    *sp = ((x & 0x00FF) << 8) |
-      ((x & 0xFF00) >> 8) ;
-    sp++;
-  }
-#endif
-}
