@@ -61,32 +61,40 @@ int crate_init(char *buffer)
   }
 
   // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] == 0){
-    // spawn a thread to do it
-    xl3_lock[args->crate_num] = 1;
-
-    pthread_t *new_thread;
-    new_thread = malloc(sizeof(pthread_t));
-    int i,thread_num = -1;
-    for (i=0;i<MAX_THREADS;i++){
-      if (thread_pool[i] == NULL){
-        thread_pool[i] = new_thread;
-        thread_num = i;
-        break;
-      }
-    }
-    if (thread_num == -1){
-      printsend("All threads busy currently\n");
-      free(args);
-      return -1;
-    }
-    args->thread_num = thread_num;
-    pthread_create(new_thread,NULL,pt_crate_init,(void *)args);
-  }else{
+  if (xl3_lock[args->crate_num] != 0){
     // this xl3 is locked, we cant do this right now
     free(args);
     return -1;
   }
+  if (xl3_connected[args->crate_num] == 0){
+    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
+    free(args);
+    return 0;
+  }
+
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    free(args);
+    return -1;
+  }
+
+  // we have a thread so lock it
+  xl3_lock[args->crate_num] = 1;
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_crate_init,(void *)args);
   return 0; 
 }
 
@@ -94,6 +102,10 @@ void *pt_crate_init(void *args)
 {
   crate_init_t arg = *(crate_init_t *) args; 
   free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
 
   char get_db_address[500];
   char ctc_address[500];
@@ -150,7 +162,7 @@ void *pt_crate_init(void *args)
 
   // make sure crate_config is up to date
   if (arg.use_cbal || arg.use_zdisc || arg.use_ttot || arg.use_all)
-    update_crate_config(arg.crate_num,arg.slot_mask);
+    update_crate_config(arg.crate_num,arg.slot_mask,&thread_fdset);
 
   // GET ALL FEC DATA FROM DB
   int i,j,crate,card;
@@ -191,11 +203,11 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-          crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-          crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-          crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
+            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
+            crate_config[arg.crate_num][i].dc_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_crate_cbal?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
-          DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
+            DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *cbal_response = pr_init();
         pr_set_method(cbal_response, GET);
         pr_set_url(cbal_response, get_db_address);
@@ -231,9 +243,9 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-          crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-          crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-          crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
+            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
+            crate_config[arg.crate_num][i].dc_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_zdisc?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *zdisc_response = pr_init();
         pr_set_method(zdisc_response, GET);
@@ -348,10 +360,10 @@ void *pt_crate_init(void *args)
 
   SwapLongBlock(&(packet.payload),sizeof(crate_init_args_t)/sizeof(uint32_t));
 
-  do_xl3_cmd(&packet,arg.crate_num); 
+  do_xl3_cmd(&packet,arg.crate_num,&thread_fdset); 
 
   // NOW PROCESS RESULTS AND POST TO DB
-  hware_flip = &(packet_results->hware_vals);
+  hware_flip = packet_results->hware_vals;
   for (i=0;i<16;i++){
     SwapShortBlock(&(hware_flip->mb_id),1);
     SwapShortBlock(&(hware_flip->dc_id),4);

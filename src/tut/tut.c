@@ -77,6 +77,17 @@ COMMAND commands[] = {
     { "set_gt_mask", (Function *)NULL, (char *)NULL },
     { "set_gt_crate_mask", (Function *)NULL, (char *)NULL },
     { "set_ped_crate_mask", (Function *)NULL, (char *)NULL },
+    { "run_pedestals_end_mtc", (Function *)NULL, (char *)NULL },
+    { "run_pedestals_end_crate", (Function *)NULL, (char *)NULL },
+    { "run_pedestals_end", (Function *)NULL, (char *)NULL },
+    { "run_pedestals_mtc", (Function *)NULL, (char *)NULL },
+    { "run_pedestals_crate", (Function *)NULL, (char *)NULL },
+    { "run_pedestals", (Function *)NULL, (char *)NULL },
+    { "enable_pulser", (Function *)NULL, (char *)NULL },
+    { "disable_pulser", (Function *)NULL, (char *)NULL },
+    { "enable_pedestal", (Function *)NULL, (char *)NULL },
+    { "disable_pedestal", (Function *)NULL, (char *)NULL },
+    { "set_pulser_freq", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };

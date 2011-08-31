@@ -22,6 +22,65 @@
 #include "mtc_rw.h"
 #include "mtc_utils.h"
 
+int setup_pedestals(float pulser_freq, uint32_t ped_width, 	uint32_t coarse_delay,
+    uint32_t fine_delay, uint32_t ped_crate_mask, uint32_t gt_crate_mask)
+{
+  int result = 0;
+  float fdelay_set;
+  result += set_lockout_width(DEFAULT_LOCKOUT_WIDTH);
+  if (result == 0)
+    result += set_pulser_frequency(pulser_freq);
+  if (result == 0)
+    result += set_pedestal_width(ped_width);
+  if (result == 0)
+    result += set_coarse_delay(coarse_delay);
+  if (result == 0)
+    fdelay_set = set_fine_delay(fine_delay);
+  if (result != 0){
+    pt_printsend("setup pedestals failed\n");
+    return -1;
+  }
+  unset_ped_crate_mask(MASKALL);
+  unset_gt_crate_mask(MASKALL);
+  set_ped_crate_mask(ped_crate_mask);
+  set_gt_crate_mask(gt_crate_mask);
+  set_gt_mask(DEFAULT_GT_MASK);
+  //printsend("new_daq: setup_pedestals complete\n");
+  return 0;
+}
+
+void enable_pulser()
+{
+    uint32_t temp;
+    mtc_reg_read(MTCControlReg,&temp);
+    mtc_reg_write(MTCControlReg,temp | PULSE_EN);
+    //pt_printsend("Pulser enabled\n");
+}
+
+void disable_pulser()
+{
+    uint32_t temp;
+    mtc_reg_read(MTCControlReg,&temp);
+    mtc_reg_write(MTCControlReg,temp & ~PULSE_EN);
+    //pt_printsend("Pulser disabled\n");
+}
+
+void enable_pedestal()
+{
+    uint32_t temp;
+    mtc_reg_read(MTCControlReg,&temp);
+    mtc_reg_write(MTCControlReg,temp | PED_EN);
+    //pt_printsend("Pedestals enabled\n");
+}
+
+void disable_pedestal()
+{
+    uint32_t temp;
+    mtc_reg_read(MTCControlReg,&temp);
+    mtc_reg_write(MTCControlReg,temp & ~PED_EN);
+    //pt_printsend("Pedestals disabled\n");
+}
+
 int load_mtca_dacs(float *voltages)
 {
   uint32_t shift_value;

@@ -8,6 +8,56 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
+int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t *new_thread)
+{
+  if (sbc){
+    if (sbc_lock != 0){
+      // locked, cant do this right now
+      return -1;
+    }
+    if (sbc_connected == 0){
+      pt_printsend("SBC is not connected. Exiting!\n");
+      return -2;
+    }
+  }
+  int i;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask){
+      if (xl3_lock[i] != 0){
+        // locked, cant do this right now
+        return -1;
+      }
+      if (xl3_connected[i] == 0){
+        pt_printsend("XL3 #%d is not connected. Exiting!\n");
+        return -3;
+      }
+    }
+
+  // nothings locked, so lets try spawning a thread
+  new_thread = malloc(sizeof(pthread_t));
+  int thread_num = -5;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num < 0){
+    pt_printsend("All threads busy currently\n");
+    return -4;
+  }
+
+  // we have a thread, so lock everything down
+  if (sbc)
+    sbc_lock = 1;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask)
+      xl3_lock[i] = 1;
+
+  return thread_num;
+}
+
 int read_configuration_file()
 {
   FILE *config_file;

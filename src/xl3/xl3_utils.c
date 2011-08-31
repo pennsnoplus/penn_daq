@@ -11,29 +11,44 @@
 #include "daq_utils.h"
 #include "xl3_utils.h"
 
-int deselect_fecs(int crate)
+int deselect_fecs(int crate, fd_set *thread_fdset)
 {
+  XL3_Packet packet;
+  packet.cmdHeader.packet_type = DESELECT_FECS_ID;
+  do_xl3_cmd(&packet, crate,thread_fdset);
   return 0;
 }
 
-int update_crate_config(int crate, uint16_t slot_mask)
+int update_crate_config(int crate, uint16_t slot_mask, fd_set *thread_fdset)
 {
   XL3_Packet packet;
   packet.cmdHeader.packet_type = BUILD_CRATE_CONFIG_ID;
-  *(uint32_t *) packet.payload = slot_mask;
-  SwapLongBlock(packet.payload,1);
-  do_xl3_cmd(&packet,crate);
-
-  int errors = *(uint32_t *) packet.payload;
-  int j;
-  for (j=0;j<16;j++){
-    if ((0x1<<j) & slot_mask){
-      crate_config[crate][j] = *(hware_vals_t *) (packet.payload+4+j*sizeof(hware_vals_t));
-      SwapShortBlock(&(crate_config[crate][j].mb_id),1);
-      SwapShortBlock((crate_config[crate][j].dc_id),4);
+  build_crate_config_args_t *packet_args = (build_crate_config_args_t *) packet.payload;
+  build_crate_config_results_t *packet_results = (build_crate_config_results_t *) packet.payload;
+  packet_args->slot_mask = slot_mask;
+  SwapLongBlock(packet.payload,sizeof(build_crate_config_args_t)/sizeof(uint32_t));
+  do_xl3_cmd(&packet,crate,thread_fdset);
+  int errors = packet_results->error_flags;
+  int i;
+  for (i=0;i<16;i++){
+    if ((0x1<<i) & slot_mask){
+      crate_config[crate][i] = packet_results->hware_vals[i];
+      SwapShortBlock(&(crate_config[crate][i].mb_id),1);
+      SwapShortBlock((crate_config[crate][i].dc_id),4);
     }
   }
-  deselect_fecs(crate);
+  deselect_fecs(crate,thread_fdset);
   return 0;
 }
 
+int change_mode(int mode, uint16_t davail_mask, int xl3num, fd_set *thread_fdset)
+{
+  XL3_Packet packet;
+  packet.cmdHeader.packet_type = CHANGE_MODE_ID;
+  change_mode_args_t *packet_args = (change_mode_args_t *) packet.payload;
+  packet_args->mode = mode;
+  packet_args->davail_mask = davail_mask;
+  SwapLongBlock(packet.payload,sizeof(change_mode_args_t)/sizeof(uint32_t));
+  int result = do_xl3_cmd(&packet,xl3num,thread_fdset);
+  return result;
+}

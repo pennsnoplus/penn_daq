@@ -41,7 +41,7 @@ int do_mtc_cmd(SBC_Packet *packet)
     return -3;
   }
 
-  n = recv(rw_sbc_fd,(char *)packet,numBytesToSend, 0 ); // 1500 should be?
+  n = recv(rw_sbc_fd,(char *)packet,1500, 0 ); // 1500 should be?
   if (n < 0){
     pt_printsend("do_mtc_cmd: Error receiving data from sbc. Closing connection.\n");
     pthread_mutex_lock(&main_fdset_lock);
@@ -144,6 +144,7 @@ int mtc_reg_write(uint32_t address, uint32_t data)
   writestruct++;
   uint32_t *data_ptr = (uint32_t *) writestruct;
   *data_ptr = data;
+
   do_mtc_cmd(packet);
   free(packet);
   return 0;
@@ -153,6 +154,7 @@ int mtc_reg_read(uint32_t address, uint32_t *data)
 {
   SBC_Packet *packet;
   packet = malloc(sizeof(SBC_Packet));
+  memset(packet,0,1000);
   uint32_t *result;
   packet->cmdHeader.destination = 0x1;
   packet->cmdHeader.cmdID = MTC_READ_ID;
@@ -165,6 +167,7 @@ int mtc_reg_read(uint32_t address, uint32_t *data)
   readstruct->addressSpace = MTCRegAddressSpace;
   readstruct->unitSize = 4;
   readstruct->numItems = 1;
+
   do_mtc_cmd(packet);
   result = (uint32_t *) (readstruct+1);
   *data = *result;

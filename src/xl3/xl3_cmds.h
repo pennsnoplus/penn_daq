@@ -5,8 +5,8 @@
 
 int debugging_mode(char *buffer, int onoff);
 void *pt_debugging_mode(void *args);
-int change_mode(char *buffer);
-void *pt_change_mode(void* args);
+int cmd_change_mode(char *buffer);
+void *pt_cmd_change_mode(void* args);
 int sm_reset(char *buffer);
 void *pt_sm_reset(void* args);
 int cmd_xl3_rw(char *buffer);
@@ -25,5 +25,12 @@ typedef struct{
   uint32_t address;
   uint32_t data;
 } cmd_xl3_rw_t;
+
+typedef struct{
+  int thread_num;
+  int crate_num;
+  int mode;
+  uint16_t davail_mask; 
+} cmd_change_mode_t;
 
 #endif

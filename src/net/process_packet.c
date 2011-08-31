@@ -20,6 +20,7 @@
 #include "mtc_cmds.h"
 #include "mtc_init.h"
 #include "crate_init.h"
+#include "run_pedestals.h"
 #include "net_utils.h"
 #include "net.h"
 #include "fec_test.h"
@@ -169,7 +170,7 @@ int process_control_command(char *buffer)
   }else if (strncmp(buffer,"debugging_off",13)==0){
     result = debugging_mode(buffer,0);
   }else if (strncmp(buffer,"change_mode",11)==0){
-    result = change_mode(buffer);
+    result = cmd_change_mode(buffer);
   }else if (strncmp(buffer,"crate_init",10)==0){
     result = crate_init(buffer);
   }else if (strncmp(buffer,"mtc_init",8)==0){
@@ -196,6 +197,28 @@ int process_control_command(char *buffer)
     result = cmd_set_gt_crate_mask(buffer);
   }else if (strncmp(buffer,"set_ped_crate_mask",18)==0){
     result = cmd_set_ped_crate_mask(buffer);
+  }else if (strncmp(buffer,"run_pedestals_end_mtc",21)==0){
+    result = run_pedestals_end(buffer,1,0);
+  }else if (strncmp(buffer,"run_pedestals_end_crate",23)==0){
+    result = run_pedestals_end(buffer,0,1);
+  }else if (strncmp(buffer,"run_pedestals_end",17)==0){
+    result = run_pedestals_end(buffer,1,1);
+  }else if (strncmp(buffer,"run_pedestals_mtc",17)==0){
+    result = run_pedestals(buffer,1,0);
+  }else if (strncmp(buffer,"run_pedestals_crate",19)==0){
+    result = run_pedestals(buffer,0,1);
+  }else if (strncmp(buffer,"run_pedestals",13)==0){
+    result = run_pedestals(buffer,1,1);
+  }else if (strncmp(buffer,"enable_pulser",13)==0){
+    result = cmd_enable_pulser(buffer);
+  }else if (strncmp(buffer,"disable_pulser",14)==0){
+    result = cmd_disable_pulser(buffer);
+  }else if (strncmp(buffer,"enable_pedestal",15)==0){
+    result = cmd_enable_pedestal(buffer);
+  }else if (strncmp(buffer,"disable_pedestal",16)==0){
+    result = cmd_disable_pedestal(buffer);
+  }else if (strncmp(buffer,"set_pulser_freq",14)==0){
+    result = set_pulser_freq(buffer);
   }
   //_!_end_commands_!_
   else

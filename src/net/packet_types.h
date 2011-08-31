@@ -141,9 +141,24 @@ typedef struct{
   hware_vals_t hware_vals[16];
 } crate_init_results_t;
 
+typedef struct{
+  uint32_t mode;
+  uint32_t davail_mask;
+} change_mode_args_t;
 
+typedef struct{
+  uint32_t slot_mask;
+} build_crate_config_args_t;
 
+typedef struct{
+  uint32_t error_flags;
+  hware_vals_t hware_vals[16];
+} build_crate_config_results_t;
 
+typedef struct{
+  uint32_t slot_mask;
+  uint32_t pattern;
+} set_crate_pedestals_args_t;
 
 /*! \name sbc_send_packet_type
  *  Types of packets that will be sent to the sbc from the xl3

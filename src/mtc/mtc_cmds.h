@@ -17,6 +17,16 @@ int cmd_set_gt_crate_mask(char *buffer);
 void *pt_cmd_set_gt_crate_mask(void *args);
 int cmd_set_ped_crate_mask(char *buffer);
 void *pt_cmd_set_ped_crate_mask(void *args);
+int cmd_enable_pulser(char *buffer);
+void *pt_cmd_enable_pulser(void *args);
+int cmd_disable_pulser(char *buffer);
+void *pt_cmd_disable_pulser(void *args);
+int cmd_enable_pedestal(char *buffer);
+void *pt_cmd_enable_pedestal(void *args);
+int cmd_disable_pedestal(char *buffer);
+void *pt_cmd_disable_pedestal(void *args);
+int set_pulser_freq(char *buffer);
+void *pt_set_pulser_freq(void *args);
 
 typedef struct{
   int thread_num;
@@ -47,4 +57,8 @@ typedef struct{
   int ored;
 } set_mask_t;
 
+typedef struct{
+  int thread_num;
+  float frequency;
+} set_pulser_freq_t;
 #endif

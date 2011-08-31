@@ -26,7 +26,7 @@ int sbc_control(char *buffer)
   sbc_control_t *args;
   args = malloc(sizeof(sbc_control_t));
 
-  args->sbc_action = 0;
+  args->sbc_action = 1;
   args->manual = 0;
   strcpy(args->identity_file,DEFAULT_SSHKEY);
 
@@ -61,9 +61,8 @@ int sbc_control(char *buffer)
     free(args);
     return -1;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -79,6 +78,9 @@ int sbc_control(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
 
   args->thread_num = thread_num;
 
@@ -216,9 +218,8 @@ int mtc_read(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -234,6 +235,10 @@ int mtc_read(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_mtc_read,(void *)args);
   return 0; 
@@ -293,9 +298,8 @@ int mtc_write(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -311,6 +315,10 @@ int mtc_write(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_mtc_write,(void *)args);
   return 0; 
@@ -412,9 +420,8 @@ int set_mtca_thresholds(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int thread_num = -1;
@@ -430,6 +437,10 @@ int set_mtca_thresholds(char *buffer)
     free(args);
     return -1;
   }
+  
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_set_mtca_thresholds,(void *)args);
   return 0; 
@@ -485,9 +496,8 @@ int cmd_set_gt_mask(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -503,6 +513,10 @@ int cmd_set_gt_mask(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_gt_mask,(void *)args);
   return 0; 
@@ -561,9 +575,8 @@ int cmd_set_gt_crate_mask(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -579,6 +592,10 @@ int cmd_set_gt_crate_mask(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_gt_crate_mask,(void *)args);
   return 0; 
@@ -637,9 +654,8 @@ int cmd_set_ped_crate_mask(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  sbc_lock = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -655,6 +671,10 @@ int cmd_set_ped_crate_mask(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_ped_crate_mask,(void *)args);
   return 0; 
@@ -670,6 +690,307 @@ void *pt_cmd_set_ped_crate_mask(void *args)
     mtc_reg_read(MTCPmskReg, &temp);
   mtc_reg_write(MTCPmskReg, temp & arg.mask);
 
+  sbc_lock = 0;
+  thread_done[arg.thread_num] = 1;
+  return;
+}
+
+int cmd_enable_pulser(char *buffer)
+{
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'h'){
+        pt_printsend("Usage: enable_pulser\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  // now check and see if everything needed is unlocked
+  if (sbc_lock != 0){
+    // this xl3 is locked, we cant do this right now
+    return -1;
+  }
+  if (sbc_connected == 0){
+    printsend("SBC is not connected! Aborting\n");
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
+  int *args = malloc(sizeof(int));
+  *args = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_enable_pulser,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_enable_pulser(void *args)
+{
+  int thread_num = *(int *) args;
+  free(args);
+  enable_pulser();
+  sbc_lock = 0;
+  thread_done[thread_num] = 1;
+  return;
+}
+
+int cmd_disable_pulser(char *buffer)
+{
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'h'){
+        pt_printsend("Usage: disable_pulser\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  // now check and see if everything needed is unlocked
+  if (sbc_lock != 0){
+    // this xl3 is locked, we cant do this right now
+    return -1;
+  }
+  if (sbc_connected == 0){
+    printsend("SBC is not connected! Aborting\n");
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
+  int *args = malloc(sizeof(int));
+  *args = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_disable_pulser,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_disable_pulser(void *args)
+{
+  int thread_num = *(int *) args;
+  free(args);
+  disable_pulser();
+  sbc_lock = 0;
+  thread_done[thread_num] = 1;
+  return;
+}
+
+int cmd_enable_pedestal(char *buffer)
+{
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'h'){
+        pt_printsend("Usage: enable_pedestal\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  // now check and see if everything needed is unlocked
+  if (sbc_lock != 0){
+    // this xl3 is locked, we cant do this right now
+    return -1;
+  }
+  if (sbc_connected == 0){
+    printsend("SBC is not connected! Aborting\n");
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
+  int *args = malloc(sizeof(int));
+  *args = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_enable_pedestal,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_enable_pedestal(void *args)
+{
+  int thread_num = *(int *) args;
+  free(args);
+  enable_pedestal();
+  sbc_lock = 0;
+  thread_done[thread_num] = 1;
+  return;
+}
+
+int cmd_disable_pedestal(char *buffer)
+{
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'h'){
+        pt_printsend("Usage: disable_pedestal\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  // now check and see if everything needed is unlocked
+  if (sbc_lock != 0){
+    // this xl3 is locked, we cant do this right now
+    return -1;
+  }
+  if (sbc_connected == 0){
+    printsend("SBC is not connected! Aborting\n");
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
+  int *args = malloc(sizeof(int));
+  *args = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_disable_pedestal,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_disable_pedestal(void *args)
+{
+  int thread_num = *(int *) args;
+  free(args);
+  disable_pedestal();
+  sbc_lock = 0;
+  thread_done[thread_num] = 1;
+  return;
+}
+
+int set_pulser_freq(char *buffer)
+{
+  set_pulser_freq_t *args;
+  args = malloc(sizeof(set_pulser_freq_t));
+
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'f'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->frequency = atof(words2);
+      }else if (words[1] == 'h'){
+        pt_printsend("Usage: set_pulser_freq -f [frequency]\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  // now check and see if everything needed is unlocked
+  if (sbc_lock != 0){
+    // this xl3 is locked, we cant do this right now
+    return -1;
+  }
+  if (sbc_connected == 0){
+    printsend("SBC is not connected! Aborting\n");
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    return -1;
+  }
+
+  // we have a thread so lock it
+  sbc_lock = 1;
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_set_pulser_freq,(void *)args);
+  return 0; 
+}
+
+void *pt_set_pulser_freq(void *args)
+{
+  set_pulser_freq_t arg = *(set_pulser_freq_t *) args;
+  free(args);
+
+  set_pulser_frequency(arg.frequency);
   sbc_lock = 0;
   thread_done[arg.thread_num] = 1;
   return;

@@ -52,32 +52,39 @@ int fec_test(char *buffer)
   }
 
   // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] == 0){
-    // spawn a thread to do it
-    xl3_lock[args->crate_num] = 1;
-
-    pthread_t *new_thread;
-    new_thread = malloc(sizeof(pthread_t));
-    int i,thread_num = -1;
-    for (i=0;i<MAX_THREADS;i++){
-      if (thread_pool[i] == NULL){
-        thread_pool[i] = new_thread;
-        thread_num = i;
-        break;
-      }
-    }
-    if (thread_num == -1){
-      printsend("All threads busy currently\n");
-      free(args);
-      return -1;
-    }
-    args->thread_num = thread_num;
-    pthread_create(new_thread,NULL,pt_fec_test,(void *)args);
-  }else{
+  if (xl3_lock[args->crate_num] != 0){
     // this xl3 is locked, we cant do this right now
     free(args);
     return -1;
   }
+  if (xl3_connected[args->crate_num] == 0){
+    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
+    free(args);
+    return 0;
+  }
+
+  // spawn a thread to do it
+  pthread_t *new_thread;
+  new_thread = malloc(sizeof(pthread_t));
+  int i,thread_num = -1;
+  for (i=0;i<MAX_THREADS;i++){
+    if (thread_pool[i] == NULL){
+      thread_pool[i] = new_thread;
+      thread_num = i;
+      break;
+    }
+  }
+  if (thread_num == -1){
+    printsend("All threads busy currently\n");
+    free(args);
+    return -1;
+  }
+
+  // we have a thread so lock it
+  xl3_lock[args->crate_num] = 1;
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_fec_test,(void *)args);
   return 0; 
 }
 
@@ -96,7 +103,11 @@ void *pt_fec_test(void *args)
 
   SwapLongBlock(packet.payload,1);
 
-  do_xl3_cmd(&packet,arg.crate_num);
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
+  do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
 
   SwapLongBlock(packet_results,sizeof(fec_test_results_t)/sizeof(uint32_t));
 

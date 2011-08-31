@@ -105,9 +105,8 @@ int load_relays(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  xl3_lock[args->crate_num] = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int thread_num = -1;
@@ -123,6 +122,10 @@ int load_relays(char *buffer)
     free(args);
     return -1;
   }
+
+  // we have a thread so lock it
+  xl3_lock[args->crate_num] = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_load_relays,(void *)args);
   return 0; 
@@ -133,23 +136,27 @@ void *pt_load_relays(void *args)
   load_relays_t arg = *(load_relays_t *) args;
   free(args);
 
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
   int i,j;
   uint32_t result;
   for (i=0;i<16;i++){
     for (j=0;j<4;j++){
       if ((0x1<<j) & arg.pattern[i]){
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0x2,&result,arg.crate_num);
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0xa,&result,arg.crate_num);
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0x2,&result,arg.crate_num);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0x2,&result,arg.crate_num,&thread_fdset);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0xa,&result,arg.crate_num,&thread_fdset);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0x2,&result,arg.crate_num,&thread_fdset);
       }else{
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0x0,&result,arg.crate_num);
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0x8,&result,arg.crate_num);
-        xl3_rw(XL_RELAY_R + WRITE_REG, 0x0,&result,arg.crate_num);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0x0,&result,arg.crate_num,&thread_fdset);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0x8,&result,arg.crate_num,&thread_fdset);
+        xl3_rw(XL_RELAY_R + WRITE_REG, 0x0,&result,arg.crate_num,&thread_fdset);
       }
     }
   }
   usleep(1000);
-  xl3_rw(XL_RELAY_R + WRITE_REG, 0x4,&result,arg.crate_num);
+  xl3_rw(XL_RELAY_R + WRITE_REG, 0x4,&result,arg.crate_num,&thread_fdset);
 
 
   xl3_lock[arg.crate_num] = 0;
@@ -199,9 +206,8 @@ int read_bundle(char *buffer)
     free(args);
     return 0;
   }
-  // spawn a thread to do it
-  xl3_lock[args->crate_num] = 1;
 
+  // spawn a thread to do it
   pthread_t *new_thread;
   new_thread = malloc(sizeof(pthread_t));
   int i,thread_num = -1;
@@ -217,6 +223,10 @@ int read_bundle(char *buffer)
     free(args);
     return -1;
   }
+  
+  // we have a thread so lock it
+  xl3_lock[args->crate_num] = 1;
+
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_read_bundle,(void *)args);
   return 0; 
@@ -227,14 +237,18 @@ void *pt_read_bundle(void *args)
   read_bundle_t arg = *(read_bundle_t *) args;
   free(args);
 
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
   int errors = 0;
   uint32_t crate,slot,chan,gt8,gt16,cmos_es16,cgt_es16,cgt_es8,nc_cc;
   int cell;
   double qlx,qhs,qhl,tac;
   uint32_t pmtword[3];
-  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword,arg.crate_num);
-  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword+1,arg.crate_num);
-  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword+2,arg.crate_num);
+  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword,arg.crate_num,&thread_fdset);
+  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword+1,arg.crate_num,&thread_fdset);
+  errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword+2,arg.crate_num,&thread_fdset);
   if (errors != 0){
     pt_printsend("There were %d errors reading out the bundles.\n",errors);
     xl3_lock[arg.crate_num] = 0;

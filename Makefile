@@ -13,7 +13,7 @@ CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))
 vpath %.h $(CDIRS)
 vpath %.c $(CDIRS)
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o mtc_cmds.o db.o net.o process_packet.o mtc_init.o mtc_rw.o fec_test.o xl3_cmds.o fec_cmds.o
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o mtc_cmds.o db.o net.o process_packet.o mtc_init.o mtc_rw.o fec_test.o xl3_cmds.o fec_cmds.o run_pedestals.o fec_utils.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 _DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h mtc_registers.h xl3_registers.h unpack_bundles.h
@@ -21,7 +21,7 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 #$(ODIR)/%.o: %.c $(DEPS)
 $(ODIR)/%.o: %.c $(_DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -g -c -o $@ $< $(CFLAGS)
 
 #$(IDIR)/%: %
 #	cp $^ $(IDIR)/.
@@ -30,7 +30,7 @@ $(ODIR)/%.o: %.c $(_DEPS)
 all: penn_daq tut
 
 penn_daq: $(OBJ)
-	$(CC) -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 
+	$(CC) -g -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 
 
 tut:
 	python $(CDIR)/tut/tut_gen.py
