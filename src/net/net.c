@@ -138,7 +138,7 @@ void read_socket(int fd)
   if (FD_ISSET(fd, &new_connection_fdset))
     accept_connection(fd);
   else if (FD_ISSET(fd, &xl3_fdset))
-    read_xl3_data(fd);
+    read_xl3_packet(fd);
   else if (FD_ISSET(fd, &cont_fdset))
     read_control_command(fd);
   else if (FD_ISSET(fd, &view_fdset))

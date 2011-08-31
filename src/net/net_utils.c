@@ -14,7 +14,6 @@
 
 #include "main.h"
 #include "xl3_utils.h"
-#include "mtc_utils.h"
 #include "net.h"
 #include "net_utils.h"
 

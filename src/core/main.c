@@ -25,7 +25,10 @@ int main(int argc, char *argv[])
   pthread_mutex_init(&printsend_buffer_lock,NULL);
   pthread_mutex_init(&main_fdset_lock,NULL);
   memset(printsend_buffer,'\0',sizeof(printsend_buffer));
-  command_number = 0;
+  for (i=0;i<MAX_XL3_CON;i++){
+    command_number[i] = 0;
+    multifc_buffer_full[i] = 0;
+  }
   memset(crate_config,0,sizeof(crate_config));
 
   // update configuration from config file

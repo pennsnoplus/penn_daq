@@ -5,13 +5,40 @@
 
 #include <stdint.h>
 
-#include "main.h"
+#include "db_types.h"
 
 #define XL3_MAX_PAYLOAD_SIZE 1440 //!< size of the payload in XL3_Packet
 #define XL3_HEADER_SIZE 4 //!< bytes in the XL3_Packet header
 #define MAX_PACKET_SIZE 1444 //!< Maximum size of packet that lwip expects
 
-/*! \name packet_type
+typedef struct {
+    uint16_t packet_num;
+    uint8_t packet_type;
+    uint8_t num_bundles;
+} XL3_CommandHeader;
+
+typedef struct {
+    XL3_CommandHeader cmdHeader;
+    char payload[XL3_MAX_PAYLOAD_SIZE];
+} XL3_Packet;
+
+#define kSBC_MaxPayloadSizeBytes 1024*400
+#define kSBC_MaxMessageSizeBytes    256
+
+typedef struct {
+    uint32_t destination;    /*should be kSBC_Command*/
+    uint32_t cmdID;
+    uint32_t numberBytesinPayload;
+} SBC_CommandHeader;
+
+typedef struct {
+    uint32_t numBytes;                //filled in automatically
+    SBC_CommandHeader cmdHeader;
+    char message[kSBC_MaxMessageSizeBytes];
+    char payload[kSBC_MaxPayloadSizeBytes];
+} SBC_Packet;
+
+/*! \name xl3_send_packet_type
  *  Types of packets that will be received by the xl3 from the daq
  */
 //@{
@@ -53,8 +80,7 @@
 #define SLOT_NOISE_RATE_ID        (0x66) //!< check the noise rate in a slot      
 //@}
 
-
-/*! \name packet_types
+/*! \name xl3_recv_packet_types
  * possible cmdID's for packets sent by XL3 (to the DAQ)
  */
 //@{
@@ -68,22 +94,65 @@
 //@}
 
 typedef struct {
-    uint16_t packet_num;
-    uint8_t packet_type;
-    uint8_t num_bundles;
-} XL3_CommandHeader;
+    uint32_t word1;
+    uint32_t word2;
+    uint32_t word3;
+} PMTBundle;
+
 
 typedef struct {
-    XL3_CommandHeader cmdHeader;
-    char payload[XL3_MAX_PAYLOAD_SIZE];
-} XL3_Packet;
+    uint32_t cmd_num;
+    uint16_t packet_num;
+    uint8_t flags;
+    uint32_t address;
+    uint32_t data;
+} FECCommand;
+
+#define MAX_ACKS_SIZE 80
+
+typedef struct {
+    uint32_t howmany;
+    FECCommand cmd[MAX_ACKS_SIZE];
+} MultiFC;
+
+// packet arguments and results
+
+typedef struct{
+  uint32_t slot_mask;
+} fec_test_args_t;
+
+typedef struct{
+  uint32_t error_flag;
+  uint32_t discrete_reg_errors[16]; 
+  uint32_t cmos_test_reg_errors[16];
+} fec_test_results_t;
+
+typedef struct{
+  uint32_t mb_num;
+  uint32_t xilinx_load;
+  uint32_t hv_reset;
+  uint32_t slot_mask;
+  uint32_t ctc_delay;
+  uint32_t shift_reg_only;
+} crate_init_args_t;
+
+typedef struct{
+  uint32_t error_flags;
+  hware_vals_t hware_vals[16];
+} crate_init_results_t;
 
 
 
-// SBC
 
-#define kSBC_MaxPayloadSizeBytes 1024*400
-#define kSBC_MaxMessageSizeBytes    256
+
+/*! \name sbc_send_packet_type
+ *  Types of packets that will be sent to the sbc from the xl3
+ */
+//@{
+#define MTC_XILINX_ID           (0x1)
+#define MTC_READ_ID             (0x2)
+#define MTC_WRITE_ID            (0x3)
+//@}
 
 typedef struct {
     int32_t baseAddress;
@@ -93,19 +162,16 @@ typedef struct {
     int32_t fileSize;
 } SNOMtc_XilinxLoadStruct;
 
-typedef
-struct {
+typedef struct {
     uint32_t address;        /*first address*/
     uint32_t addressModifier;
     uint32_t addressSpace;
     uint32_t unitSize;        /*1,2,or 4*/
     uint32_t errorCode;    /*filled on return*/
     uint32_t numItems;        /*number of items to read*/
-}
-SBC_VmeReadBlockStruct;
+} SBC_VmeReadBlockStruct;
 
-typedef
-struct {
+typedef struct {
     uint32_t address;        /*first address*/
     uint32_t addressModifier;
     uint32_t addressSpace;
@@ -113,26 +179,6 @@ struct {
     uint32_t errorCode;    /*filled on return*/
     uint32_t numItems;        /*number Items of data to follow*/
     /*followed by the requested data, number of items from above*/
-}
-SBC_VmeWriteBlockStruct;
-
-typedef
-struct {
-    uint32_t destination;    /*should be kSBC_Command*/
-    uint32_t cmdID;
-    uint32_t numberBytesinPayload;
-}
-SBC_CommandHeader;
-
-typedef
-struct {
-    uint32_t numBytes;                //filled in automatically
-    SBC_CommandHeader cmdHeader;
-    char message[kSBC_MaxMessageSizeBytes];
-    char payload[kSBC_MaxPayloadSizeBytes];
-}
-SBC_Packet;
-
-
+} SBC_VmeWriteBlockStruct;
 
 #endif

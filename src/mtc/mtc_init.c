@@ -6,6 +6,7 @@
 
 #include "pouch.h"
 #include "json.h"
+#include "mtc_registers.h"
 
 #include "net.h"
 #include "net_utils.h"
@@ -73,8 +74,16 @@ void *pt_mtc_init(void *args)
   int xilinx_load = ((uint32_t *) args)[1];
   free(args);
 
+  int errors;
+
   if (xilinx_load)
-    mtc_xilinx_load();
+    errors = mtc_xilinx_load();
+
+  if (errors < 0){
+    sbc_lock = 0;
+    thread_done[thread_num] = 1;
+    return;
+  }
 
   mtc_t *mtc = ( mtc_t * ) malloc( sizeof(mtc_t));
   if ( mtc == ( mtc_t *) NULL )
@@ -94,6 +103,8 @@ void *pt_mtc_init(void *args)
   pr_do(response);
   if (response->httpresponse != 200){
     pt_printsend("Unable to connect to database. error code %d\n",(int)response->httpresponse);
+    free(response);
+    free(mtc);
     sbc_lock = 0;
     thread_done[thread_num] = 1;
     return;
@@ -101,66 +112,60 @@ void *pt_mtc_init(void *args)
   JsonNode *doc = json_decode(response->resp.data);
   parse_mtc(doc,mtc);
   json_delete(doc);
+  pr_free(response);
 
-  /*
+  // hold errors here
+  int result = 0;
+ 
   //unset all masks
   unset_gt_mask(MASKALL);
   unset_ped_crate_mask(MASKALL);
   unset_gt_crate_mask(MASKALL);
 
   // load the dacs
-  mtc_cons *mtc_cons_ptr = ( mtc_cons * ) malloc( sizeof(mtc_cons));
-  if ( mtc_cons_ptr == ( mtc_cons *) NULL )
-  {
-  printsend("error: malloc in mtc_init\n");
-  free(mtc);
-  free(mtc_cons_ptr);
-  return -1;
-  }
+  float mtca_dac_values[14];
 
+  int i;
   for (i=0; i<=13; i++)
   { 
-  raw_dacs[i]=
-  (u_short) mtc->mtca.triggers[i].threshold;
-  mtc_cons_ptr->mtca_dac_values[i]=
-  (((float)raw_dacs[i]/2048) * 5000.0) - 5000.0;
+    uint16_t raw_dacs = (uint16_t) mtc->mtca.triggers[i].threshold;
+    mtca_dac_values[i] = (((float) raw_dacs/2048) * 5000.0) - 5000.0;
   }
 
-  load_mtc_dacs(mtc_cons_ptr);
+  load_mtca_dacs(mtca_dac_values);
 
   // clear out the control register
   mtc_reg_write(MTCControlReg,0x0);
 
   // set lockout width
-  lkwidth = (u_short)((~((u_short) mtc->mtcd.lockout_width) & 0xff)*20);
+  uint16_t lkwidth = (uint16_t)((~((u_short) mtc->mtcd.lockout_width) & 0xff)*20);
   result += set_lockout_width(lkwidth);
 
   // zero out gt counter
   set_gt_counter(0);
 
   // load prescaler
-  pscale = ~((u_short)(mtc->mtcd.nhit100_lo_prescale)) + 1;
+  uint16_t pscale = ~((uint16_t)(mtc->mtcd.nhit100_lo_prescale)) + 1;
   result += set_prescale(pscale);
 
   // load pulser
-  freq = 781250.0/(float)((u_long)(mtc->mtcd.pulser_period) + 1);
+  float freq = 781250.0/(float)((u_long)(mtc->mtcd.pulser_period) + 1);
   result += set_pulser_frequency(freq);
 
   // setup pedestal width
-  pwid = (u_short)(((~(u_short)(mtc->mtcd.pedestal_width)) & 0xff) * 5);
+  uint16_t pwid = (uint16_t)(((~(u_short)(mtc->mtcd.pedestal_width)) & 0xff) * 5);
   result += set_pedestal_width(pwid);
 
+
   // setup PULSE_GT delays
-  printsend("Setting up PULSE_GT delays...\n");
-  coarse_delay = (u_short)(((~(u_short)(mtc->mtcd.coarse_delay))
-  & 0xff) * 10);
+  pt_printsend("Setting up PULSE_GT delays...\n");
+  uint16_t coarse_delay = (uint16_t)(((~(uint16_t)(mtc->mtcd.coarse_delay)) & 0xff) * 10);
   result += set_coarse_delay(coarse_delay);
-  fine_delay = (float)(mtc->mtcd.fine_delay)*
-  (float)(mtc->mtcd.fine_slope);
-  fdelay_set = set_fine_delay(fine_delay);
-  printsend( "PULSE_GET total delay has been set to %f\n",
-  (float) coarse_delay+fine_delay+
-  (float)(mtc->mtcd.min_delay_offset));
+  float fine_delay = (float)(mtc->mtcd.fine_delay)*(float)(mtc->mtcd.fine_slope);
+  float fdelay_set = set_fine_delay(fine_delay);
+  pt_printsend( "PULSE_GET total delay has been set to %f\n",
+      (float) coarse_delay+fine_delay+
+      (float)(mtc->mtcd.min_delay_offset));
 
   // load 10 MHz counter???? guess not
 
@@ -168,17 +173,12 @@ void *pt_mtc_init(void *args)
   reset_memory();
 
   free(mtc);
-  free(mtc_cons_ptr);
 
   if (result < 0) {
-  printsend("errors in the MTC initialization!\n");
-  return -1;
+    pt_printsend("errors in the MTC initialization!\n");
+  }else{
+    pt_printsend("MTC finished initializing\n");
   }
-
-  printsend("MTC finished initializing\n");
-  pr_free(response);
-   */
-  free(mtc);
 
   sbc_lock = 0;
   thread_done[thread_num] = 1;

@@ -54,6 +54,29 @@ int com_help();
 COMMAND commands[] = {
     { "help", com_help, (char *)NULL },
     //_!_begin_commands_!_
+    { "exit", (Function *)NULL, (char *)NULL },
+    { "print_connected", (Function *)NULL, (char *)NULL },
+    { "stop_logging", (Function *)NULL, (char *)NULL },
+    { "set_location", (Function *)NULL, (char *)NULL },
+    { "start_logging", (Function *)NULL, (char *)NULL },
+    { "sbc_control", (Function *)NULL, (char *)NULL },
+    { "clear_screen", (Function *)NULL, (char *)NULL },
+    { "debugging_on", (Function *)NULL, (char *)NULL },
+    { "debugging_off", (Function *)NULL, (char *)NULL },
+    { "change_mode", (Function *)NULL, (char *)NULL },
+    { "crate_init", (Function *)NULL, (char *)NULL },
+    { "mtc_init", (Function *)NULL, (char *)NULL },
+    { "fec_test", (Function *)NULL, (char *)NULL },
+    { "sm_reset", (Function *)NULL, (char *)NULL },
+    { "xl3_rw", (Function *)NULL, (char *)NULL },
+    { "xl3_queue_rw", (Function *)NULL, (char *)NULL },
+    { "read_bundle", (Function *)NULL, (char *)NULL },
+    { "mtc_read", (Function *)NULL, (char *)NULL },
+    { "mtc_write", (Function *)NULL, (char *)NULL },
+    { "set_mtca_thresholds", (Function *)NULL, (char *)NULL },
+    { "set_gt_mask", (Function *)NULL, (char *)NULL },
+    { "set_gt_crate_mask", (Function *)NULL, (char *)NULL },
+    { "set_ped_crate_mask", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };

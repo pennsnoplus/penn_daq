@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#include "db.h"
+#include "db_types.h"
+#include "packet_types.h"
 
 #define MAX_THREADS 20
 
@@ -26,7 +27,10 @@ FILE *ps_log_file; //!< log of anything that would go to viewer terminal
 int write_log; //!< flags whether to write to log or not
 int current_location; //!< Where penn_daq is running (for database use)
 
-int command_number; //!< Numbers cmd packets sent to xl3
+int command_number[19]; //!< Numbers cmd packets sent to xl3
+
+MultiFC multifc_buffer[19];
+int multifc_buffer_full[19];
 
 // configuration crap
 int NEED_TO_SWAP;
@@ -40,7 +44,6 @@ char DB_BASE_NAME[100];
 char DB_VIEWDOC[100];
 int MAX_PENDING_CONS;
 int XL3_PORT;
-int MAX_XL3_CON;
 int SBC_PORT;
 char SBC_USER[100];
 char SBC_SERVER[100];
@@ -48,8 +51,5 @@ int CONT_PORT;
 char CONT_CMD_ACK[100];
 char CONT_CMD_BSY[100];
 int VIEW_PORT;
-int XL3_MAX_PAYLOAD_SIZE;
-int XL3_HEADER_SIZE;
-int MAX_PACKET_SIZE;
 
 #endif

@@ -12,6 +12,8 @@
 
 #include "packet_types.h"
 #include "mtc_registers.h"
+#include "pouch.h"
+#include "json.h"
 
 #include "main.h"
 #include "net.h"
@@ -20,165 +22,285 @@
 #include "mtc_rw.h"
 #include "mtc_utils.h"
 
-int sbc_control(char *buffer)
+int load_mtca_dacs(float *voltages)
 {
-  sbc_control_t *args;
-  args = malloc(sizeof(sbc_control_t));
+  uint32_t shift_value;
+  uint16_t raw_dacs[14];
+  char dac_names[][14]={"N100LO","N100MED","N100HI","NHIT20","NH20LB","ESUMHI",
+    "ESUMLO","OWLEHI","OWLELO","OWLN","SPARE1","SPARE2",
+    "SPARE3","SPARE4"};
+  int i, j, bi, di;
+  float mV_dacs;
 
-  args->sbc_action = 0;
-  args->manual = 0;
-  strcpy(args->identity_file,DEFAULT_SSHKEY);
+  pt_printsend("Loading MTC/A threshold DACs...\n");
 
-  char *words,*words2;
-  words = strtok(buffer," ");
-  while (words != NULL){
-    if (words[0] == '-'){
-      if (words[1] == 'c'){
-        args->sbc_action = 0;
-      }else if (words[1] == 'r'){
-        args->sbc_action = 1;
-      }else if (words[1] == 'k'){
-        args->sbc_action = 2;
-      }else if (words[1] == 'i'){
-        words2 = strtok(NULL, " ");
-        strcpy(args->identity_file,words2);
-      }else if (words[1] == 'm'){
-        args->manual = 1;
-      }else if (words[1] == 'h'){
-        printsend("Usage: sbc_control -c (connect)|-k (kill)|-r (reconnect)"
-          "-i [identity file] -m (start OrcaReadout manually)\n");
-        free(args);
-        return 0;
-      }
+
+  /* convert each threshold from mVolts to raw value and load into
+     raw_dacs array */
+  for (i = 0; i < 14; i++) {
+    //raw_dacs[i] = ((2048 * rdbuf)/5000) + 2048;
+    raw_dacs[i] = MTCA_DAC_SLOPE * voltages[i] + MTCA_DAC_OFFSET;
+    mV_dacs = (((float)raw_dacs[i]/2048) * 5000.0) - 5000.0;
+    printsend( "\t%s\t threshold set to %6.2f mVolts\n", dac_names[i],
+        mV_dacs);
+  }
+
+  /* set DACSEL */
+  mtc_reg_write(MTCDacCntReg,DACSEL);
+
+  /* shift in raw DAC values */
+
+  for (i = 0; i < 4 ; i++) {
+    mtc_reg_write(MTCDacCntReg,DACSEL | DACCLK); /* shift in 0 to first 4 dummy bits */
+    mtc_reg_write(MTCDacCntReg,DACSEL);
+  }
+
+  shift_value = 0UL;
+  for (bi = 11; bi >= 0; bi--) {                     /* shift in 12 bit word for each DAC */
+    for (di = 0; di < 14 ; di++){
+      if (raw_dacs[di] & (1UL << bi))
+        shift_value |= (1UL << di);
+      else
+        shift_value &= ~(1UL << di);
     }
-    words = strtok(NULL, " ");
+    mtc_reg_write(MTCDacCntReg,shift_value | DACSEL);
+    mtc_reg_write(MTCDacCntReg,shift_value | DACSEL | DACCLK);
+    mtc_reg_write(MTCDacCntReg,shift_value | DACSEL);
   }
-  
-  // now check and see if everything needed is unlocked
-  if (sbc_lock){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  // spawn a thread to do it
-  sbc_lock = 1;
+  /* unset DASEL */
+  mtc_reg_write(MTCDacCntReg,0x0);
 
-  pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
-    free(args);
-    return -1;
-  }
 
-  args->thread_num = thread_num;
-
-  pthread_create(new_thread,NULL,pt_sbc_control,(void *)args);
-  return 0; 
+  pt_printsend("DAC loading complete\n");
+  return 0;
 }
 
-void *pt_sbc_control(void *args)
+
+
+void unset_gt_mask(uint32_t raw_trig_types)
 {
-  int thread_num = ((sbc_control_t *) args)->thread_num;
-  int sbc_action = ((sbc_control_t *) args)->sbc_action;
-  int manual = ((sbc_control_t *) args)->manual;
-  char identity_file[100];
-  strcpy(identity_file,((sbc_control_t *) args)->identity_file);
-  free(args);
+  uint32_t temp;
+  mtc_reg_read(MTCMaskReg, &temp);
+  mtc_reg_write(MTCMaskReg, temp & ~raw_trig_types);
+  //pt_printsend("Triggers have been removed from the GT Mask\n");
+}
 
-  char base_cmd[100];
-  if (strcmp(identity_file,"") != 0)
-    sprintf(base_cmd,"ssh %s@%s -i %s",SBC_USER,SBC_SERVER,identity_file);
-  else
-    sprintf(base_cmd,"ssh %s@%s",SBC_USER,SBC_SERVER);
+void set_gt_mask(uint32_t raw_trig_types)
+{
+  uint32_t temp;
+  mtc_reg_read(MTCMaskReg, &temp);
+  mtc_reg_write(MTCMaskReg, temp | raw_trig_types);
+  //pt_printsend("Triggers have been added to the GT Mask\n");
+}
 
-  pthread_mutex_lock(&main_fdset_lock);
-  // if killing or reconnecting, close socket and stop the service
-  if (sbc_action == 1 || sbc_action == 2){
-    if (rw_sbc_fd > 0){
-      close(rw_sbc_fd);
-      FD_CLR(rw_sbc_fd,&main_fdset);
-      rw_sbc_fd = -1;
-      sbc_connected = 0;
+void unset_ped_crate_mask(uint32_t crates)
+{
+  uint32_t temp;
+  mtc_reg_read(MTCPmskReg, &temp);
+  mtc_reg_write(MTCPmskReg, temp & ~crates);
+  //printsend("Crates have been removed from the Pedestal Crate Mask\n");
+}
+
+void set_ped_crate_mask(uint32_t crates)
+{
+  uint32_t temp;
+  mtc_reg_read(MTCPmskReg, &temp);
+  mtc_reg_write(MTCPmskReg, temp | crates);
+  //printsend("Crates have been added to the Pedestal Crate Mask\n");
+}
+
+void unset_gt_crate_mask(uint32_t crates)
+{
+  uint32_t temp;
+  mtc_reg_read(MTCGmskReg, &temp);
+  mtc_reg_write(MTCGmskReg, temp & ~crates);
+  //printsend("Crates have been removed from the GT Crate Mask\n");
+}
+
+void set_gt_crate_mask(uint32_t crates)
+{
+  uint32_t temp;
+  mtc_reg_read(MTCGmskReg, &temp);
+  mtc_reg_write(MTCGmskReg, temp | crates);
+  //printsend("Crates have been added to the GT Crate Mask\n");
+}
+
+int set_lockout_width(uint16_t width)
+{
+  uint32_t gtlock_value;
+  if ((width < 20) || (width > 5100)) {
+    pt_printsend("Lockout width out of range\n");
+    return -1;
+  }
+  gtlock_value = ~(width / 20);
+  uint32_t temp;
+  mtc_reg_write(MTCGtLockReg,gtlock_value);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp | LOAD_ENLK); /* write GTLOCK value */
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp & ~LOAD_ENLK); /* toggle load enable */
+  //pt_printsend( "Lockout width is set to %u ns\n", width);
+  return 0;
+}
+
+int set_gt_counter(uint32_t count)
+{
+  uint32_t shift_value;
+  short j;
+  uint32_t temp;
+
+  for (j = 23; j >= 0; j--){
+    shift_value = ((count >> j) & 0x01) == 1 ? SERDAT | SEN : SEN ;
+    mtc_reg_write(MTCSerialReg,shift_value);
+    mtc_reg_read(MTCSerialReg,&temp);
+    mtc_reg_write(MTCSerialReg,temp | SHFTCLKGT); /* clock in SERDAT */
+  }
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp | LOAD_ENGT); /* toggle load enable */
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp & ~LOAD_ENGT); /* toggle load enable */
+
+  pt_printsend("The GT counter has been loaded. It is now set to %d\n",(int) count);
+  return 0;
+}
+
+int set_prescale(uint16_t scale)
+{
+  uint32_t temp;
+  if (scale < 2) {
+    pt_printsend("Prescale value out of range\n");
+    return -1;
+  }
+  mtc_reg_write(MTCScaleReg,~(scale-1));
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp | LOAD_ENPR);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp & ~LOAD_ENPR); /* toggle load enable */
+  pt_printsend( "Prescaler set to %d NHIT_100_LO per PRESCALE\n", scale);
+  return 0;
+}     
+
+int set_pulser_frequency(float freq)
+{
+  uint32_t pulser_value, shift_value, prog_freq;
+  int16_t j;
+  uint32_t temp;
+
+  if (freq <= 1.0e-3) {                                /* SOFT_GTs as pulser */
+    pulser_value = 0;
+    pt_printsend("SOFT_GT is set to source the pulser\n");
+  }
+  else {
+    pulser_value = (uint32_t)((781250 / freq) - 1);   /* 50MHz counter as pulser */
+    prog_freq = (uint32_t)(781250/(pulser_value + 1));
+    if ((pulser_value < 1) || (pulser_value > 167772216)) {
+      pt_printsend( "Pulser frequency out of range\n", prog_freq);
+      return -1;
     }
-    char kill_cmd[500];
-    sprintf(kill_cmd,"%s /etc/rc.d/orcareadout stop",base_cmd);
-    pt_printsend("sbc_control: Stopping remote OrcaReadout process\n");
-    system(kill_cmd);
   }
 
-  // if connecting or reconnecting, do that now
-  if (sbc_action == 0 || sbc_action == 1)
-  {
-    printf("connecting or reconnecting\n");
-    pt_printsend("sbc_control: Connecting to the SBC\n");
-    if (rw_sbc_fd > 0){
-      pt_printsend("sbc_control: Already was connected (socket %d)\n",rw_sbc_fd);
-      pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
-      return;
-    }
-
-    if (manual == 0){
-      char start_cmd[500];
-      sprintf(start_cmd,"%s /etc/rc.d/orcareadout start",base_cmd);
-      pt_printsend("sbc_control: Starting remote OrcaReadout process\n");
-      system(start_cmd);
-    }
-
-    rw_sbc_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (rw_sbc_fd <= 0){
-      pt_printsend("sbc_control: Error opening a new socket\n");
-      pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
-      return;
-    }
-  
-    usleep(1000);
-
-    // we can connect, set up the address
-    struct sockaddr_in sbc_addr;
-    memset(&sbc_addr,'\0',sizeof(sbc_addr));
-    sbc_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, SBC_SERVER, &sbc_addr.sin_addr.s_addr);
-    sbc_addr.sin_port = htons(SBC_PORT);
-    // make the connection
-    if (connect(rw_sbc_fd,(struct sockaddr*) &sbc_addr,sizeof(sbc_addr))<0){
-      close(rw_sbc_fd);
-      FD_CLR(rw_sbc_fd,&main_fdset);
-      rw_sbc_fd = -1;
-      pt_printsend("sbc_control: Error connecting to SBC (errno %d)\n",errno);
-      pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
-      return;
-    }
-
-    FD_SET(rw_sbc_fd,&main_fdset);
-    if (rw_sbc_fd > fdmax)
-      fdmax = rw_sbc_fd;
-    // now send test word to OrcaReadout so it can
-    // determine endianness
-    int32_t test_word = 0x000DCBA;
-    int n = write(rw_sbc_fd,(char*)&test_word,4);
-    pt_printsend("sbc_connect: Connected to SBC\n");
-    sbc_connected = 1;
-  } // end if connecting or reconnecting
-
-  pthread_mutex_unlock(&main_fdset_lock);
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  for (j = 23; j >= 0; j--){
+    shift_value = ((pulser_value >> j) & 0x01) == 1 ? SERDAT|SEN : SEN; 
+    mtc_reg_write(MTCSerialReg,shift_value);
+    mtc_reg_read(MTCSerialReg,&temp);
+    mtc_reg_write(MTCSerialReg,temp | SHFTCLKPS); /* clock in SERDAT */
+  }
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp | LOAD_ENPS);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp & ~LOAD_ENPS); /* toggle load enable */
+  //pt_printsend( "Pulser frequency is set to %u Hz\n", prog_freq);
+  return 0;
 }
+
+int set_pedestal_width(uint16_t width)
+{
+  uint32_t temp, pwid_value;
+  if ((width < 5) || (width > 1275)) {
+    pt_printsend("Pedestal width out of range\n");
+    return -1;
+  }
+  pwid_value = ~(width / 5);
+
+  mtc_reg_write(MTCPedWidthReg,pwid_value);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp | LOAD_ENPW);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp & ~LOAD_ENPW);
+  //pt_printsend( "Pedestal width is set to %u ns\n", width);
+  return 0;
+}
+
+int set_coarse_delay(uint16_t delay)
+{
+  uint32_t temp, rtdel_value;
+
+  if ((delay < 10) || (delay > 2550)) {
+    pt_printsend("Coarse delay value out of range\n");
+    return -1;
+  } 
+  rtdel_value = ~(delay / 10);
+
+  mtc_reg_write(MTCCoarseDelayReg,rtdel_value);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp | LOAD_ENPW);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp & ~LOAD_ENPW);
+  //pt_printsend( "Coarse delay is set to %u ns\n", delay);
+  return 0;
+} 
+
+float set_fine_delay(float delay)
+{
+  uint32_t temp, addel_value;;
+  int result;
+  float addel_slope;   /* ADDEL value per ns of delay */
+  float fdelay_set;
+
+  // get up to date fine slope value
+  pouch_request *response = pr_init();
+  char get_db_address[500];
+  sprintf(get_db_address,"http://%s:%s/%s/MTC_doc",DB_ADDRESS,DB_PORT,DB_BASE_NAME);
+  pr_set_method(response, GET);
+  pr_set_url(response, get_db_address);
+  pr_do(response);
+  if (response->httpresponse != 200){
+    pt_printsend("Unable to connect to database. error code %d\n",(int)response->httpresponse);
+    pr_free(response);
+    return -1.0;
+  }
+  JsonNode *doc = json_decode(response->resp.data);
+  addel_slope = (float) json_get_number(json_find_member(json_find_member(doc,"mtcd"),"fine_slope")); 
+  addel_value = (uint32_t)(delay / addel_slope);
+  json_delete(doc);
+  pr_free(response);
+
+  if (addel_value > 255) {
+    pt_printsend("Fine delay value out of range\n");
+    return -1.0;
+  }
+
+  mtc_reg_write(MTCFineDelayReg,addel_value);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp | LOAD_ENPW);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg, temp & ~LOAD_ENPW);
+
+  fdelay_set = (float)addel_value*addel_slope;
+  //pt_printsend( "Fine delay is set to %f ns\n", fdelay_set);
+  return fdelay_set;
+}
+
+void reset_memory()
+{
+  uint32_t temp;
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp | FIFO_RESET);
+  mtc_reg_read(MTCControlReg,&temp);
+  mtc_reg_write(MTCControlReg,temp & ~FIFO_RESET);
+  mtc_reg_write(MTCBbaReg,0x0);  
+  pt_printsend("The FIFO control has been reset and the BBA register has been cleared\n");
+} 
 
 int mtc_xilinx_load()
 {
@@ -201,7 +323,7 @@ int mtc_xilinx_load()
   packet = malloc(sizeof(SBC_Packet));
 
   packet->cmdHeader.destination = 0x3;
-  packet->cmdHeader.cmdID = 0x1;
+  packet->cmdHeader.cmdID = MTC_XILINX_ID;
   packet->cmdHeader.numberBytesinPayload = sizeof(SNOMtc_XilinxLoadStruct) + howManybits;
   packet->numBytes = packet->cmdHeader.numberBytesinPayload+256+16;
   SNOMtc_XilinxLoadStruct *payloadPtr = (SNOMtc_XilinxLoadStruct *)packet->payload;
@@ -212,16 +334,21 @@ int mtc_xilinx_load()
   payloadPtr->fileSize = howManybits;
   char *p = (char *)payloadPtr + sizeof(SNOMtc_XilinxLoadStruct);
   strncpy(p, data, howManybits);
-  
-  do_mtc_xilinx_cmd(packet);
-  long errorCode = payloadPtr->errorCode;
-  if (errorCode){
-    pt_printsend( "Error code: %d \n",(int)errorCode);
-  }
-  pt_printsend("Xilinx loading complete\n");
-
   free(data);
   data = (char *) NULL;
+
+  int errors = do_mtc_xilinx_cmd(packet);
+  long errorCode = payloadPtr->errorCode;
+  if (errorCode){
+    pt_printsend("Error code: %d \n",(int)errorCode);
+    pt_printsend("Failed to load xilinx!\n");  
+    return -5;
+  }else if (errors < 0){
+    pt_printsend("Failed to load xilinx!\n");  
+    return errors;
+  }
+
+  pt_printsend("Xilinx loading complete\n");
   return 0;
 }
 
@@ -249,7 +376,7 @@ static char* getXilinxData(long *howManyBits)
      }
      while (( (c = getc(fp))  != EOF ) && ( c != '/'))
      ;
-     */
+   */
   /* get real data now. */
   *howManyBits = 0;
   while (( (data[*howManyBits] = getc(fp)) != EOF)

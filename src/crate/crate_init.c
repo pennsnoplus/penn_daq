@@ -99,7 +99,8 @@ void *pt_crate_init(void *args)
   char ctc_address[500];
   hware_vals_t *hware_flip;
   XL3_Packet packet;
-  uint32_t *mb_num = (uint32_t *) packet.payload;
+  crate_init_args_t *packet_args = (crate_init_args_t *) packet.payload;
+  crate_init_results_t *packet_results = (crate_init_results_t *) packet.payload;;
 
   pt_printsend("Initializing crate %d, slots %08x, xl: %d, hv: %d\n",
       arg.crate_num,arg.slot_mask,arg.xilinx_load,arg.hv_reset);
@@ -307,7 +308,7 @@ void *pt_crate_init(void *args)
     // SEND THE DATABASE TO XL3s //
     ///////////////////////////////
 
-    *mb_num = i;
+    packet_args->mb_num = i;
 
     SwapLongBlock(&(packet.payload),1);	
     swap_fec_db(mb_consts);
@@ -338,27 +339,19 @@ void *pt_crate_init(void *args)
   pt_printsend("Beginning crate_init.\n");
 
   packet.cmdHeader.packet_type = CRATE_INIT_ID;
-  *mb_num = 666;
+  packet_args->mb_num = 666;
+  packet_args->xilinx_load = arg.xilinx_load;
+  packet_args->hv_reset = arg.hv_reset;
+  packet_args->slot_mask = arg.slot_mask;
+  packet_args->ctc_delay = ctc_delay;
+  packet_args->shift_reg_only = arg.shift_reg_only;
 
-  uint32_t *p;
-  p = (uint32_t *) (packet.payload+4);
-  *p = arg.xilinx_load;
-  p++;
-  *p = arg.hv_reset;
-  p++;
-  *p = arg.slot_mask;
-  p++;
-  *p = ctc_delay;
-  p++;
-  *p = arg.shift_reg_only;
-
-  SwapLongBlock(&(packet.payload),5);
+  SwapLongBlock(&(packet.payload),sizeof(crate_init_args_t)/sizeof(uint32_t));
 
   do_xl3_cmd(&packet,arg.crate_num); 
 
   // NOW PROCESS RESULTS AND POST TO DB
-  hware_flip = (hware_vals_t *) (packet.payload+4);
-
+  hware_flip = &(packet_results->hware_vals);
   for (i=0;i<16;i++){
     SwapShortBlock(&(hware_flip->mb_id),1);
     SwapShortBlock(&(hware_flip->dc_id),4);
