@@ -2,21 +2,21 @@ IDIR = include
 ODIR = build
 CDIR = src
 BDIR = bin
-CC = gcc -g
+CC = gcc
 #CFLAGS = -I$(IDIR)
 CFLAGS = $(patsubst %,-I%,$(CDIRS))
 LIBS = -lcurl -lpthread
 
-_CDIRS = core utils db net crate xl3 fec mtc tut
+_CDIRS = core utils db net crate xl3 fec mtc tut tests
 CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))
 
 vpath %.h $(CDIRS)
 vpath %.c $(CDIRS)
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o db.o net.o process_packet.o mtc_init.o mtc_rw.o
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o mtc_cmds.o db.o net.o process_packet.o mtc_init.o mtc_rw.o fec_test.o xl3_cmds.o fec_cmds.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h mtc_registers.h
+_DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h mtc_registers.h xl3_registers.h unpack_bundles.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 #$(ODIR)/%.o: %.c $(DEPS)
@@ -38,4 +38,4 @@ tut:
     
 clean: 
 	rm -f $(ODIR)/*.o core $(BDIR)/*
-	#rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*
+#rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*
