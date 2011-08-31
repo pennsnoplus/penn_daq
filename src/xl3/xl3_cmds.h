@@ -33,4 +33,10 @@ typedef struct{
   uint16_t davail_mask; 
 } cmd_change_mode_t;
 
+typedef struct{
+  int thread_num;
+  int crate_num;
+  int onoff;
+} debugging_mode_t;
+
 #endif

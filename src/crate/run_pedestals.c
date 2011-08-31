@@ -137,63 +137,14 @@ int run_pedestals(char *buffer, int mtc, int crate)
     }
     words = strtok(NULL, " ");
   }
-  /*
 
-  // now check and see if everything needed is unlocked
-  if (crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & args->crate_mask)
-        if (xl3_lock[i] != 0){
-          // one of our xl3s is locked, we cant do this right now
-          free(args);
-          return -1;  
-        }
-  if (mtc)
-    if (sbc_lock != 0){
-      // sbc is not free, we cant do this right now
-      free(args);
-      return -1;
-    } 
-
-  // check that all the xl3s we are attempting are connected
-  if (crate)
-    for (i=0;i<10;i++)
-      if ((0x1<<i) & args->crate_mask)
-        if (rw_xl3_fd[i] <= 0){
-          pt_printsend("XL3 #%d is not connected. Exiting!\n",i);
-          free(args);
-          return -1;
-        }
-
-  // make sure we can get a thread
+  if (crate == 0)
+    args->crate_mask = 0x0;
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
-    free(args);
+  int thread_num = thread_and_lock(mtc,args->crate_mask,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
-
-  // since they are all free, and we have a thread, lock em up
-  if (crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & args->crate_mask)
-        xl3_lock[i] = 1;
-  if (mtc)
-    sbc_lock = 1;
-*/
-  pthread_t *new_thread;
-  int thread_num = thread_and_lock(1,args->crate_mask,new_thread);
-  if (thread_num < 0)
-    return -1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_run_pedestals,(void *)args);
@@ -260,7 +211,7 @@ void *pt_run_pedestals(void *args)
   // now set up pedestals on mtc
   if (arg.mtc){
     errors = setup_pedestals(arg.frequency,arg.ped_width,arg.gtdelay,DEFAULT_GT_FINE_DELAY,
-          MASKALL,MASKALL);
+        MASKALL,MASKALL);
     //    arg.crate_mask | MSK_TUB, arg.crate_mask | MSK_TUB);
     if (errors != 0){
       pt_printsend("run_pedestals: Error setting up MTC. Exiting\n");
@@ -328,47 +279,14 @@ int run_pedestals_end(char *buffer, int mtc, int crate)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  int i;
-  if (crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & args->crate_mask)
-        if (xl3_lock[i] != 0){
-          // one of our xl3s is locked, we cant do this right now
-          free(args);
-          return -1;  
-        }
-  if (mtc)
-    if (sbc_lock != 0){
-      // sbc is not free, we cant do this right now
-      free(args);
-      return -1;
-    } 
-
-  // make sure we can get a thread
+  if (crate == 0)
+    args->crate_mask = 0x0;
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(mtc,args->crate_mask,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // since they are all free, and we have a thread, lock em up
-  if (crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & args->crate_mask)
-        xl3_lock[i] = 1;
-  if (mtc)
-    sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_run_pedestals_end,(void *)args);

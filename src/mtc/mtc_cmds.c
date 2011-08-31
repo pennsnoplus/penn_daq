@@ -55,32 +55,12 @@ int sbc_control(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(2,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
 
@@ -207,31 +187,9 @@ int mtc_read(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
@@ -287,37 +245,12 @@ int mtc_write(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_mtc_write,(void *)args);
@@ -409,37 +342,12 @@ int set_mtca_thresholds(char *buffer)
   for (i=0;i<14;i++)
     args->dac_voltages[i] *= 1000;
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-  
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_set_mtca_thresholds,(void *)args);
@@ -485,37 +393,12 @@ int cmd_set_gt_mask(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    pt_printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    pt_printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_gt_mask,(void *)args);
@@ -564,37 +447,12 @@ int cmd_set_gt_crate_mask(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    pt_printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    pt_printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_gt_crate_mask,(void *)args);
@@ -643,37 +501,12 @@ int cmd_set_ped_crate_mask(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (sbc_connected == 0){
-    pt_printsend("SBC is not connected! Aborting\n");
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    pt_printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_set_ped_crate_mask,(void *)args);
@@ -709,34 +542,11 @@ int cmd_enable_pulser(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   int *args = malloc(sizeof(int));
   *args = thread_num;
@@ -768,34 +578,11 @@ int cmd_disable_pulser(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   int *args = malloc(sizeof(int));
   *args = thread_num;
@@ -827,34 +614,11 @@ int cmd_enable_pedestal(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   int *args = malloc(sizeof(int));
   *args = thread_num;
@@ -886,34 +650,11 @@ int cmd_disable_pedestal(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   int *args = malloc(sizeof(int));
   *args = thread_num;
@@ -951,34 +692,12 @@ int set_pulser_freq(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
+    free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  sbc_lock = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_set_pulser_freq,(void *)args);

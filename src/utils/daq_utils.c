@@ -8,14 +8,14 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
-int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t *new_thread)
+int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
 {
   if (sbc){
     if (sbc_lock != 0){
       // locked, cant do this right now
       return -1;
     }
-    if (sbc_connected == 0){
+    if (sbc_connected == 0 && sbc != 2){
       pt_printsend("SBC is not connected. Exiting!\n");
       return -2;
     }
@@ -34,11 +34,11 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t *new_thread)
     }
 
   // nothings locked, so lets try spawning a thread
-  new_thread = malloc(sizeof(pthread_t));
+  *new_thread = malloc(sizeof(pthread_t));
   int thread_num = -5;
   for (i=0;i<MAX_THREADS;i++){
     if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
+      thread_pool[i] = *new_thread;
       thread_num = i;
       break;
     }

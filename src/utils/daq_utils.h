@@ -5,7 +5,7 @@
 
 #define CONFIG_FILE_LOC "data/config.cfg"
 
-int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t *new_thread);
+int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread);
 int set_location(char *buffer); //!< Changes the global location variable, which is used when posting to debug database
 int start_logging(); //!< Starts printing anything that would go to viewer terminal to a file
 int stop_logging(); //!< Stops printing to log file

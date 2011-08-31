@@ -36,37 +36,12 @@ int sm_reset(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (xl3_connected[args->crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-  
-  // we have a thread, so lock it
-  xl3_lock[args->crate_num] = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_sm_reset,(void *)args);
@@ -124,37 +99,12 @@ int cmd_xl3_rw(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (xl3_connected[args->crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread, so lock it now
-  xl3_lock[args->crate_num] = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_xl3_rw,(void *)args);
@@ -215,37 +165,12 @@ int xl3_queue_rw(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (xl3_connected[args->crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  xl3_lock[args->crate_num] = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_xl3_queue_rw,(void *)args);
@@ -297,7 +222,11 @@ void *pt_xl3_queue_rw(void *args)
 
 int debugging_mode(char *buffer, int onoff)
 {
-  int crate_num = 2;
+  debugging_mode_t *args;
+  args = malloc(sizeof(debugging_mode_t));
+
+  args->crate_num = 2;
+  args->onoff = onoff;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -305,7 +234,7 @@ int debugging_mode(char *buffer, int onoff)
     if (words[0] == '-'){
       if (words[1] == 'c'){
         if ((words2 = strtok(NULL," ")) != NULL)
-          crate_num = atoi(words2);
+          args->crate_num = atoi(words2);
       }else if (words[1] == 'h'){
         printsend("Usage: debugging_on/off -c [crate num (int)]\n");
         return 0;
@@ -314,40 +243,14 @@ int debugging_mode(char *buffer, int onoff)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (xl3_connected[crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",crate_num);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
     return -1;
   }
 
-  // we have a thread so lock it
-  xl3_lock[crate_num] = 1;
-
-  uint32_t *args;
-  args = malloc(3*sizeof(uint32_t));
-  args[0] = (uint32_t) thread_num;
-  args[1] = (uint32_t) crate_num;
-  args[2] = (uint32_t) onoff;
+  args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_debugging_mode,(void *)args);
   return 0; 
 }
@@ -412,34 +315,12 @@ int cmd_change_mode(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    return -1;
-  }
-  if (xl3_connected[args->crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  xl3_lock[args->crate_num] = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_cmd_change_mode,(void *)args);

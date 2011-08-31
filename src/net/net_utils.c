@@ -38,7 +38,7 @@ int print_connected()
   }
   for (i=0;i<MAX_XL3_CON;i++){
     if (xl3_connected[i]){
-      printsend("\t XL3 #%d (socket: %d)\n",rw_xl3_fd[i]);
+      printsend("\t XL3 #%d (socket: %d)\n",i,rw_xl3_fd[i]);
       y++;
     }
   }
