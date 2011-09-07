@@ -18,6 +18,8 @@ int do_mtc_cmd(SBC_Packet *packet)
     pt_printsend("do_mtc_cmd: not connected to the MTC/SBC\n");
     return -1;
   }
+  packet->numBytes = packet->cmdHeader.numberBytesinPayload + sizeof(uint32_t) +
+    sizeof(SBC_CommandHeader) + kSBC_MaxMessageSizeBytes;
   int32_t numBytesToSend = packet->numBytes;
   int n = write(rw_sbc_fd,(char *)packet,numBytesToSend);
   if (n < 0) {
@@ -41,7 +43,7 @@ int do_mtc_cmd(SBC_Packet *packet)
     return -3;
   }
 
-  n = recv(rw_sbc_fd,(char *)packet,1500, 0 ); // 1500 should be?
+  n = recv(rw_sbc_fd,(char *)packet,numBytesToSend, 0 ); // 1500 should be?
   if (n < 0){
     pt_printsend("do_mtc_cmd: Error receiving data from sbc. Closing connection.\n");
     pthread_mutex_lock(&main_fdset_lock);
@@ -132,8 +134,9 @@ int mtc_reg_write(uint32_t address, uint32_t data)
   packet = malloc(sizeof(SBC_Packet));
   packet->cmdHeader.destination = 0x1;
   packet->cmdHeader.cmdID = MTC_WRITE_ID;
-  packet->cmdHeader.numberBytesinPayload  = 256+28;
-  packet->numBytes = 256+28+16;
+  packet->cmdHeader.numberBytesinPayload  = sizeof(SBC_VmeWriteBlockStruct)+sizeof(uint32_t);
+  //packet->cmdHeader.numberBytesinPayload  = 256+28;
+  //packet->numBytes = 256+28+16;
   SBC_VmeWriteBlockStruct *writestruct;
   writestruct = (SBC_VmeWriteBlockStruct *) packet->payload;
   writestruct->address = address + MTCRegAddressBase;
@@ -158,8 +161,8 @@ int mtc_reg_read(uint32_t address, uint32_t *data)
   uint32_t *result;
   packet->cmdHeader.destination = 0x1;
   packet->cmdHeader.cmdID = MTC_READ_ID;
-  packet->cmdHeader.numberBytesinPayload = 256+27;
-  packet->numBytes = 256+27+16;
+  packet->cmdHeader.numberBytesinPayload = sizeof(SBC_VmeReadBlockStruct)+sizeof(uint32_t);
+  //packet->numBytes = 256+27+16;
   SBC_VmeReadBlockStruct *readstruct;
   readstruct = (SBC_VmeReadBlockStruct *) packet->payload;
   readstruct->address = address + MTCRegAddressBase;

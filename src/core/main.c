@@ -7,6 +7,7 @@
 #include "pouch.h"
 #include "packet_types.h"
 
+#include "process_packet.h"
 #include "daq_utils.h"
 #include "net.h"
 #include "net_utils.h"
@@ -17,8 +18,14 @@ int main(int argc, char *argv[])
   // set up a signal handler to handle ctrl-C
   (void) signal(SIGINT, sigint_func);
 
-  current_location = 0;
+  CURRENT_LOCATION = 0;
   write_log = 0;
+  start_time = 0;
+  end_time = 0;
+  last_print_time = 0;
+  megabundle_count = 0;
+  recv_bytes = 0;
+  recv_fake_bytes = 0;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;
@@ -65,13 +72,13 @@ int main(int argc, char *argv[])
         exit(0);
         break;
       case 'p':
-        current_location = 2;
+        CURRENT_LOCATION = 2;
         break;
       case 'a':
-        current_location = 0;
+        CURRENT_LOCATION = 0;
         break;
       case 'u':
-        current_location = 1;
+        CURRENT_LOCATION = 1;
         break;
       case '?':
         /* getopt_long already printed an error message. */
@@ -96,7 +103,7 @@ int main(int argc, char *argv[])
   }
   pr_free(pr);
 
-  printsend("current location is %d\n",current_location);
+  printsend("current location is %d\n",CURRENT_LOCATION);
 
   // set up sockets to listen for new connections
   setup_sockets();

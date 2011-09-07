@@ -74,11 +74,14 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
           }
 
           SwapShortBlock(&(packet->cmdHeader.packet_num),1);
-          // if its a message we'll print it out and loop around again
           if (packet->cmdHeader.packet_type == MESSAGE_ID){
             pt_printsend("%s",packet->payload);
           }else if (packet->cmdHeader.packet_type == MEGA_BUNDLE_ID){
             //store_mega_bundle();
+          }else if (packet->cmdHeader.packet_type == SCREWED_ID){
+            //handle_screwed_packet();
+          }else if (packet->cmdHeader.packet_type == ERROR_ID){
+            //handle_error_packet();
           }else if (packet->cmdHeader.packet_type == PING_ID){
             packet->cmdHeader.packet_type = PONG_ID;
             n = write(rw_xl3_fd[i],(char *)packet,MAX_PACKET_SIZE);
@@ -135,7 +138,7 @@ int xl3_rw(uint32_t address, uint32_t data, uint32_t *result, int crate_num, fd_
   packet.cmdHeader.packet_type = FAST_CMD_ID;
   FECCommand *command;
   command = (FECCommand *) packet.payload;
-  command->flags = 0x0;
+  command->flags = 0x99;
   command->cmd_num = 0x0;
   command->packet_num = 0x0;
   command->address = address;
@@ -145,7 +148,7 @@ int xl3_rw(uint32_t address, uint32_t data, uint32_t *result, int crate_num, fd_
   do_xl3_cmd(&packet, crate_num, thread_fdset);
   *result = command->data;
   SwapLongBlock(result,1);
-  return command->flags;
+  return (int) command->flags;
 }
 
 int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t *buffer, fd_set *thread_fdset)
@@ -229,9 +232,14 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
           }
 
           SwapShortBlock(&(packet.cmdHeader.packet_num),1);
-          // if its a message we'll print it out and loop around again
           if (packet.cmdHeader.packet_type == MESSAGE_ID){
             pt_printsend("%s",packet.payload);
+          }else if (packet.cmdHeader.packet_type == MEGA_BUNDLE_ID){
+            //store_mega_bundle();
+          }else if (packet.cmdHeader.packet_type == SCREWED_ID){
+            //handle_screwed_packet();
+          }else if (packet.cmdHeader.packet_type == ERROR_ID){
+            //handle_error_packet();
           }else if (packet.cmdHeader.packet_type == PING_ID){
             packet.cmdHeader.packet_type = PONG_ID;
             n = write(rw_xl3_fd[i],(char *)&packet,MAX_PACKET_SIZE);
@@ -239,8 +247,6 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
               pt_printsend("wait_for_multifc_results: Error writing to socket for pong.\n");
               return -1;
             }
-          }else if (packet.cmdHeader.packet_type == MEGA_BUNDLE_ID){
-            //store_mega_bundle();
           }else if (i == xl3num){
             if (packet.cmdHeader.packet_type == CMD_ACK_ID){
               // read in cmds and add to buffer, then loop again unless read in num_cmds cmds

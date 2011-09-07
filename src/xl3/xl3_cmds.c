@@ -125,7 +125,7 @@ void *pt_cmd_xl3_rw(void *args)
   if (errors == 0)
     pt_printsend( "result was %08x\n",result);
   else 
-    pt_printsend("there was a bus error!\n");
+    pt_printsend("there was a bus error! %d\n",errors);
 
   xl3_lock[arg.crate_num] = 0;
   thread_done[arg.thread_num] = 1;

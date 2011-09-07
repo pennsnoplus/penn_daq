@@ -25,7 +25,6 @@ hware_vals_t crate_config[19][16]; //!< contains the most up to date crate confi
 
 FILE *ps_log_file; //!< log of anything that would go to viewer terminal
 int write_log; //!< flags whether to write to log or not
-int current_location; //!< Where penn_daq is running (for database use)
 
 int command_number[19]; //!< Numbers cmd packets sent to xl3
 
@@ -51,5 +50,7 @@ int CONT_PORT;
 char CONT_CMD_ACK[100];
 char CONT_CMD_BSY[100];
 int VIEW_PORT;
+int BUNDLE_PRINT;
+int CURRENT_LOCATION;
 
 #endif

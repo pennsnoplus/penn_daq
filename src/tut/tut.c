@@ -61,6 +61,7 @@ COMMAND commands[] = {
     { "start_logging", (Function *)NULL, (char *)NULL },
     { "sbc_control", (Function *)NULL, (char *)NULL },
     { "clear_screen", (Function *)NULL, (char *)NULL },
+    { "reset_speed", (Function *)NULL, (char *)NULL },
     { "debugging_on", (Function *)NULL, (char *)NULL },
     { "debugging_off", (Function *)NULL, (char *)NULL },
     { "change_mode", (Function *)NULL, (char *)NULL },
@@ -88,6 +89,10 @@ COMMAND commands[] = {
     { "enable_pedestal", (Function *)NULL, (char *)NULL },
     { "disable_pedestal", (Function *)NULL, (char *)NULL },
     { "set_pulser_freq", (Function *)NULL, (char *)NULL },
+    { "send_softgt", (Function *)NULL, (char *)NULL },
+    { "multi_softgt", (Function *)NULL, (char *)NULL },
+    { "trigger_scan", (Function *)NULL, (char *)NULL },
+    { "mem_test", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };

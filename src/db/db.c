@@ -232,7 +232,7 @@ int post_debug_doc(int crate, int card, JsonNode* doc)
     json_append_member(doc,"slot",json_mkstring(hv_ids));
     json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
     json_append_member(doc,"datetime",json_mkstring(datetime));
-    json_append_member(doc,"location",json_mknumber((double)current_location));
+    json_append_member(doc,"location",json_mknumber((double)CURRENT_LOCATION));
     // TODO: this might be leaking a lot...
     sprintf(put_db_address,"http://%s:%s/%s",DB_ADDRESS,DB_PORT,DB_BASE_NAME);
     pouch_request *post_response = pr_init();
@@ -279,7 +279,7 @@ int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc)
     json_append_member(doc,"slot",json_mkstring(hv_ids));
     json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
     json_append_member(doc,"datetime",json_mkstring(datetime));
-    json_append_member(doc,"location",json_mknumber((double)current_location));
+    json_append_member(doc,"location",json_mknumber((double)CURRENT_LOCATION));
 
     sprintf(put_db_address,"http://%s:%s/%s/%s",DB_ADDRESS,DB_PORT,DB_BASE_NAME,id);
     pouch_request *post_response = pr_init();

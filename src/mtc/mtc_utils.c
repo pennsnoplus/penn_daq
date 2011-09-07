@@ -22,6 +22,36 @@
 #include "mtc_rw.h"
 #include "mtc_utils.h"
 
+int send_softgt()
+{
+  mtc_reg_write(MTCSoftGTReg,0x0);
+  return 0;
+}
+
+int multi_softgt(int number)
+{
+  SBC_Packet *packet;
+  packet = malloc(sizeof(SBC_Packet));
+  packet->cmdHeader.destination = 0x3;
+  packet->cmdHeader.cmdID = 0x5;
+  packet->cmdHeader.numberBytesinPayload  = sizeof(SBC_VmeWriteBlockStruct) + sizeof(uint32_t);
+  //packet->numBytes = 256+28+16;
+  SBC_VmeWriteBlockStruct *writestruct;
+  writestruct = (SBC_VmeWriteBlockStruct *) packet->payload;
+  writestruct->address = MTCSoftGTReg + MTCRegAddressBase;
+  writestruct->addressModifier = MTCRegAddressMod;
+  writestruct->addressSpace = MTCRegAddressSpace;
+  writestruct->unitSize = 4;
+  writestruct->numItems = number;
+  writestruct++;
+  uint32_t *data_ptr = (uint32_t *) writestruct;
+  *data_ptr = 0x0;
+  do_mtc_cmd(packet);
+  free(packet);
+
+
+}
+
 int setup_pedestals(float pulser_freq, uint32_t ped_width, 	uint32_t coarse_delay,
     uint32_t fine_delay, uint32_t ped_crate_mask, uint32_t gt_crate_mask)
 {
@@ -81,30 +111,22 @@ void disable_pedestal()
     //pt_printsend("Pedestals disabled\n");
 }
 
-int load_mtca_dacs(float *voltages)
+int load_mtca_dacs_by_counts(uint16_t *raw_dacs)
 {
-  uint32_t shift_value;
-  uint16_t raw_dacs[14];
   char dac_names[][14]={"N100LO","N100MED","N100HI","NHIT20","NH20LB","ESUMHI",
     "ESUMLO","OWLEHI","OWLELO","OWLN","SPARE1","SPARE2",
     "SPARE3","SPARE4"};
   int i, j, bi, di;
   float mV_dacs;
+  uint32_t shift_value;
 
-  pt_printsend("Loading MTC/A threshold DACs...\n");
-
-
-  /* convert each threshold from mVolts to raw value and load into
-     raw_dacs array */
-  for (i = 0; i < 14; i++) {
-    //raw_dacs[i] = ((2048 * rdbuf)/5000) + 2048;
-    raw_dacs[i] = MTCA_DAC_SLOPE * voltages[i] + MTCA_DAC_OFFSET;
-    mV_dacs = (((float)raw_dacs[i]/2048) * 5000.0) - 5000.0;
-    printsend( "\t%s\t threshold set to %6.2f mVolts\n", dac_names[i],
+  for (i=0;i<14;i++){
+    float mV_dacs = (((float)raw_dacs[i]/2048) * 5000.0) - 5000.0;
+    pt_printsend( "\t%s\t threshold set to %6.2f mVolts\n", dac_names[i],
         mV_dacs);
   }
 
-  /* set DACSEL */
+   /* set DACSEL */
   mtc_reg_write(MTCDacCntReg,DACSEL);
 
   /* shift in raw DAC values */
@@ -128,8 +150,25 @@ int load_mtca_dacs(float *voltages)
   }
   /* unset DASEL */
   mtc_reg_write(MTCDacCntReg,0x0);
+  return 0;
+}
+
+int load_mtca_dacs(float *voltages)
+{
+  uint16_t raw_dacs[14];
+  int i;
+    pt_printsend("Loading MTC/A threshold DACs...\n");
 
 
+  /* convert each threshold from mVolts to raw value and load into
+     raw_dacs array */
+  for (i = 0; i < 14; i++) {
+    //raw_dacs[i] = ((2048 * rdbuf)/5000) + 2048;
+    raw_dacs[i] = MTCA_DAC_SLOPE * voltages[i] + MTCA_DAC_OFFSET;
+  }
+
+  load_mtca_dacs_by_counts(raw_dacs);
+ 
   pt_printsend("DAC loading complete\n");
   return 0;
 }
@@ -401,12 +440,15 @@ int mtc_xilinx_load()
   if (errorCode){
     pt_printsend("Error code: %d \n",(int)errorCode);
     pt_printsend("Failed to load xilinx!\n");  
+    free(packet);
     return -5;
   }else if (errors < 0){
     pt_printsend("Failed to load xilinx!\n");  
+    free(packet);
     return errors;
   }
 
+  free(packet);
   pt_printsend("Xilinx loading complete\n");
   return 0;
 }

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,6 +25,8 @@
 #include "net_utils.h"
 #include "net.h"
 #include "fec_test.h"
+#include "mem_test.h"
+#include "trigger_scan.h"
 #include "process_packet.h"
 
 int read_xl3_packet(int fd)
@@ -41,7 +44,10 @@ int read_xl3_packet(int fd)
   int numbytes = recv(fd, buffer, MAX_PACKET_SIZE, 0);
   // check if theres any errors or an EOF packet
   if (numbytes < 0){
-    printsend("Error receiving data from XL3 #%d\n",crate);
+    printsend("Error receiving data from XL3 #%d (got %d). Error code %d\n",crate,numbytes,errno);
+    if (errno == 54){
+      printsend("XL3 probably restarted, closing the connection on socket %d and waiting to reconnect.\n",fd);
+    }
     pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&xl3_fdset);
     FD_CLR(fd,&main_fdset);
@@ -51,7 +57,7 @@ int read_xl3_packet(int fd)
     rw_xl3_fd[crate] = -1;
     return -1;
   }else if (numbytes == 0){
-    printsend("Got a zero byte packet, Closing XL3 #%d\n",crate);
+    printsend("Got a zero byte packet, Closing XL3 #%d on socket %d\n",crate,fd);
     pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(fd,&xl3_fdset);
     FD_CLR(fd,&main_fdset);
@@ -165,6 +171,8 @@ int process_control_command(char *buffer)
   }else if (strncmp(buffer,"clear_screen",12)==0){
     system("clear");
     pt_printsend("Cleared screen\n");
+  }else if (strncmp(buffer,"reset_speed",11)==0){
+    result = reset_speed();
   }else if (strncmp(buffer,"debugging_on",12)==0){
     result = debugging_mode(buffer,1);
   }else if (strncmp(buffer,"debugging_off",13)==0){
@@ -219,6 +227,14 @@ int process_control_command(char *buffer)
     result = cmd_disable_pedestal(buffer);
   }else if (strncmp(buffer,"set_pulser_freq",14)==0){
     result = set_pulser_freq(buffer);
+  }else if (strncmp(buffer,"send_softgt",11)==0){
+    result = cmd_send_softgt(buffer);
+  }else if (strncmp(buffer,"multi_softgt",12)==0){
+    result = cmd_multi_softgt(buffer);
+  }else if (strncmp(buffer,"trigger_scan",12)==0){
+    result = trigger_scan(buffer);
+  }else if (strncmp(buffer,"mem_test",8)==0){
+    result = mem_test(buffer);
   }
   //_!_end_commands_!_
   else
@@ -230,17 +246,25 @@ int process_xl3_packet(char *buffer, int xl3num)
 {
   XL3_Packet *packet = (XL3_Packet *) buffer;
   SwapShortBlock(&(packet->cmdHeader.packet_num),1);
-  // if its a message we'll print it out and loop around again
   if (packet->cmdHeader.packet_type == MESSAGE_ID){
     pt_printsend("%s",packet->payload);
   }else if (packet->cmdHeader.packet_type == MEGA_BUNDLE_ID){
-    //store_mega_bundle();
+    store_mega_bundle();
+  }else if (packet->cmdHeader.packet_type == SCREWED_ID){
+    printf("got a screwed packet\n"); //FIXME
+    //handle_screwed_packet();
+  }else if (packet->cmdHeader.packet_type == ERROR_ID){
+    printf("got an error packet: number %d\n",packet->cmdHeader.packet_num); //FIXME
+    //handle_error_packet();
   }else if (packet->cmdHeader.packet_type == PING_ID){
+    printf("got ping\n");
     packet->cmdHeader.packet_type = PONG_ID;
     int n = write(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE);
     if (n < 0){
       pt_printsend("process_xl3_packet: Error writing to socket for pong.\n");
       return -1;
+    }else{
+      printf("sent pong\n");
     }
   }else{
     // got the wrong type of ack packet
@@ -249,3 +273,35 @@ int process_xl3_packet(char *buffer, int xl3num)
   return 0;
 }
 
+int store_mega_bundle(XL3_Packet *packet)
+{
+  struct timeval start,end;
+  if (megabundle_count == 0){
+    gettimeofday(&start,0);
+    start_time = start.tv_sec*1000000 + start.tv_usec;
+    recv_bytes = 0;
+    recv_fake_bytes = 0;
+  }
+  gettimeofday(&end,0);
+  end_time = end.tv_sec*1000000 + end.tv_usec;
+  long int avg_dt = end_time - start_time;
+  megabundle_count++;
+  int num_bundles = packet->cmdHeader.num_bundles;
+  recv_bytes += num_bundles*12;
+  recv_fake_bytes += (120-num_bundles)*12;
+  if (megabundle_count%BUNDLE_PRINT == 0){
+    long int inst_dt = end_time - last_print_time;
+    last_print_time = end_time;
+    pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
+        (float) (recv_bytes*8/(float)avg_dt),
+        (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
+        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
+//    pt_printsend("recv %i \t %i \t %i \t %i \t average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
+//        megabundle_count,num_bundles,(int) recv_bytes, (int) avg_dt,
+//        (float) (recv_bytes*8/(float)avg_dt),
+//        (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
+//        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
+    recv_fake_bytes = 0;
+  }
+  return 0;
+}

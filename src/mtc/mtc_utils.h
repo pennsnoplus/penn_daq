@@ -4,11 +4,14 @@
 #define __MTC_UTILS_H
 
 #include "mtc_registers.h"
+int soft_gt();
+int multi_softgt(int number);
 
 int setup_pedestals(float pulser_freq, uint32_t ped_width, 	uint32_t coarse_delay,
     uint32_t fine_delay, uint32_t ped_crate_mask, uint32_t gt_crate_mask);
 int mtc_xilinx_load();
 static char* getXilinxData(long *howManyBits);
+int load_mtca_dacs_by_counts(uint16_t *raw_dacs);
 int load_mtca_dacs(float *voltages);
 int set_lockout_width(uint16_t width);
 int set_gt_counter(uint32_t count);

@@ -27,6 +27,10 @@ int cmd_disable_pedestal(char *buffer);
 void *pt_cmd_disable_pedestal(void *args);
 int set_pulser_freq(char *buffer);
 void *pt_set_pulser_freq(void *args);
+int cmd_send_softgt(char *buffer);
+void *pt_cmd_send_softgt(void *args);
+int cmd_multi_softgt(char *buffer);
+void *pt_cmd_multi_softgt(void *args);
 
 typedef struct{
   int thread_num;
@@ -61,4 +65,10 @@ typedef struct{
   int thread_num;
   float frequency;
 } set_pulser_freq_t;
+
+typedef struct{
+  int thread_num;
+  int number;
+} cmd_multi_softgt_t;
+
 #endif

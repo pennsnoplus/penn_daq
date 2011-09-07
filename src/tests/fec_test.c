@@ -51,37 +51,12 @@ int fec_test(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (xl3_lock[args->crate_num] != 0){
-    // this xl3 is locked, we cant do this right now
-    free(args);
-    return -1;
-  }
-  if (xl3_connected[args->crate_num] == 0){
-    printsend("XL3 #%d is not connected! Aborting\n",args->crate_num);
-    free(args);
-    return 0;
-  }
-
-  // spawn a thread to do it
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
     free(args);
     return -1;
   }
-
-  // we have a thread so lock it
-  xl3_lock[args->crate_num] = 1;
 
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_fec_test,(void *)args);

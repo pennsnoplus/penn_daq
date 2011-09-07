@@ -212,16 +212,17 @@ int accept_connection(int fd)
         if (xl3_connected[i]){
           // xl3s dont close their connections,
           // so we assume this means its reconnecting
-          printsend("Going to reconnect - Closed XL3 #%d connection.\n",i);
+          printsend("Going to reconnect.\n");
           if (rw_xl3_fd[i] != new_fd){
             // dont close it if its the same socket we
             // just reopened on!
+            printsend("Closing old XL3 #%d connection on socket %d\n",i,rw_xl3_fd[i]);
             close(rw_xl3_fd[i]);
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
           }
         }
-        printsend("New connection: XL3 #%d\n",i); 
+        printsend("New connection: XL3 #%d on socket %d\n",i,new_fd); 
         rw_xl3_fd[i] = new_fd;
         xl3_connected[i] = 1;
         FD_SET(new_fd,&xl3_fdset);

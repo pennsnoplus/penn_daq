@@ -677,6 +677,8 @@ int set_pulser_freq(char *buffer)
   set_pulser_freq_t *args;
   args = malloc(sizeof(set_pulser_freq_t));
 
+  args->frequency = 0;
+
   char *words,*words2;
   words = strtok(buffer, " ");
   while (words != NULL){
@@ -710,6 +712,76 @@ void *pt_set_pulser_freq(void *args)
   free(args);
 
   set_pulser_frequency(arg.frequency);
+  sbc_lock = 0;
+  thread_done[arg.thread_num] = 1;
+  return;
+}
+
+int cmd_send_softgt(char *buffer)
+{
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
+    return -1;
+  }
+
+  int *args = malloc(sizeof(int));
+  *args = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_send_softgt,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_send_softgt(void *args)
+{
+  send_softgt();
+  sbc_lock = 0;
+  thread_done[*(int *) args] = 1;
+  free(args);
+  return;
+}
+
+
+int cmd_multi_softgt(char *buffer)
+{
+  cmd_multi_softgt_t *args;
+  args = malloc(sizeof(cmd_multi_softgt_t));
+
+  args->number = 500;
+
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'n'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->number = atoi(words2);
+      }else if (words[1] == 'h'){
+        pt_printsend("Usage: multi_softgt -n [number]\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_multi_softgt,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_multi_softgt(void *args)
+{
+  cmd_multi_softgt_t arg = *(cmd_multi_softgt_t *) args;
+  free(args);
+
+  multi_softgt(arg.number);
+
   sbc_lock = 0;
   thread_done[arg.thread_num] = 1;
   return;
