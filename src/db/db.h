@@ -19,8 +19,9 @@ int parse_test(JsonNode* test,mb_t* mb,int cbal,int zdisc,int all);
 int swap_fec_db(mb_t* mb);
 int parse_mtc(JsonNode* value,mtc_t* mtc);
 
-int post_debug_doc(int crate, int card, JsonNode* doc);
+int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset);
 int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc);
+int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_fdset);
 
 #endif
 

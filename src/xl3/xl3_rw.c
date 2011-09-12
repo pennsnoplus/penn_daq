@@ -31,7 +31,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   fd_set readable_fdset = *(thread_fdset);;
 
   struct timeval delay_value;
-  delay_value.tv_sec = 4;
+  delay_value.tv_sec = 30;
   delay_value.tv_usec = 0;
   // lets get a response back from the xl3
   while (1){

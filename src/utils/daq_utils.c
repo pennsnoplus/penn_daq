@@ -9,6 +9,65 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
+int run_macro_from_tut(char *buffer)
+{
+  char filename[250];
+  char *words,*words2;
+  words = strtok(buffer," ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'f'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          strcpy(filename,words2);
+      }else if (words[1] == 'h'){
+        printsend("Usage: run_macro -f [file name]\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  if (filename != NULL)
+    parse_macro(filename);
+  return 0;
+}
+
+int run_macro()
+{
+  if (macro_cur_cmd == macro_tot_cmds){
+    running_macro = 0;
+    printf("macro finished!\n");
+    return 0;
+  }
+  int result = process_control_command(macro_cmds[macro_cur_cmd]);
+  if (result == 0)
+    macro_cur_cmd++;
+  else if (result == 999){
+    printf("Problem in macro!\n");
+    macro_cur_cmd = macro_tot_cmds;
+  }
+  return 0; 
+}
+
+int parse_macro(char *filename)
+{
+  FILE *macro_file;
+  char long_filename[250];
+  sprintf(long_filename,"macro/%s",filename);
+  macro_file = fopen(long_filename,"r");
+  macro_tot_cmds = 0;
+  macro_cur_cmd = 0;
+  while (fgets(macro_cmds[macro_tot_cmds],250,macro_file) != NULL){
+    printf("new command: .%s.\n",macro_cmds[macro_tot_cmds]);
+    macro_tot_cmds++;
+  }
+  fclose(macro_file);
+  if (macro_tot_cmds > 0)
+    running_macro = 1;
+  printf("done reading macro\n");
+  return 0; 
+}
+
 int reset_speed()
 {
   megabundle_count = 0;
@@ -47,7 +106,7 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
         return -1;
       }
       if (xl3_connected[i] == 0){
-        pt_printsend("XL3 #%d is not connected. Exiting!\n");
+        pt_printsend("XL3 #%d is not connected. Exiting!\n",i);
         return -3;
       }
     }
@@ -186,9 +245,27 @@ int cleanup_threads()
   return 0;
 }
 
+int kill_all_threads()
+{
+  int u;
+  for (u=0;u<MAX_THREADS;u++){
+    if (thread_pool[u] != NULL){
+      pthread_cancel(*thread_pool[u]);
+      free(thread_pool[u]);
+    }
+  }
+  sbc_lock = 0;
+  for (u=0;u<19;u++)
+    xl3_lock[u] = 0;
+  printsend("All threads DESTROYED\n");
+  return 0;
+}
+
 void sigint_func(int sig) 
 {
   printsend("\nBeginning shutdown\n");
+  kill_all_threads();
+
   printsend("Closing all connections\n");
   int u;
   for(u = 0; u <= fdmax; u++){
@@ -202,14 +279,6 @@ void sigint_func(int sig)
       stop_logging();
     }
   }
-  printsend("Killing any remaining threads\n");
-  for (u=0;u<MAX_THREADS;u++){
-    if (thread_pool[u] != NULL){
-      pthread_cancel(*thread_pool[u]);
-      free(thread_pool[u]);
-    }
-  }
-
   exit(0);
 }
 

@@ -218,7 +218,8 @@ void *pt_trigger_scan(void *args)
     // so we dont trigger off noise
     unset_gt_mask(0xFFFFFFFF);
     load_mtca_dacs_by_counts(counts);
-    set_gt_mask(1<<(arg.trigger-1));
+    usleep(500);
+    set_gt_mask(0x1<<(arg.trigger-1));
     
     for (i=0;i<10000;i++)
       values[i] = -1;

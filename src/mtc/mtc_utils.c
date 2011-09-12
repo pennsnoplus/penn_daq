@@ -122,8 +122,8 @@ int load_mtca_dacs_by_counts(uint16_t *raw_dacs)
 
   for (i=0;i<14;i++){
     float mV_dacs = (((float)raw_dacs[i]/2048) * 5000.0) - 5000.0;
-    pt_printsend( "\t%s\t threshold set to %6.2f mVolts\n", dac_names[i],
-        mV_dacs);
+    pt_printsend( "\t%s\t threshold set to %6.2f mVolts (%d counts)\n", dac_names[i],
+        mV_dacs,raw_dacs[i]);
   }
 
    /* set DACSEL */
@@ -201,6 +201,8 @@ void unset_ped_crate_mask(uint32_t crates)
 
 void set_ped_crate_mask(uint32_t crates)
 {
+  if (CURRENT_LOCATION == PENN_TESTSTAND)
+    crates = MASKALL;
   uint32_t temp;
   mtc_reg_read(MTCPmskReg, &temp);
   mtc_reg_write(MTCPmskReg, temp | crates);
@@ -217,6 +219,8 @@ void unset_gt_crate_mask(uint32_t crates)
 
 void set_gt_crate_mask(uint32_t crates)
 {
+  if (CURRENT_LOCATION == PENN_TESTSTAND)
+    crates = MASKALL;
   uint32_t temp;
   mtc_reg_read(MTCGmskReg, &temp);
   mtc_reg_write(MTCGmskReg, temp | crates);

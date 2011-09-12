@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
   // set up a signal handler to handle ctrl-C
   (void) signal(SIGINT, sigint_func);
 
-  CURRENT_LOCATION = 0;
+  CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
   write_log = 0;
   start_time = 0;
   end_time = 0;
@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
   megabundle_count = 0;
   recv_bytes = 0;
   recv_fake_bytes = 0;
+  running_macro = 0;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
     {"penn", no_argument, 0, 'p'},
     {"aboveground", no_argument, 0, 'a'},
     {"underground", no_argument, 0, 'u'},
+    {"macro",required_argument, 0, 'm'},
     {0, 0, 0, 0}
   };
   while ((c = getopt_long(argc, argv, "lhpau", long_options, &option_index)) != -1){
@@ -65,20 +67,23 @@ int main(int argc, char *argv[])
         start_logging();
         break;
       case 'h':
-        printsend("usage: %s [-l/--log] [-p/--penn|-a/--aboveground|-u/--underground]", argv[0]);
+        printsend("usage: %s [-l/--log] [-m (macro file)] [-p/--penn|-a/--aboveground|-u/--underground]", argv[0]);
         printsend("            or\n");
         printsend("       %s [-h/--help]\n", argv[0]);
         printsend("For more help, read the README\n");
         exit(0);
         break;
       case 'p':
-        CURRENT_LOCATION = 2;
+        CURRENT_LOCATION = PENN_TESTSTAND;
         break;
       case 'a':
-        CURRENT_LOCATION = 0;
+        CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
         break;
       case 'u':
-        CURRENT_LOCATION = 1;
+        CURRENT_LOCATION = UNDERGROUND;
+        break;
+      case 'm':
+        parse_macro(optarg);
         break;
       case '?':
         /* getopt_long already printed an error message. */
@@ -119,6 +124,9 @@ int main(int argc, char *argv[])
   while(1){
     // first send messages queued up by threads
     send_queued_msgs();
+    // next continue macro if one is running
+    if (running_macro)
+      run_macro();
     // reset our fdsets
     pthread_mutex_lock(&main_fdset_lock);
     fd_set temp = main_fdset;

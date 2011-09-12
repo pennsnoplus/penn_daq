@@ -10,6 +10,10 @@
 #include "db_types.h"
 #include "packet_types.h"
 
+#define ABOVE_GROUND_TESTSTAND 0
+#define UNDERGROUND 1
+#define PENN_TESTSTAND 2
+
 #define MAX_THREADS 20
 
 #define DEF_NEED_TO_SWAP 1
@@ -25,6 +29,11 @@ hware_vals_t crate_config[19][16]; //!< contains the most up to date crate confi
 
 FILE *ps_log_file; //!< log of anything that would go to viewer terminal
 int write_log; //!< flags whether to write to log or not
+
+int running_macro;
+char macro_cmds[1000][250];
+int macro_tot_cmds;
+int macro_cur_cmd;
 
 int command_number[19]; //!< Numbers cmd packets sent to xl3
 

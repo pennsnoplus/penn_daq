@@ -128,6 +128,51 @@ typedef struct{
 } fec_test_results_t;
 
 typedef struct{
+  uint32_t slot_num;
+} mem_test_args_t;
+
+typedef struct{
+  uint32_t error_flag;
+  uint32_t address_bit_failures;
+  uint32_t error_location;
+  uint32_t expected_data;
+  uint32_t read_data;
+} mem_test_results_t;
+
+typedef struct{
+  uint32_t slot_num;
+} vmon_args_t;
+
+typedef struct{
+  float voltages[21];
+} vmon_results_t;
+
+typedef struct{
+  uint32_t slot;
+  uint32_t chip;
+  uint32_t reg;
+} board_id_args_t;
+
+typedef struct{
+  uint32_t id;
+} board_id_results_t;
+
+typedef struct{
+  uint32_t slot_mask;
+} ped_run_args_t;
+
+typedef struct{
+  uint32_t error_flag;
+  uint32_t discrete_reg_errors[16]; 
+  uint32_t cmos_test_reg_errors[16];
+} ped_run_results_t;
+
+typedef struct{
+  uint32_t slot;
+  uint32_t reads;
+} read_pedestals_args_t;
+
+typedef struct{
   uint32_t mb_num;
   uint32_t xilinx_load;
   uint32_t hv_reset;
@@ -159,6 +204,24 @@ typedef struct{
   uint32_t slot_mask;
   uint32_t pattern;
 } set_crate_pedestals_args_t;
+
+typedef struct{
+  uint32_t slot_num;
+  uint32_t offset;
+  float rate;
+} zdisc_args_t;
+
+typedef struct{
+  uint32_t error_flag;
+  float MaxRate[32];
+  float UpperRate[32];
+  float LowerRate[32];
+  uint8_t MaxDacSetting[32];
+  uint8_t ZeroDacSetting[32];
+  uint8_t UpperDacSetting[32];
+  uint8_t LowerDacSetting[32];
+} zdisc_results_t;
+
 
 /*! \name sbc_send_packet_type
  *  Types of packets that will be sent to the sbc from the xl3

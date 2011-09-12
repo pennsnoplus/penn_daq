@@ -211,8 +211,7 @@ void *pt_run_pedestals(void *args)
   // now set up pedestals on mtc
   if (arg.mtc){
     errors = setup_pedestals(arg.frequency,arg.ped_width,arg.gtdelay,DEFAULT_GT_FINE_DELAY,
-        MASKALL,MASKALL);
-    //    arg.crate_mask | MSK_TUB, arg.crate_mask | MSK_TUB);
+        arg.crate_mask | MSK_TUB, arg.crate_mask | MSK_TUB);
     if (errors != 0){
       pt_printsend("run_pedestals: Error setting up MTC. Exiting\n");
       unset_ped_crate_mask(MASKALL);

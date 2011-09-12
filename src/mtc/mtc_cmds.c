@@ -287,48 +287,48 @@ int set_mtca_thresholds(char *buffer)
       if (words[1] == '0'){
         if (words[2] == '0'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[0] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[0] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '1'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[1] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[1] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '2'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[2] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[2] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '3'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[3] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[3] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '4'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[4] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[4] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '5'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[5] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[5] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '6'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[6] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[6] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '7'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[7] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[7] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '8'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[8] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[8] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '9'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[9] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[9] = (float) strtod(words2,(char**)NULL);
         }
       }else if (words[1] == '1'){
         if (words[2] == '0'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[10] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[10] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '1'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[11] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[11] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '2'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[12] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[12] = (float) strtod(words2,(char**)NULL);
         }else if (words[2] == '3'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->dac_voltages[13] = (float) strtod(words2,(char**)NULL)*1000;
+            args->dac_voltages[13] = (float) strtod(words2,(char**)NULL);
         }
       }else if (words[1] == 'h'){
         printsend("Usage: set_thresholds -(00)..(13) [voltage level in V (float)]\n");
@@ -341,6 +341,7 @@ int set_mtca_thresholds(char *buffer)
 
   for (i=0;i<14;i++)
     args->dac_voltages[i] *= 1000;
+
 
   pthread_t *new_thread;
   int thread_num = thread_and_lock(1,0x0,&new_thread);
@@ -413,7 +414,7 @@ void *pt_cmd_set_gt_mask(void *args)
   uint32_t temp = 0x0;
   if (arg.ored)
     mtc_reg_read(MTCMaskReg, &temp);
-  mtc_reg_write(MTCMaskReg, temp & arg.mask);
+  mtc_reg_write(MTCMaskReg, temp | arg.mask);
 
   sbc_lock = 0;
   thread_done[arg.thread_num] = 1;
@@ -467,7 +468,7 @@ void *pt_cmd_set_gt_crate_mask(void *args)
   uint32_t temp = 0x0;
   if (arg.ored)
     mtc_reg_read(MTCGmskReg, &temp);
-  mtc_reg_write(MTCGmskReg, temp & arg.mask);
+  mtc_reg_write(MTCGmskReg, temp | arg.mask);
 
   sbc_lock = 0;
   thread_done[arg.thread_num] = 1;
@@ -521,7 +522,7 @@ void *pt_cmd_set_ped_crate_mask(void *args)
   uint32_t temp = 0x0;
   if (arg.ored)
     mtc_reg_read(MTCPmskReg, &temp);
-  mtc_reg_write(MTCPmskReg, temp & arg.mask);
+  mtc_reg_write(MTCPmskReg, temp | arg.mask);
 
   sbc_lock = 0;
   thread_done[arg.thread_num] = 1;

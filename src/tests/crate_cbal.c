@@ -11,12 +11,12 @@
 #include "net.h"
 #include "net_utils.h"
 #include "daq_utils.h"
-#include "fec_test.h"
+#include "crate_cbal.h"
 
-int fec_test(char *buffer)
+int crate_cbal(char *buffer)
 {
-  fec_test_t *args;
-  args = malloc(sizeof(fec_test_t));
+  crate_cbal_t *args;
+  args = malloc(sizeof(crate_cbal_t));
 
   args->crate_num = 2;
   args->slot_mask = 0x80;
@@ -42,7 +42,7 @@ int fec_test(char *buffer)
             if ((words2 = strtok(NULL, " ")) != NULL)
               strcpy(args->ft_ids[i],words2);
       }else if (words[1] == 'h'){
-        printsend("Usage: fec_test -c [crate num (int)] "
+        printsend("Usage: crate_cbal -c [crate num (int)] "
             "-s [slot mask (hex)] -d (update database)\n");
         free(args);
         return 0;
@@ -59,19 +59,19 @@ int fec_test(char *buffer)
   }
 
   args->thread_num = thread_num;
-  pthread_create(new_thread,NULL,pt_fec_test,(void *)args);
+  pthread_create(new_thread,NULL,pt_crate_cbal,(void *)args);
   return 0; 
 }
 
 
-void *pt_fec_test(void *args)
+void *pt_crate_cbal(void *args)
 {
-  fec_test_t arg = *(fec_test_t *) args; 
+  crate_cbal_t arg = *(crate_cbal_t *) args; 
   free(args);
 
   XL3_Packet packet;
-  fec_test_args_t *packet_args = (fec_test_args_t *) packet.payload;
-  fec_test_results_t *packet_results = (fec_test_results_t *) packet.payload;
+  crate_cbal_args_t *packet_args = (crate_cbal_args_t *) packet.payload;
+  crate_cbal_results_t *packet_results = (crate_cbal_results_t *) packet.payload;
 
   packet.cmdHeader.packet_type = FEC_TEST_ID;
   packet_args->slot_mask = arg.slot_mask;
@@ -84,7 +84,7 @@ void *pt_fec_test(void *args)
 
   do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
 
-  SwapLongBlock(packet_results,sizeof(fec_test_results_t)/sizeof(uint32_t));
+  SwapLongBlock(packet_results,sizeof(crate_cbal_results_t)/sizeof(uint32_t));
 
   if (arg.update_db){
     pt_printsend("updating the database\n");
@@ -93,7 +93,7 @@ void *pt_fec_test(void *args)
       if ((0x1<<slot) & arg.slot_mask){
         pt_printsend("updating slot %d\n",slot);
         JsonNode *newdoc = json_mkobject();
-        json_append_member(newdoc,"type",json_mkstring("fec_test"));
+        json_append_member(newdoc,"type",json_mkstring("crate_cbal"));
         json_append_member(newdoc,"pedestal",
             json_mkbool(!(packet_results->discrete_reg_errors[slot] & 0x1)));
         json_append_member(newdoc,"chip_disable",

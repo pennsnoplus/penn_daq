@@ -62,12 +62,14 @@ COMMAND commands[] = {
     { "sbc_control", (Function *)NULL, (char *)NULL },
     { "clear_screen", (Function *)NULL, (char *)NULL },
     { "reset_speed", (Function *)NULL, (char *)NULL },
+    { "kill_threads", (Function *)NULL, (char *)NULL },
+    { "run_macro", (Function *)NULL, (char *)NULL },
+    { "stop_macro", (Function *)NULL, (char *)NULL },
     { "debugging_on", (Function *)NULL, (char *)NULL },
     { "debugging_off", (Function *)NULL, (char *)NULL },
     { "change_mode", (Function *)NULL, (char *)NULL },
     { "crate_init", (Function *)NULL, (char *)NULL },
     { "mtc_init", (Function *)NULL, (char *)NULL },
-    { "fec_test", (Function *)NULL, (char *)NULL },
     { "sm_reset", (Function *)NULL, (char *)NULL },
     { "xl3_rw", (Function *)NULL, (char *)NULL },
     { "xl3_queue_rw", (Function *)NULL, (char *)NULL },
@@ -92,7 +94,12 @@ COMMAND commands[] = {
     { "send_softgt", (Function *)NULL, (char *)NULL },
     { "multi_softgt", (Function *)NULL, (char *)NULL },
     { "trigger_scan", (Function *)NULL, (char *)NULL },
+    { "fec_test", (Function *)NULL, (char *)NULL },
     { "mem_test", (Function *)NULL, (char *)NULL },
+    { "vmon", (Function *)NULL, (char *)NULL },
+    { "board_id", (Function *)NULL, (char *)NULL },
+    { "ped_run", (Function *)NULL, (char *)NULL },
+    { "zdisc", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };

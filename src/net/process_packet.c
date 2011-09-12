@@ -26,6 +26,10 @@
 #include "net.h"
 #include "fec_test.h"
 #include "mem_test.h"
+#include "vmon.h"
+#include "board_id.h"
+#include "ped_run.h"
+#include "zdisc.h"
 #include "trigger_scan.h"
 #include "process_packet.h"
 
@@ -101,7 +105,7 @@ int read_control_command(int fd)
   // otherwise process the packet
   int error = process_control_command(buffer);
   // send response
-  if (error != 0){
+  if (error != 0 && error != 999){
     // one of the sockets was locked already or no threads available
     if (FD_ISSET(fd,&main_writeable_fdset))
       write(fd,CONT_CMD_BSY,strlen(CONT_CMD_BSY));
@@ -173,6 +177,12 @@ int process_control_command(char *buffer)
     pt_printsend("Cleared screen\n");
   }else if (strncmp(buffer,"reset_speed",11)==0){
     result = reset_speed();
+  }else if (strncmp(buffer,"kill_threads",12)==0){
+    result = kill_all_threads();
+  }else if (strncmp(buffer,"run_macro",9)==0){
+    result = run_macro_from_tut();
+  }else if (strncmp(buffer,"stop_macro",10)==0){
+    running_macro = 0;
   }else if (strncmp(buffer,"debugging_on",12)==0){
     result = debugging_mode(buffer,1);
   }else if (strncmp(buffer,"debugging_off",13)==0){
@@ -183,8 +193,6 @@ int process_control_command(char *buffer)
     result = crate_init(buffer);
   }else if (strncmp(buffer,"mtc_init",8)==0){
     result = mtc_init(buffer);
-  }else if (strncmp(buffer,"fec_test",8)==0){
-    result = fec_test(buffer);
   }else if (strncmp(buffer,"sm_reset",8)==0){
     result = sm_reset(buffer);
   }else if (strncmp(buffer,"xl3_rw",6)==0){
@@ -233,12 +241,24 @@ int process_control_command(char *buffer)
     result = cmd_multi_softgt(buffer);
   }else if (strncmp(buffer,"trigger_scan",12)==0){
     result = trigger_scan(buffer);
+  }else if (strncmp(buffer,"fec_test",8)==0){
+    result = fec_test(buffer);
   }else if (strncmp(buffer,"mem_test",8)==0){
     result = mem_test(buffer);
+  }else if (strncmp(buffer,"vmon",4)==0){
+    result = vmon(buffer);
+  }else if (strncmp(buffer,"board_id",8)==0){
+    result = board_id(buffer);
+  }else if (strncmp(buffer,"ped_run",7)==0){
+    result = ped_run(buffer);
+  }else if (strncmp(buffer,"zdisc",5)==0){
+    result = zdisc(buffer);
   }
   //_!_end_commands_!_
-  else
+  else{
     printsend("not a valid command\n");
+    result = 999;
+  }
   return result;
 }
 
@@ -257,14 +277,11 @@ int process_xl3_packet(char *buffer, int xl3num)
     printf("got an error packet: number %d\n",packet->cmdHeader.packet_num); //FIXME
     //handle_error_packet();
   }else if (packet->cmdHeader.packet_type == PING_ID){
-    printf("got ping\n");
     packet->cmdHeader.packet_type = PONG_ID;
     int n = write(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE);
     if (n < 0){
       pt_printsend("process_xl3_packet: Error writing to socket for pong.\n");
       return -1;
-    }else{
-      printf("sent pong\n");
     }
   }else{
     // got the wrong type of ack packet

@@ -7,6 +7,11 @@
 
 typedef struct{
   int thread_num;
+  int crate_num;
+  int slot_num;
+  int update_db;
+  int final_test;
+  char ft_id[50];
 } mem_test_t;
 
 int mem_test(char *buffer);

@@ -83,7 +83,6 @@ void *pt_crate_init(void *args)
 
   char get_db_address[500];
   char ctc_address[500];
-  hware_vals_t *hware_flip;
   XL3_Packet packet;
   crate_init_args_t *packet_args = (crate_init_args_t *) packet.payload;
   crate_init_results_t *packet_results = (crate_init_results_t *) packet.payload;;
@@ -104,16 +103,14 @@ void *pt_crate_init(void *args)
     pr_do(hw_response);
     if (hw_response->httpresponse != 200){
       pt_printsend("Unable to connect to database. error code %d\n",(int)hw_response->httpresponse);
-      xl3_lock[arg.crate_num] = 0;
-      thread_done[arg.thread_num] = 1;
+      unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
       return;
     }
     JsonNode *hw_doc = json_decode(hw_response->resp.data);
     JsonNode* totalrows = json_find_member(hw_doc,"total_rows");
     if ((int)json_get_number(totalrows) != 16){
       pt_printsend("Database error: not enough FEC entries\n");
-      xl3_lock[arg.crate_num] = 0;
-      thread_done[arg.thread_num] = 1;
+      unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
       return;
     }
     hw_rows = json_find_member(hw_doc,"rows");
@@ -126,8 +123,7 @@ void *pt_crate_init(void *args)
     pr_do(debug_response);
     if (debug_response->httpresponse != 200){
       pt_printsend("Unable to connect to database. error code %d\n",(int)debug_response->httpresponse);
-      xl3_lock[arg.crate_num] = 0;
-      thread_done[arg.thread_num] = 1;
+      unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
       return;
     }
     debug_doc = json_decode(debug_response->resp.data);
@@ -158,8 +154,7 @@ void *pt_crate_init(void *args)
       card = (int)json_get_number(json_find_element(key,1));
       if (crate != arg.crate_num || card != i){
         printsend("Database error : incorrect crate or card num (%d,%d)\n",crate,card);
-        xl3_lock[arg.crate_num] = 0;
-        thread_done[arg.thread_num] = 1;
+        unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
         return;
       }
       parse_fec_hw(value,mb_consts);
@@ -188,8 +183,7 @@ void *pt_crate_init(void *args)
         pr_do(cbal_response);
         if (cbal_response->httpresponse != 200){
           pt_printsend("Unable to connect to database. error code %d\n",(int)cbal_response->httpresponse);
-          xl3_lock[arg.crate_num] = 0;
-          thread_done[arg.thread_num] = 1;
+          unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
           return;
         }
         JsonNode *viewdoc = json_decode(cbal_response->resp.data);
@@ -227,8 +221,7 @@ void *pt_crate_init(void *args)
         pr_do(zdisc_response);
         if (zdisc_response->httpresponse != 200){
           pt_printsend("Unable to connect to database. error code %d\n",(int)zdisc_response->httpresponse);
-          xl3_lock[arg.crate_num] = 0;
-          thread_done[arg.thread_num] = 1;
+          unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
           return;
         }
         JsonNode *viewdoc = json_decode(zdisc_response->resp.data);
@@ -266,8 +259,7 @@ void *pt_crate_init(void *args)
         pr_do(ttot_response);
         if (ttot_response->httpresponse != 200){
           pt_printsend("Unable to connect to database. error code %d\n",(int)ttot_response->httpresponse);
-          xl3_lock[arg.crate_num] = 0;
-          thread_done[arg.thread_num] = 1;
+          unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
           return;
         }
         JsonNode *viewdoc = json_decode(ttot_response->resp.data);
@@ -310,8 +302,7 @@ void *pt_crate_init(void *args)
   pr_do(ctc_response);
   if (ctc_response->httpresponse != 200){
     pt_printsend("Error getting ctc document, error code %d\n",(int)ctc_response->httpresponse);
-    xl3_lock[arg.crate_num] = 0;
-    thread_done[arg.thread_num] = 1;
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
     return;
   }
   JsonNode *ctc_doc = json_decode(ctc_response->resp.data);
@@ -337,20 +328,18 @@ void *pt_crate_init(void *args)
   do_xl3_cmd(&packet,arg.crate_num,&thread_fdset); 
 
   // NOW PROCESS RESULTS AND POST TO DB
-  hware_flip = packet_results->hware_vals;
   for (i=0;i<16;i++){
-    SwapShortBlock(&(hware_flip->mb_id),1);
-    SwapShortBlock(&(hware_flip->dc_id),4);
-    hware_flip++;
+    crate_config[arg.crate_num][i] = packet_results->hware_vals[i];
+    SwapShortBlock(&(crate_config[arg.crate_num][i].mb_id),1);
+    SwapShortBlock(&(crate_config[arg.crate_num][i].dc_id),4);
   }
 
-  //update_crate_configuration(crate_num,hware_flip);  //FIXME
+  
   pt_printsend("Crate configuration updated.\n");
   pt_printsend("*******************************\n");
   json_delete(hw_rows);
   json_delete(debug_doc);
 
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
