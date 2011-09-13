@@ -4,6 +4,9 @@
 #define __MTC_UTILS_H
 
 #include "mtc_registers.h"
+
+int get_gt_count(uint32_t *count);
+float set_gt_delay(float gtdel);
 int soft_gt();
 int multi_softgt(int number);
 

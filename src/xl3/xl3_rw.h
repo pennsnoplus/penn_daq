@@ -38,4 +38,5 @@ int xl3_rw(uint32_t address, uint32_t data, uint32_t *result, int crate_num, fd_
  */ 
 int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t *buffer, fd_set *thread_fdset);
 
+int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_buf, fd_set *thread_fdset);
 #endif

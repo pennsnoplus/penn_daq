@@ -25,19 +25,4 @@ typedef struct{
 int ped_run(char *buffer);
 void *pt_ped_run(void *args);
 
-struct cell {
-  int16_t per_cell;
-  int cellno;
-  double qlxbar, qlxrms;
-  double qhlbar, qhlrms;
-  double qhsbar, qhsrms;
-  double tacbar, tacrms;
-};
-
-struct pedestal {
-  int16_t channelnumber;
-  int16_t per_channel;
-  struct cell thiscell[16];
-};
-
 #endif

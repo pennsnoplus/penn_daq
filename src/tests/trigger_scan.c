@@ -172,9 +172,7 @@ void *pt_trigger_scan(void *args)
 
   pt_printsend("Starting a trigger scan.\n");
   int errors = setup_pedestals(0, DEFAULT_PED_WIDTH, DEFAULT_GT_DELAY,0,
-      MASKALL,MASKALL);
-  //FIXME
-  //    arg.crate_mask,arg.crate_mask);
+      arg.crate_mask,arg.crate_mask);
   if (errors){
     pt_printsend("Error setting up MTC for pedestals. Exiting\n");
     unset_ped_crate_mask(MASKALL);
@@ -182,9 +180,6 @@ void *pt_trigger_scan(void *args)
     unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
     return;
   }
-
-  enable_pulser();
-  enable_pedestal();
 
   for (i=0;i<19;i++)
     if ((0x1<<i) & arg.crate_mask)

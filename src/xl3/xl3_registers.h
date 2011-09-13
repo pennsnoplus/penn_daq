@@ -58,6 +58,10 @@
 #define CMOS_SPARE_COUNT(num) (0x100+0x5+0x8*num)
 #define CMOS_ARRAY_PTR(num) (0x100+0x6+0x8*num)
 #define CMOS_COUNT_INFO(num) (0x100+0x7+0x8*num)
-
+// hv
+#define HV_CSR_CLK 0x1
+#define HV_CSR_DATIN 0x2
+#define HV_CSR_LOAD 0x4
+#define HV_CSR_DATOUT 0x8
 
 #endif

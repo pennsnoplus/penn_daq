@@ -94,7 +94,8 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
       return -1;
     }
     if (sbc_connected == 0 && sbc != 2){
-      pt_printsend("SBC is not connected. Exiting!\n");
+      if (running_macro == 0)
+        pt_printsend("SBC is not connected. Exiting!\n");
       return -2;
     }
   }
@@ -106,7 +107,8 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
         return -1;
       }
       if (xl3_connected[i] == 0){
-        pt_printsend("XL3 #%d is not connected. Exiting!\n",i);
+        if (running_macro == 0)
+          pt_printsend("XL3 #%d is not connected. Exiting!\n",i);
         return -3;
       }
     }
@@ -122,7 +124,8 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
     }
   }
   if (thread_num < 0){
-    pt_printsend("All threads busy currently\n");
+    if (running_macro == 0)
+      pt_printsend("All threads busy currently\n");
     return -4;
   }
 
@@ -349,4 +352,11 @@ void SwapShortBlock(void* p, int32_t n){
       sp++;
     }
   }
+}
+
+uint32_t sGetBits(uint32_t value, uint32_t bit_start, uint32_t num_bits)
+{
+  uint32_t bits;
+  bits = (value >> (bit_start + 1 - num_bits)) & ~(~0 << num_bits);
+  return bits;
 }

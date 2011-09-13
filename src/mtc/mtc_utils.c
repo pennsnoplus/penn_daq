@@ -22,6 +22,29 @@
 #include "mtc_rw.h"
 #include "mtc_utils.h"
 
+int get_gt_count(uint32_t *count)
+{
+  mtc_reg_read(MTCOcGtReg, count);
+  *count &= 0x00FFFFFFF;
+  return 0;
+}
+
+float set_gt_delay(float gtdel)
+{
+  int result;
+  float offset_res, fine_delay, total_delay, fdelay_set;
+  uint16_t cdticks, coarse_delay;
+
+  offset_res = gtdel - (float)(18.35); //FIXME there is delay_offset in db?? check old code
+  cdticks = (uint16_t) (offset_res/10.0);
+  coarse_delay = cdticks*10;
+  fine_delay = offset_res - ((float) cdticks*10.0);
+  result = set_coarse_delay(coarse_delay);
+  fdelay_set = set_fine_delay(fine_delay);
+  total_delay = ((float) coarse_delay + fdelay_set + (float)(18.35));
+  return total_delay;
+}
+
 int send_softgt()
 {
   mtc_reg_write(MTCSoftGTReg,0x0);
@@ -70,6 +93,8 @@ int setup_pedestals(float pulser_freq, uint32_t ped_width, 	uint32_t coarse_dela
     pt_printsend("setup pedestals failed\n");
     return -1;
   }
+  enable_pulser();
+  enable_pedestal();
   unset_ped_crate_mask(MASKALL);
   unset_gt_crate_mask(MASKALL);
   set_ped_crate_mask(ped_crate_mask);

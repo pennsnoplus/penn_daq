@@ -138,7 +138,7 @@ int xl3_rw(uint32_t address, uint32_t data, uint32_t *result, int crate_num, fd_
   packet.cmdHeader.packet_type = FAST_CMD_ID;
   FECCommand *command;
   command = (FECCommand *) packet.payload;
-  command->flags = 0x99;
+  command->flags = 0x0;
   command->cmd_num = 0x0;
   command->packet_num = 0x0;
   command->address = address;
@@ -148,6 +148,7 @@ int xl3_rw(uint32_t address, uint32_t data, uint32_t *result, int crate_num, fd_
   do_xl3_cmd(&packet, crate_num, thread_fdset);
   *result = command->data;
   SwapLongBlock(result,1);
+  SwapShortBlock(&command->flags,1);
   return (int) command->flags;
 }
 
@@ -294,6 +295,120 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
             } // end if i = xl3num
           }else{
             pt_printsend("wait_for_multifc_results: Wasn't expecting a packet from xl3 %d, got type %d\n",i,packet.cmdHeader.packet_type);
+          } // end switch on packet type
+        } // end if this xl3 is readable
+      } // end if this xl3 is connected
+    } // end loop over xl3s
+  } // end while loop
+
+  // shouldnt ever get here
+  return -1;
+}
+
+int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_buf, fd_set *thread_fdset)
+{
+  if (rw_xl3_fd[xl3num] <= 0){
+    pt_printsend("wait_for_cald_test_results: Invalid crate number (%d): socket value is NULL\n",xl3num);
+    return -1;
+  }
+
+  int i,j;
+  int point_count = 0;
+  int current_slot = 0;
+  int current_point = 0;
+
+  XL3_Packet packet;
+  fd_set readable_fdset = *(thread_fdset);
+
+  struct timeval delay_value;
+  delay_value.tv_sec = 10;
+  delay_value.tv_usec = 0;
+  // we loop, taking packets from our XL3s. We are expecting
+  // cald response packets which we parse and add to our buffers.
+  // when we get a cald test id packet, it means we are done
+  while (1){
+    memset(&packet,'\0',MAX_PACKET_SIZE);
+    int data = select(fdmax+1,&readable_fdset,NULL,NULL,&delay_value);
+    // check for errors
+    if (data == -1){
+      pt_printsend("wait_for_cald_test_results: Error in select\n");
+      return -2;
+    }else if (data == 0){
+      pt_printsend("wait_for_cald_test_results: Timeout in select\n");
+      return -3;
+    }
+    // lets see whats readable
+    for (i=0;i<MAX_XL3_CON;i++){
+      if (rw_xl3_fd[i] > 0){
+        if (FD_ISSET(rw_xl3_fd[i],&readable_fdset)){
+          int n = recv(rw_xl3_fd[i],(char *)&packet,MAX_PACKET_SIZE,0); 
+          if (n < 0){
+            pt_printsend("wait_for_cald_test_results: Error receiving data from XL3 #%d. Closing connection\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            xl3_connected[i] = 0;
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }else if (n == 0){
+            pt_printsend("wait_for_cald_test_results: Got a zero byte packet, Closing XL3 #%d\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            xl3_connected[i] = 0;
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }
+
+          SwapShortBlock(&(packet.cmdHeader.packet_num),1);
+          if (packet.cmdHeader.packet_type == MESSAGE_ID){
+            pt_printsend("%s",packet.payload);
+          }else if (packet.cmdHeader.packet_type == MEGA_BUNDLE_ID){
+            //store_mega_bundle();
+          }else if (packet.cmdHeader.packet_type == SCREWED_ID){
+            //handle_screwed_packet();
+          }else if (packet.cmdHeader.packet_type == ERROR_ID){
+            //handle_error_packet();
+          }else if (packet.cmdHeader.packet_type == PING_ID){
+            packet.cmdHeader.packet_type = PONG_ID;
+            n = write(rw_xl3_fd[i],(char *)&packet,MAX_PACKET_SIZE);
+            if (n < 0){
+              pt_printsend("wait_for_cald_test_results: Error writing to socket for pong.\n");
+              return -1;
+            }
+          }else if (i == xl3num){
+            if (packet.cmdHeader.packet_type == CALD_RESPONSE_ID){
+              cald_response_results_t *packet_results = (cald_response_results_t *) packet.payload;
+              SwapShortBlock(packet_results,sizeof(cald_response_results_t)/sizeof(uint16_t));
+              if (packet_results->slot != current_slot){
+                current_slot = packet_results->slot;
+                current_point = 0;
+              }
+              for (j=0;j<100;j++){
+                if (packet_results->point[j] != 0){
+                  point_buf[current_slot*10000+current_point] = packet_results->point[j];
+                  point_buf[0] = packet_results->point[j];
+                  adc_buf[current_slot*4*10000+current_point*4+0] = packet_results->adc0[j];
+                  adc_buf[current_slot*4*10000+current_point*4+1] = packet_results->adc1[j];
+                  adc_buf[current_slot*4*10000+current_point*4+2] = packet_results->adc2[j];
+                  adc_buf[current_slot*4*10000+current_point*4+3] = packet_results->adc3[j];
+                  current_point++;
+                  point_count++;
+                }
+              }
+            }else if (packet.cmdHeader.packet_type == CALD_TEST_ID){
+              // we must be finished
+              return point_count;
+            }else{
+              // got the wrong type of ack packet
+              pt_printsend("wait_for_cald_test_results: Got wrong packet type back, got %08x\n",packet.cmdHeader.packet_type);
+            } // end if i = xl3num
+          }else{
+            pt_printsend("wait_for_cald_test_results: Wasn't expecting a packet from xl3 %d, got type %d\n",i,packet.cmdHeader.packet_type);
           } // end switch on packet type
         } // end if this xl3 is readable
       } // end if this xl3 is connected

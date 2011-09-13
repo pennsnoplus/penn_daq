@@ -103,7 +103,7 @@ typedef struct {
 typedef struct {
     uint32_t cmd_num;
     uint16_t packet_num;
-    uint8_t flags;
+    uint16_t flags;
     uint32_t address;
     uint32_t data;
 } FECCommand;
@@ -207,6 +207,35 @@ typedef struct{
 
 typedef struct{
   uint32_t slot_num;
+  uint32_t dac_num;
+  uint32_t dac_value;
+} loadsdac_args_t;
+
+typedef struct{
+  uint32_t error_flags;
+} loadsdac_results_t;
+
+typedef struct{
+  uint32_t num_dacs;
+  loadsdac_args_t dacs[50];
+} multi_loadsdac_args_t;
+
+typedef struct{
+  uint32_t error_flags;
+} multi_loadsdac_results_t;
+
+typedef struct{
+  uint32_t slot_mask;
+} reset_fifos_args_t;
+
+typedef struct{
+  uint32_t crate_num;
+  uint32_t select_reg;
+  uint16_t tacbits[32];
+} loadtacbits_args_t;
+
+typedef struct{
+  uint32_t slot_num;
   uint32_t offset;
   float rate;
 } zdisc_args_t;
@@ -221,6 +250,32 @@ typedef struct{
   uint8_t UpperDacSetting[32];
   uint8_t LowerDacSetting[32];
 } zdisc_results_t;
+
+typedef struct{
+  uint32_t slot_mask;
+  uint32_t num_points;
+  uint32_t samples;
+  uint32_t upper;
+  uint32_t lower;
+} cald_test_args_t;
+
+typedef struct{
+  uint16_t slot;
+  uint16_t point[100];
+  uint16_t adc0[100];
+  uint16_t adc1[100];
+  uint16_t adc2[100];
+  uint16_t adc3[100];
+} cald_response_results_t;
+
+typedef struct{
+  uint32_t slot_num;
+} check_total_count_args_t;
+
+typedef struct{
+  uint32_t error_flags;
+  uint32_t count[32];
+} check_total_count_results_t;
 
 
 /*! \name sbc_send_packet_type

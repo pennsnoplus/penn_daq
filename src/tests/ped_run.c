@@ -14,6 +14,7 @@
 #include "net.h"
 #include "net_utils.h"
 #include "mtc_utils.h"
+#include "fec_utils.h"
 #include "xl3_utils.h"
 #include "daq_utils.h"
 #include "ped_run.h"
@@ -129,25 +130,6 @@ void *pt_ped_run(void *args)
   for (i=0;i<32;i++)
     if ((0x1<<i) & arg.pattern)
       num_channels++;
-
-  // set up MTC
-  int errors = setup_pedestals(arg.frequency,arg.ped_width,arg.gt_delay,DEFAULT_GT_FINE_DELAY,
-      (0x1<<arg.crate_num),(0x1<<arg.crate_num));
-  if (errors){
-    pt_printsend("Error setting up MTC for pedestals. Exiting\n");
-    unset_ped_crate_mask(MASKALL);
-    unset_gt_crate_mask(MASKALL);
-    free(pmt_buffer);
-    free(ped);
-    unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-    return;
-  }
-
-  if (arg.frequency == 0){
-    enable_pedestal();
-    enable_pulser(); 
-  }
-
   // set up crate
   change_mode(INIT_MODE,0x0,arg.crate_num,&thread_fdset);
   int slot;
@@ -163,11 +145,24 @@ void *pt_ped_run(void *args)
   }
   deselect_fecs(arg.crate_num,&thread_fdset);
 
-  errors = fec_load_crate_addr(arg.crate_num,arg.slot_mask,&thread_fdset);
+  int errors = fec_load_crate_addr(arg.crate_num,arg.slot_mask,&thread_fdset);
   errors += set_crate_pedestals(arg.crate_num,arg.slot_mask,arg.pattern,&thread_fdset);
   deselect_fecs(arg.crate_num,&thread_fdset);
   if (errors){
     pt_printsend("Error setting up crate for pedestals. Exiting\n");
+    free(pmt_buffer);
+    free(ped);
+    unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
+    return;
+  }
+
+  // set up MTC
+  errors = setup_pedestals(arg.frequency,arg.ped_width,arg.gt_delay,DEFAULT_GT_FINE_DELAY,
+      (0x1<<arg.crate_num),(0x1<<arg.crate_num));
+  if (errors){
+    pt_printsend("Error setting up MTC for pedestals. Exiting\n");
+    unset_ped_crate_mask(MASKALL);
+    unset_gt_crate_mask(MASKALL);
     free(pmt_buffer);
     free(ped);
     unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
@@ -180,9 +175,6 @@ void *pt_ped_run(void *args)
     disable_pulser();
   }else{
     float wait_time = (float) arg.num_pedestals*16.0/arg.frequency*1E6;
-    printf("going to wait for %d us\n",(int) wait_time);
-    enable_pedestal();
-    enable_pulser();
     usleep((int) wait_time);
     disable_pulser();
   }

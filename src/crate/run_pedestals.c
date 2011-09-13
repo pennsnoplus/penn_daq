@@ -225,9 +225,6 @@ void *pt_run_pedestals(void *args)
       thread_done[arg.thread_num] = 1;
       return;
     }
-    // and enable things
-    enable_pulser();
-    enable_pedestal();
   }
 
   // now enable the readout on the xl3s

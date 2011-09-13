@@ -30,6 +30,13 @@
 #include "board_id.h"
 #include "ped_run.h"
 #include "zdisc.h"
+#include "crate_cbal.h"
+#include "cgt_test.h"
+#include "cald_test.h"
+#include "cmos_m_gtvalid.h"
+#include "ttot.h"
+#include "fifo_test.h"
+#include "mb_stability_test.h"
 #include "trigger_scan.h"
 #include "process_packet.h"
 
@@ -253,6 +260,22 @@ int process_control_command(char *buffer)
     result = ped_run(buffer);
   }else if (strncmp(buffer,"zdisc",5)==0){
     result = zdisc(buffer);
+  }else if (strncmp(buffer,"crate_cbal",10)==0){
+    result = crate_cbal(buffer);
+  }else if (strncmp(buffer,"cgt_test",8)==0){
+    result = cgt_test(buffer);
+  }else if (strncmp(buffer,"cmos_m_gtvalid",14)==0){
+    result = cmos_m_gtvalid(buffer);
+  }else if (strncmp(buffer,"cald_test",9)==0){
+    result = cald_test(buffer);
+  }else if (strncmp(buffer,"get_ttot",8)==0){
+    result = get_ttot(buffer);
+  }else if (strncmp(buffer,"set_ttot",8)==0){
+    result = set_ttot(buffer);
+  }else if (strncmp(buffer,"fifo_test",9)==0){
+    result = fifo_test(buffer);
+  }else if (strncmp(buffer,"mb_stability_test",17)==0){
+    result = mb_stability_test(buffer);
   }
   //_!_end_commands_!_
   else{

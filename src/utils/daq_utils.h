@@ -18,5 +18,6 @@ int kill_all_threads();
 void sigint_func(int sig); //!< handles ctrl-C
 void SwapLongBlock(void* p, int32_t n); //!< handles changing endianness
 void SwapShortBlock(void* p, int32_t n); //!< handles changing endianness
+uint32_t sGetBits(uint32_t value, uint32_t bit_start, uint32_t num_bits);
 
 #endif
