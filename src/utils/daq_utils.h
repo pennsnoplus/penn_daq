@@ -5,6 +5,8 @@
 
 #define CONFIG_FILE_LOC "data/config.cfg"
 
+int read_from_tut(char *result);
+int run_macro_from_tut(char *buffer);
 int run_macro();
 int parse_macro(char *filename);
 int reset_speed();

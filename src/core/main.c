@@ -27,12 +27,16 @@ int main(int argc, char *argv[])
   recv_bytes = 0;
   recv_fake_bytes = 0;
   running_macro = 0;
+  running_final_test = 0;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;
   pthread_mutex_init(&printsend_buffer_lock,NULL);
   pthread_mutex_init(&main_fdset_lock,NULL);
+  pthread_mutex_init(&final_test_cmd_lock,NULL);
+  pthread_cond_init(&final_test_cmd_cv,NULL);
   memset(printsend_buffer,'\0',sizeof(printsend_buffer));
+  memset(final_test_cmd,'\0',sizeof(final_test_cmd));
   for (i=0;i<MAX_XL3_CON;i++){
     command_number[i] = 0;
     multifc_buffer_full[i] = 0;
@@ -133,14 +137,12 @@ int main(int argc, char *argv[])
     if (sbc_lock && sbc_connected)
       FD_CLR(rw_sbc_fd,&temp);
     for (i=0;i<MAX_XL3_CON;i++)
-      if (xl3_lock[i])
+      if (xl3_lock[i] && rw_xl3_fd[i] > 0)
         FD_CLR(rw_xl3_fd[i],&temp);
+    if (cont_lock && rw_cont_fd > 0)
+      FD_CLR(rw_cont_fd,&temp);
     main_readable_fdset = temp;
     main_writeable_fdset = temp;
-    //for (i=0;i<=fdmax;i++){
-    //  if (FD_ISSET(i,&main_readable_fdset))
-    //    printf("%d\n",i);
-    //}
     // free any threads that have finished
     cleanup_threads();
     // now we do the select
@@ -159,7 +161,7 @@ int main(int argc, char *argv[])
           read_socket(cur_fd);
         } // end if fd is readable
       } // end loop over all fds
-    } // end if select returns > 0
+    }// end if select returns > 0
   } // end main loop
 
   sigint_func(SIGINT);

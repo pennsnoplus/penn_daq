@@ -21,7 +21,7 @@
 #define DEF_MTC_XILINX_LOCATION "data/mtcxilinx.rbt" 
 
 pthread_t *thread_pool[MAX_THREADS]; //!< Pool of threads to make new tests in
-int thread_done[MAX_THREADS]; //!< Flags that a thread has finished and can be cleared
+int thread_done[MAX_THREADS+1]; //!< Flags that a thread has finished and can be cleared
 
 char DB_SERVER[100]; //<! holds the full database path
 
@@ -34,6 +34,11 @@ int running_macro;
 char macro_cmds[1000][250];
 int macro_tot_cmds;
 int macro_cur_cmd;
+
+int running_final_test;
+pthread_mutex_t final_test_cmd_lock; 
+pthread_cond_t final_test_cmd_cv;
+char final_test_cmd[1000];
 
 int command_number[19]; //!< Numbers cmd packets sent to xl3
 

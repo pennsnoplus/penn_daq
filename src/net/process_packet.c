@@ -37,6 +37,8 @@
 #include "ttot.h"
 #include "fifo_test.h"
 #include "mb_stability_test.h"
+#include "chinj_scan.h"
+#include "final_test.h"
 #include "trigger_scan.h"
 #include "process_packet.h"
 
@@ -109,8 +111,17 @@ int read_control_command(int fd)
     rw_cont_fd = -1;
     return -1;
   }
-  // otherwise process the packet
-  int error = process_control_command(buffer);
+  int error = 0;
+  // if running a final test, pass the command there
+  if (running_final_test){
+    pthread_mutex_lock(&final_test_cmd_lock);
+    sprintf(final_test_cmd+strlen(final_test_cmd),"%s",buffer);
+    pthread_cond_signal(&final_test_cmd_cv);
+    pthread_mutex_unlock(&final_test_cmd_lock);
+  }else{
+    // otherwise process the packet
+    error = process_control_command(buffer);
+  }
   // send response
   if (error != 0 && error != 999){
     // one of the sockets was locked already or no threads available
@@ -276,6 +287,10 @@ int process_control_command(char *buffer)
     result = fifo_test(buffer);
   }else if (strncmp(buffer,"mb_stability_test",17)==0){
     result = mb_stability_test(buffer);
+  }else if (strncmp(buffer,"chinj_scan",10)==0){
+    result = chinj_scan(buffer);
+  }else if (strncmp(buffer,"final_test",10)==0){
+    result = final_test(buffer);
   }
   //_!_end_commands_!_
   else{

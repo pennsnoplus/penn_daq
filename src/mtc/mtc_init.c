@@ -32,31 +32,9 @@ int mtc_init(char *buffer)
     words = strtok(NULL, " ");
   }
 
-  // now check and see if everything needed is unlocked
-  if (sbc_lock != 0){
-    // the sbc is locked, we cant do this right now
-    printf("we cant, its locked!\n");
-    return -1;
-  }
-  if (sbc_connected == 0){
-    printsend("SBC is not connected! Aborting\n");
-    return 0;
-  }
-  // spawn a thread to do it
-  sbc_lock = 1;
-
   pthread_t *new_thread;
-  new_thread = malloc(sizeof(pthread_t));
-  int i,thread_num = -1;
-  for (i=0;i<MAX_THREADS;i++){
-    if (thread_pool[i] == NULL){
-      thread_pool[i] = new_thread;
-      thread_num = i;
-      break;
-    }
-  }
-  if (thread_num == -1){
-    printsend("All threads busy currently\n");
+  int thread_num = thread_and_lock(1,0,&new_thread);
+  if (thread_num < 0){
     return -1;
   }
 
@@ -73,6 +51,8 @@ void *pt_mtc_init(void *args)
   int thread_num = ((uint32_t *) args)[0];
   int xilinx_load = ((uint32_t *) args)[1];
   free(args);
+
+  pt_printsend("Initializing MTC/A/D\n");
 
   int errors;
 

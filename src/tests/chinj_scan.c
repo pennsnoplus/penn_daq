@@ -381,12 +381,12 @@ void *pt_chinj_scan(void *args)
                   scan_errors[slot_iter*32+i*2+1][dac_iter]++;
               }
             }
-            //pt_printsend("%2d %3d %4d %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f\n",
-            //i,j,ped[i].thiscell[j].per_cell,
-            //ped[i].thiscell[j].qhlbar, ped[i].thiscell[j].qhlrms,
-            //ped[i].thiscell[j].qhsbar, ped[i].thiscell[j].qhsrms,
-            //ped[i].thiscell[j].qlxbar, ped[i].thiscell[j].qlxrms,
-            //ped[i].thiscell[j].tacbar, ped[i].thiscell[j].tacrms);
+            pt_printsend("%2d %3d %4d %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f\n",
+            i,j,ped[i].thiscell[j].per_cell,
+            ped[i].thiscell[j].qhlbar, ped[i].thiscell[j].qhlrms,
+            ped[i].thiscell[j].qhsbar, ped[i].thiscell[j].qhsrms,
+            ped[i].thiscell[j].qlxbar, ped[i].thiscell[j].qlxrms,
+            ped[i].thiscell[j].tacbar, ped[i].thiscell[j].tacrms);
           }
         }
 
@@ -408,8 +408,6 @@ void *pt_chinj_scan(void *args)
        }
      */
 
-    free(pmt_buffer);
-    free(ped);
 
     //disable trigger enables
     unset_ped_crate_mask(MASKALL);
@@ -421,6 +419,8 @@ void *pt_chinj_scan(void *args)
     deselect_fecs(arg.crate_num,&thread_fdset);
   } // end loop over dacvalue
 
+  free(pmt_buffer);
+  free(ped);
 
   // lets update this database
   if (arg.update_db){

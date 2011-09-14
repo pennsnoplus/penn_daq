@@ -10,6 +10,23 @@
 #include "json.h"
 #include "db.h"
 
+int get_new_id(char* newid)
+{
+  char get_db_address[500];
+  sprintf(get_db_address,"%s/_uuids",DB_SERVER);
+  pouch_request *pr = pr_init();
+  pr_set_url(pr, get_db_address);
+  pr_set_method(pr, GET);
+  pr_do(pr);
+  JsonNode *newerid = json_decode(pr->resp.data);
+  int ret = sprintf(newid,"%s",json_get_string(json_find_element(json_find_member(newerid,"uuids"),0)));
+  json_delete(newerid);
+  pr_free(pr);
+  if (ret)
+    return 0;
+  return 1;
+}
+
 int parse_mtc(JsonNode* value,mtc_t* mtc)
 {
     int i;
@@ -254,11 +271,11 @@ int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
     return ret;
 };
 
-int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc)
+int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc, fd_set *thread_fdset)
 {
     char mb_ids[8],dc_ids[4][8],hv_ids[8];
     char put_db_address[500];
-    update_crate_config(crate,0x1<<card);
+    update_crate_config(crate,0x1<<card,thread_fdset);
     time_t the_time;
     the_time = time(0); //
     char datetime[100];

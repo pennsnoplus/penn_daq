@@ -108,6 +108,8 @@ COMMAND commands[] = {
     { "set_ttot", (Function *)NULL, (char *)NULL },
     { "fifo_test", (Function *)NULL, (char *)NULL },
     { "mb_stability_test", (Function *)NULL, (char *)NULL },
+    { "chinj_scan", (Function *)NULL, (char *)NULL },
+    { "final_test", (Function *)NULL, (char *)NULL },
     //_!_end_commands_!_
     { (char *)NULL, (Function *)NULL, (char*)NULL }
 };

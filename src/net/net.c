@@ -82,6 +82,7 @@ void setup_sockets()
 
   // set up locks
   sbc_lock = 0;
+  cont_lock = 0;
   for (i=0;i<MAX_XL3_CON;i++)
     xl3_lock[i] = 0;
 

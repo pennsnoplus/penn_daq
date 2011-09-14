@@ -9,6 +9,16 @@
 #include "net_utils.h"
 #include "daq_utils.h"
 
+int read_from_tut(char *result)
+{
+  pthread_mutex_lock(&final_test_cmd_lock);
+  pthread_cond_wait(&final_test_cmd_cv, &final_test_cmd_lock);
+  strcpy(result,final_test_cmd);
+  memset(final_test_cmd,'\0',sizeof(final_test_cmd));
+  pthread_mutex_unlock(&final_test_cmd_lock);
+  return 0;
+}
+
 int run_macro_from_tut(char *buffer)
 {
   char filename[250];
@@ -214,15 +224,15 @@ int set_location(char *buffer)
     if (words[0] == '-'){
       if (words[1] == 'p'){
         printsend("location set to penn test stand\n");
-        CURRENT_LOCATION = 2;
+        CURRENT_LOCATION = PENN_TESTSTAND;
       }
       if (words[1] == 'u'){
         printsend("location set to underground\n");
-        CURRENT_LOCATION = 1;
+        CURRENT_LOCATION = UNDERGROUND;
       }
       if (words[1] == 'a'){
         printsend("location set to above ground test stand\n");
-        CURRENT_LOCATION = 0;
+        CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
       }
       if (words[1] == 'h'){
         printsend("Usage: set_location"

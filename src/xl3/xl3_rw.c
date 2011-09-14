@@ -28,7 +28,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   int sent_command_number = command_number[xl3num];
   command_number[xl3num]++;
 
-  fd_set readable_fdset = *(thread_fdset);;
+  fd_set readable_fdset = *(thread_fdset);
 
   struct timeval delay_value;
   delay_value.tv_sec = 30;
@@ -419,3 +419,135 @@ int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_bu
   return -1;
 }
 
+/*
+int read_from_tut(char *result, fd_set *thread_fdset)
+{
+  if (rw_cont_fd <= 0){
+    pt_printsend("read_from_tut: Controller doesn't appear to be connected");
+    return -1;
+  }
+
+  fd_set readable_fdset = *(thread_fdset);
+  fd_set writeable_fdset = *(thread_fdset);
+  int j;
+  for (j=0;j<=fdmax;j++)
+    if (FD_ISSET(j,&readable_fdset))
+      pt_printsend("%d is set\n",j);
+
+  XL3_Packet packet;
+  char tut_buf[2000];
+  memset(tut_buf,'\0',2000);
+
+  struct timeval delay_value;
+  delay_value.tv_sec = 10;
+  delay_value.tv_usec = 0;
+  // lets get a response back from the xl3
+  // or some text from the controller
+  while (1){
+    memset(&packet,'\0',MAX_PACKET_SIZE);
+    int data = select(fdmax+1,&readable_fdset,&writeable_fdset,NULL,&delay_value);
+    // check for errors
+    if (data == -1){
+      pt_printsend("read_from_tut: Error in select\n");
+      return -2;
+    }else if (data == 0){
+      pt_printsend("read_from_tut: Timeout in select\n");
+      return -3;
+    }
+    // lets see whats readable
+    int i,n;
+    for (i=0;i<=fdmax;i++){
+      if (FD_ISSET(i,&readable_fdset)){
+        pt_printsend("%d is readabe\n",i);
+        if (FD_ISSET(i,&cont_fdset))
+          pt_printsend("Its a controller\n");
+      }
+    }
+    for (i=0;i<MAX_XL3_CON;i++){
+      if (rw_xl3_fd[i] > 0){
+        if (FD_ISSET(rw_xl3_fd[i],&readable_fdset)){
+          n = recv(rw_xl3_fd[i],(char*)&packet,MAX_PACKET_SIZE,0); 
+          if (n < 0){
+            pt_printsend("read_from_tut: Error receiving data from XL3 #%d. Closing connection\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            xl3_connected[i] = 0;
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }else if (n == 0){
+            pt_printsend("read_from_tut: Got a zero byte packet, Closing XL3 #%d\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            xl3_connected[i] = 0;
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }
+
+          SwapShortBlock(&(packet.cmdHeader.packet_num),1);
+          if (packet.cmdHeader.packet_type == MESSAGE_ID){
+            pt_printsend("%s",packet.payload);
+          }else if (packet.cmdHeader.packet_type == MEGA_BUNDLE_ID){
+            //store_mega_bundle();
+          }else if (packet.cmdHeader.packet_type == SCREWED_ID){
+            //handle_screwed_packet();
+          }else if (packet.cmdHeader.packet_type == ERROR_ID){
+            //handle_error_packet();
+          }else if (packet.cmdHeader.packet_type == PING_ID){
+            packet.cmdHeader.packet_type = PONG_ID;
+            n = write(rw_xl3_fd[i],(char *)&packet,MAX_PACKET_SIZE);
+            if (n < 0){
+              pt_printsend("do_xl3_cmd: Error writing to socket for pong.\n");
+              return -1;
+            }
+          } // end switch on packet type
+        } // end if this xl3 is readable 
+      } // end if this xl3 is connected
+    } // end loop on xl3 fds
+    // now check controller for text
+    if (FD_ISSET(rw_cont_fd,&readable_fdset)){
+      pt_printsend("got a cont packet\n");
+      n = recv(rw_cont_fd,tut_buf,2000,0); 
+      pt_printsend("size was %d\n",n);
+      if (n > 0){
+        sprintf(result,"%s",tut_buf);
+        if (FD_ISSET(rw_cont_fd,&writeable_fdset)){
+          write(rw_cont_fd,CONT_CMD_ACK,strlen(CONT_CMD_ACK));
+          return 0;
+        }else{
+          pt_printsend("Could not ack to controller. Check connection\n");
+          return 0;
+        }
+      }else if (n < 0){
+        pt_printsend("Error receiving command from controller\n");
+        pthread_mutex_lock(&main_fdset_lock);
+        FD_CLR(rw_cont_fd,&cont_fdset);
+        FD_CLR(rw_cont_fd,&main_fdset);
+        close(rw_cont_fd);
+        pthread_mutex_unlock(&main_fdset_lock);
+        cont_connected = 0;
+        rw_cont_fd = -1;
+        return -1;
+      }else if (n == 0){
+        pt_printsend("Closing controller connection.\n");
+        pthread_mutex_lock(&main_fdset_lock);
+        FD_CLR(rw_cont_fd,&cont_fdset);
+        FD_CLR(rw_cont_fd,&main_fdset);
+        close(rw_cont_fd);
+        pthread_mutex_unlock(&main_fdset_lock);
+        cont_connected = 0;
+        rw_cont_fd = -1;
+        return -1;
+      }
+    } // end if packet from controller
+  } // end while loop
+
+  // should never get here
+  return 0;
+}
+*/
