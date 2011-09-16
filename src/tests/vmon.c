@@ -79,9 +79,6 @@ void *pt_vmon(void *args)
   for (i=0;i<16;i++)
     for (j=0;j<21;j++)
       voltages[i][j] = 0;
-  char v_name[21][20] = {"neg_24","neg_15","Vee","neg_3_3","neg_2","pos_3_3","pos_4","Vcc","pos_6_5","pos_8","pos_15","pos_24","neg_2_ref","neg_1_ref","pos_0_8_ref","pos_1_ref","pos_4_ref","pos_5_ref","Temp","CalD","hvt"};
-  float voltages_min[21] = {-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99.,-99};
-  float voltages_max[21] = {99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99.,99};
 
 
   XL3_Packet packet;
@@ -106,7 +103,7 @@ void *pt_vmon(void *args)
   for (k=0;k<2;k++){
     pt_printsend("slot             %2d     %2d     %2d     %2d     %2d     %2d     %2d     %2d\n",k*8,k*8+1,k*8+2,k*8+3,k*8+4,k*8+5,k*8+6,k*8+7);
     for (i=0;i<21;i++){
-      pt_printsend("%10s   ",v_name[i]);
+      pt_printsend("%10s   ",voltages_name[i]);
       for (j=0;j<8;j++){
         pt_printsend("%6.2f ",voltages[j+k*8][i]);
       }
@@ -124,11 +121,24 @@ void *pt_vmon(void *args)
         int pass_flag = 1;
         JsonNode *newdoc = json_mkobject();
         json_append_member(newdoc,"type",json_mkstring("vmon"));
-        for (j=0;j<21;j++){
-          json_append_member(newdoc,v_name[j],json_mknumber((double)voltages[slot][j]));
+
+        JsonNode *all_volts = json_mkarray();
+        for (j=0;j<18;j++){
+          JsonNode *one_volt = json_mkobject();
+          json_append_member(one_volt,"name",json_mkstring(voltages_name[j]));
+          json_append_member(one_volt,"nominal",json_mknumber((double) voltages_nom[j]));
+          json_append_member(one_volt,"value",json_mknumber((double)voltages[slot][j]));
+          json_append_member(one_volt,"within_spec",json_mkbool((voltages[slot][j] >= voltages_min[j]) && (voltages[slot][j] <= voltages_max[j])));
+          json_append_element(all_volts,one_volt);
           if ((voltages[slot][j] < voltages_min[j]) || (voltages[slot][j] > voltages_max[j]))
             pass_flag = 0;
         }
+        json_append_member(newdoc,"voltages",all_volts);
+
+        json_append_member(newdoc,"temp",json_mknumber((double)voltages[slot][18]));
+        json_append_member(newdoc,"cald",json_mknumber((double)voltages[slot][19]));
+        json_append_member(newdoc,"hvt",json_mknumber((double)voltages[slot][20]));
+
         json_append_member(newdoc,"pass",json_mkbool(pass_flag));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	

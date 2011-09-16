@@ -299,7 +299,7 @@ void *pt_ped_run(void *args)
       pt_printsend("Slot (%2d)\n", slot);
       pt_printsend("########################################################\n");
       
-      int error_flag[32];
+      uint32_t error_flag[32];
 
       for (i = 0; i<32; i++){
         error_flag[i] = 0;
@@ -313,19 +313,19 @@ void *pt_ped_run(void *args)
                 ped[i].thiscell[j].qlxbar, ped[i].thiscell[j].qlxrms,
                 ped[i].thiscell[j].tacbar, ped[i].thiscell[j].tacrms);
             if (ped[i].thiscell[j].per_cell < arg.num_pedestals*.8 || ped[i].thiscell[j].per_cell > arg.num_pedestals*1.2)
-              error_flag[i]++;
+              error_flag[i] |= 0x1;
             if (ped[i].thiscell[j].qhlbar < arg.ped_low || 
                 ped[i].thiscell[j].qhlbar > arg.ped_high ||
                 ped[i].thiscell[j].qhsbar < arg.ped_low ||
                 ped[i].thiscell[j].qhsbar > arg.ped_high ||
                 ped[i].thiscell[j].qlxbar < arg.ped_low ||
                 ped[i].thiscell[j].qlxbar > arg.ped_high)
-              error_flag[i]+=100;
+              error_flag[i] |= 0x2;
             //printsend("%d %d %d %d\n",ped[i].thiscell[j].qhlbar,ped[i].thiscell[j].qhsbar,ped[i].thiscell[j].qlxbar,ped[i].thiscell[j].tacbar);
           }
-          if (error_flag[i] > 100)
+          if (error_flag[i] & 0x1)
             pt_printsend(">>>Bad Q pedestal for this channel\n");
-          if (error_flag[i]%100 > 0)
+          if (error_flag[i] & 0x2)
             printsend(">>>Wrong no of pedestals for this channel\n");
         }
       }
@@ -345,6 +345,7 @@ void *pt_ped_run(void *args)
         JsonNode *tac = json_mkarray();
         JsonNode *tacrms = json_mkarray();
         JsonNode *error_node = json_mkarray();
+        JsonNode *error_flags = json_mkarray();
         for (i=0;i<32;i++){
           JsonNode *numtemp = json_mkarray();
           JsonNode *qhltemp = json_mkarray();
@@ -375,38 +376,29 @@ void *pt_ped_run(void *args)
           json_append_element(qlxrms, qlxrmstemp);
           json_append_element(tac, tactemp);
           json_append_element(tacrms, tacrmstemp);
-          if (error_flag[i] == 0){
-            json_append_element(error_node,json_mkstring("none"));
-          }else{
-            json_append_element(error_node,json_mknumber((double)error_flag[i])); //FIXME
-          }
+          json_append_element(error_node,json_mkbool(error_flag[i]));
+          json_append_element(error_flags,json_mknumber((double)error_flag[i]));
         }
         json_append_member(newdoc,"type",json_mkstring("ped_run"));
         json_append_member(newdoc,"num",num);
-        json_append_member(newdoc,"QHL",qhl);
-        json_append_member(newdoc,"QHL_rms",qhlrms);
-        json_append_member(newdoc,"QHS",qhs);
-        json_append_member(newdoc,"QHS_rms",qhsrms);
-        json_append_member(newdoc,"QLX",qlx);
-        json_append_member(newdoc,"QLX_rms",qlxrms);
-        json_append_member(newdoc,"TAC",tac);
-        json_append_member(newdoc,"TAC_rms",tacrms);
+        json_append_member(newdoc,"qhl",qhl);
+        json_append_member(newdoc,"qhl_rms",qhlrms);
+        json_append_member(newdoc,"qhs",qhs);
+        json_append_member(newdoc,"qhs_rms",qhsrms);
+        json_append_member(newdoc,"qlx",qlx);
+        json_append_member(newdoc,"qlx_rms",qlxrms);
+        json_append_member(newdoc,"tac",tac);
+        json_append_member(newdoc,"tac_rms",tacrms);
         json_append_member(newdoc,"errors",error_node);
-        int fail_flag = 0;
-        for (j=0;j<32;j++){
+        json_append_member(newdoc,"error_flags",error_flags);
+
+        int pass_flag = 1;;
+        for (j=0;j<32;j++)
           if (error_flag[j] != 0)
-            fail_flag = 1;
-        }
-        if (fail_flag == 0){
-          json_append_member(newdoc,"pass",json_mkstring("yes"));
-        }else{
-          json_append_member(newdoc,"pass",json_mkstring("no"));
-        }
-        if (arg.balanced){
-          json_append_member(newdoc,"balanced",json_mkstring("yes"));
-        }else{
-          json_append_member(newdoc,"balanced",json_mkstring("no"));	
-        }
+            pass_flag = 0;;
+        json_append_member(newdoc,"pass",json_mkbool(pass_flag));
+        json_append_member(newdoc,"balanced",json_mkbool(arg.balanced));
+
         if (arg.final_test){
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
         }

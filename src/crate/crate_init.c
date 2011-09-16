@@ -117,7 +117,7 @@ void *pt_crate_init(void *args)
     //json_delete(hw_doc); // only delete the head node
     pr_free(hw_response);
   }else{
-    sprintf(get_db_address,"http://%s:%s/%s/CRATE_INIT_DOC",DB_ADDRESS,DB_PORT,DB_BASE_NAME);
+    sprintf(get_db_address,"%s/%s/CRATE_INIT_DOC",DB_SERVER,DB_BASE_NAME);
     pr_set_method(debug_response, GET);
     pr_set_url(debug_response, get_db_address);
     pr_do(debug_response);

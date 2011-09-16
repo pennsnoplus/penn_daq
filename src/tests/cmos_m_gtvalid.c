@@ -478,7 +478,7 @@ void *pt_cmos_m_gtvalid(void *args)
         json_append_member(newdoc,"type",json_mkstring("cmos_m_gtvalid"));
 
         json_append_member(newdoc,"vmax",json_mknumber((double)VMAX));
-        json_append_member(newdoc,"TACREF",json_mknumber((double)TACREF));
+        json_append_member(newdoc,"tacref",json_mknumber((double)TACREF));
 
         JsonNode* isetm_new = json_mkarray();
         JsonNode* iseta_new = json_mkarray();
@@ -489,24 +489,22 @@ void *pt_cmos_m_gtvalid(void *args)
         json_append_member(newdoc,"isetm",isetm_new);
         json_append_member(newdoc,"iseta",iseta_new);
 
-        JsonNode* tac_shift_new = json_mkarray();
-        JsonNode* gtchan0 = json_mkarray();
-        JsonNode* gtchan1 = json_mkarray();
-        JsonNode* errors = json_mkarray();
-        for (i=0;i<32;i++){
-          json_append_element(tac_shift_new,json_mknumber((double) (tacbits_save[1][i]*16+tacbits_save[0][1])));
-          json_append_element(gtchan0,json_mknumber((double) (gtchan_set[0][i])));
-          json_append_element(gtchan1,json_mknumber((double) (gtchan_set[1][i])));
-          json_append_element(errors,json_mkbool(0));//FIXME
+        JsonNode* channels = json_mkarray();
+        for (j=0;j<32;j++){
+          JsonNode *one_chan = json_mkobject();
+          json_append_member(one_chan,"id",json_mknumber((double) j));
+          json_append_member(one_chan,"tac_shift",json_mknumber((double) (tacbits_save[1][j]*16+tacbits_save[0][1])));
+          json_append_member(one_chan,"gtvalid0",json_mknumber((double) (gtchan_set[0][j])));
+          json_append_member(one_chan,"gtvalid1",json_mknumber((double) (gtchan_set[1][j])));
+          json_append_member(one_chan,"errors",json_mkbool(0));//FIXME
+          json_append_element(channels,one_chan);
         }
-        json_append_member(newdoc,"tac_shift",tac_shift_new);
-        json_append_member(newdoc,"GTValid_tac0",gtchan0);
-        json_append_member(newdoc,"GTValid_tac1",gtchan1);
-        json_append_member(newdoc,"errors",errors);
+        json_append_member(newdoc,"channels",channels);
+
         json_append_member(newdoc,"pass",json_mkbool(1));//FIXME
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
-        post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
+        post_debug_doc(arg.crate_num,j,newdoc,&thread_fdset);
         json_delete(newdoc); // only delete the head
       }
 

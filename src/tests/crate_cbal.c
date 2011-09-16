@@ -523,41 +523,41 @@ void *pt_crate_cbal(void *args)
         pt_printsend("updating the database\n");
         JsonNode *newdoc = json_mkobject();
         json_append_member(newdoc,"type",json_mkstring("crate_cbal"));
-        JsonNode* vbal_high_new = json_mkarray();
-        JsonNode* vbal_low_new = json_mkarray();
-        JsonNode* error_new = json_mkarray();
-        JsonNode* chan_error = json_mkarray();
+
+        JsonNode *channels = json_mkarray();
         int pass_flag = 1;
+
         for (j=0;j<32;j++){
-          json_append_element(vbal_high_new,
+          JsonNode *one_chan = json_mkobject();
+          json_append_member(one_chan,"id",json_mknumber((double) j));
+          json_append_member(one_chan,"vbal_high",
               json_mknumber((double)chan_param[j].high_gain_balance));
-          json_append_element(vbal_low_new,
+          json_append_member(one_chan,"vbal_low",
               json_mknumber((double)chan_param[j].low_gain_balance));
-          json_append_element(chan_error,json_mkbool(error_flags[j]));
+          json_append_member(one_chan,"errors",json_mkbool(error_flags[j]));
           if (error_flags[j] == 0)
-            json_append_element(error_new,json_mkstring("none"));
+            json_append_member(one_chan,"error_flags",json_mkstring("none"));
           else if (error_flags[j] == 1)
-            json_append_element(error_new,json_mkstring("Extreme balance set to 150"));
+            json_append_member(one_chan,"error_flags",json_mkstring("Extreme balance set to 150"));
           else if (error_flags[j] == 2)
-            json_append_element(error_new,json_mkstring("Extreme balance values"));
+            json_append_member(one_chan,"error_flags",json_mkstring("Extreme balance values"));
           else if (error_flags[j] == 3)
-            json_append_element(error_new,json_mkstring("Partially balanced"));
+            json_append_member(one_chan,"error_flags",json_mkstring("Partially balanced"));
           else if (error_flags[j] == 4)
-            json_append_element(error_new,json_mkstring("Unbalanced, set to 150"));
+            json_append_member(one_chan,"error_flags",json_mkstring("Unbalanced, set to 150"));
           if (error_flags[j] != 0)
             pass_flag = 0;
+          json_append_element(channels,one_chan);
         }
+        json_append_member(newdoc,"channels",channels);
+
         if (return_value != 0)
           pass_flag = 0;
-        json_append_member(newdoc,"vbal_low",vbal_low_new);
-        json_append_member(newdoc,"vbal_high",vbal_high_new);
-        json_append_member(newdoc,"error_messages",error_new);
-        json_append_member(newdoc,"errors",chan_error);
         json_append_member(newdoc,"pass",json_mkbool(pass_flag));
 
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[j]));	
-        post_debug_doc(arg.crate_num,j,newdoc,&thread_fdset);
+        post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
         json_delete(newdoc); // delete the head
       }
 

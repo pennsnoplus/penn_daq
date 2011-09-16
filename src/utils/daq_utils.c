@@ -3,11 +3,150 @@
 #include <time.h>
 #include <string.h>
 
+#include "xl3_registers.h"
+#include "mtc_registers.h"
+
 #include "main.h"
 #include "net.h"
 #include "process_packet.h"
 #include "net_utils.h"
 #include "daq_utils.h"
+
+int print_help(char *buffer)
+{
+  int which = 0;
+  char *words,*words2;
+  words = strtok(buffer," ");
+  while (words != NULL){
+    if (strncmp(words,"xl3_registers",13) == 0){
+      which = 1;
+    }else if (strncmp(words,"fec_registers",13) == 0){
+      which = 2;
+    }else if (strncmp(words,"mtc_registers",13) == 0){
+      which = 3;
+    }else if (strncmp(words,"xl3",3) == 0){
+      which = 4;
+    }else if (strncmp(words,"fec",3) == 0){
+      which = 5;
+    }else if (strncmp(words,"mtc",3) == 0){
+      which = 6;
+    }else if (strncmp(words,"daq",3) == 0){
+      which = 7;
+    }else if (strncmp(words,"tests",4) == 0){
+      which = 8;
+    }else if (strncmp(words,"all",3) == 0){
+      which = 9;
+    }
+    words = strtok(NULL," ");
+  }
+
+  int i,j;
+  if (which == 0){
+    pt_printsend("Type \"help topic\" to get more help about \"topic\"\n");
+    pt_printsend("Topics:\n");
+    pt_printsend("all\t\t\tView a list of all commands\n");
+    pt_printsend("xl3\t\t\tView a list of xl3 commands\n");
+    pt_printsend("fec\t\t\tView a list of fec commands\n");
+    pt_printsend("mtc\t\t\tView a list of mtc commands\n");
+    pt_printsend("daq\t\t\tView a list of daq commands\n");
+    pt_printsend("tests\t\t\tView a list of tests\n");
+    pt_printsend("xl3_registers\t\tView a list of register numbers and addresses\n");
+    pt_printsend("fec_registers\t\tView a list of register numbers and addresses\n");
+    pt_printsend("mtc_registers\t\tView a list of register numbers and addresses\n");
+  }
+  if (which == 1){
+    pt_printsend("XL3 Registers:\n");
+    for (i=0;i<14;i++)
+      pt_printsend("%2d: (%08x) %s\n",i,xl3_reg_addresses[i],xl3_reg_names[i]);
+  }
+  if (which == 2){
+    pt_printsend("FEC Registers:\n");
+    for (i=0;i<20;i++)
+      pt_printsend("%2d: (%08x) %s\n",i,fec_reg_addresses[i],fec_reg_names[i]);
+    for (i=0;i<8;i++)
+      pt_printsend("%3d - %3d: (%08x + 0x8*num) %s\n",20+i*32,20+i*32+31,fec_reg_addresses[20+i],fec_reg_names[20+i]);
+  }
+  if (which == 3){
+    pt_printsend("MTC Registers:\n");
+    for (i=0;i<21;i++)
+      pt_printsend("%2d: (%08x) %s\n",i,mtc_reg_addresses[i],mtc_reg_names[i]);
+  }
+  if (which == 7 || which == 9){
+    pt_printsend("print_connected\t\tPrints all connected devices\n");
+    pt_printsend("stop_logging\t\tStop logging output to a file\n");
+    pt_printsend("start_logging\t\tStart logging output to a file\n");
+    pt_printsend("set_location\t\tSet current location\n");
+    pt_printsend("sbc_control\t\tConnect or reconnect to sbc\n");
+    pt_printsend("clear_screen\t\tClear screen of output\n");
+    pt_printsend("reset_speed\t\tReset speed calculated for pedestal runs\n");
+    pt_printsend("kill_threads\t\tClose all currently running threads\n");
+    pt_printsend("run_macro\t\tRun a list of commands from a file\n");
+    pt_printsend("stop_macro\t\tStop running a macro\n");
+  }
+  if (which == 4 || which == 9){
+    pt_printsend("xr\t\t\tRead from an xl3 register specified by number\n");
+    pt_printsend("xw\t\t\tWrite to an xl3 register specified by number\n");
+    pt_printsend("xl3_rw\t\t\tRead/Write to xl3/fec registers by address\n");
+    pt_printsend("xl3_queue_rw\t\tRead/Write to xl3/fec using command queue\n");
+    pt_printsend("debugging_on\t\tTurn on debugging output to serial port\n");
+    pt_printsend("debugging_off\t\tTurn off debugging output to serial port\n");
+    pt_printsend("change_mode\t\tTurn readout on or off\n");
+    pt_printsend("sm_reset\t\tReset vhdl state mahine\n");
+    pt_printsend("crate_init\t\tInitialize crate\n");
+  }
+  if (which == 5 || which == 9){
+    pt_printsend("fr\t\t\tRead from a fec register specified by number\n");
+    pt_printsend("fw\t\t\tWrite to a fec register specified by number\n");
+    pt_printsend("read_bundle\t\tRead a single bundle and print it\n");
+  }
+  if (which == 6 || which == 9){
+    pt_printsend("mr\t\t\tRead from a mtc register specified by number\n");
+    pt_printsend("mw\t\t\tWrite to a mtc register specified by number\n");
+    pt_printsend("mtc_read\t\tRead from a mtc register by address\n");
+    pt_printsend("mtc_write\t\tWrite to a mtc register by address\n");
+    pt_printsend("mtc_init\t\tInitialize mtc\n");
+    pt_printsend("set_mtca_thresholds\n");
+    pt_printsend("set_gt_mask\n");
+    pt_printsend("set_gt_crate_mask\n");
+    pt_printsend("set_ped_crate_mask\n");
+    pt_printsend("enable_pulser\n");
+    pt_printsend("disable_pulser\n");
+    pt_printsend("enable_pedestal\n");
+    pt_printsend("disable_pedestal\n");
+    pt_printsend("set_pulser_freq\n");
+    pt_printsend("send_softgt\n");
+    pt_printsend("multi_softgt\n");
+  }
+  if (which == 8 || which == 9){
+    pt_printsend("run_pedestals\t\tEnable pedestals on mtc and readout on crates\n");
+    pt_printsend("run_pedestals_mtc\t\tEnable pedestals and pulser on mtc\n");
+    pt_printsend("run_pedestals_crate\t\tEnable pedestals and readout on crate\n");
+    pt_printsend("run_pedestals_end\t\tStop pulser and end readout\n");
+    pt_printsend("run_pedestals_end_mtc\t\tStop pulser and pedestals\n");
+    pt_printsend("run_pedestals_end_crate\t\tDisable pedestals and stop readout\n");
+    pt_printsend("trigger_scan\n");
+    pt_printsend("fec_test\n");
+    pt_printsend("mem_test\n");
+    pt_printsend("vmon\n");
+    pt_printsend("board_id\n");
+    pt_printsend("ped_run\n");
+    pt_printsend("zdisc\n");
+    pt_printsend("crate_cbal\n");
+    pt_printsend("cgt_test\n");
+    pt_printsend("cmos_m_gtvalid\n");
+    pt_printsend("cald_test\n");
+    pt_printsend("get_ttot\n");
+    pt_printsend("set_ttot\n");
+    pt_printsend("fifo_test\n");
+    pt_printsend("disc_check\n");
+    pt_printsend("mb_stability_test\n");
+    pt_printsend("chinj_scan\n");
+    pt_printsend("final_test\n");
+  }
+  pt_printsend("-----------------------------------------\n");
+
+  return 0;
+}
 
 int read_from_tut(char *result)
 {

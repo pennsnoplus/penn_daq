@@ -36,6 +36,7 @@
 #include "cmos_m_gtvalid.h"
 #include "ttot.h"
 #include "fifo_test.h"
+#include "disc_check.h"
 #include "mb_stability_test.h"
 #include "chinj_scan.h"
 #include "final_test.h"
@@ -180,6 +181,8 @@ int process_control_command(char *buffer)
   if (strncmp(buffer,"exit",4)==0){
     printsend("Exiting daq.\n");
     sigint_func(SIGINT);
+  }else if (strncmp(buffer,"help",4) == 0){
+    result = print_help();
   }else if (strncmp(buffer,"print_connected",10)==0){
     result = print_connected();
   }else if (strncmp(buffer,"stop_logging",12)==0){
@@ -201,6 +204,18 @@ int process_control_command(char *buffer)
     result = run_macro_from_tut();
   }else if (strncmp(buffer,"stop_macro",10)==0){
     running_macro = 0;
+  }else if (strncmp(buffer,"xr",2)==0){
+    result = xrw(buffer,0);
+  }else if (strncmp(buffer,"xw",2)==0){
+    result = xrw(buffer,1);
+  }else if (strncmp(buffer,"fr",2)==0){
+    result = frw(buffer,0);
+  }else if (strncmp(buffer,"fw",2)==0){
+    result = frw(buffer,1);
+  }else if (strncmp(buffer,"mr",2)==0){
+    result = mrw(buffer,0);
+  }else if (strncmp(buffer,"mw",2)==0){
+    result = mrw(buffer,1);
   }else if (strncmp(buffer,"debugging_on",12)==0){
     result = debugging_mode(buffer,1);
   }else if (strncmp(buffer,"debugging_off",13)==0){
@@ -285,6 +300,8 @@ int process_control_command(char *buffer)
     result = set_ttot(buffer);
   }else if (strncmp(buffer,"fifo_test",9)==0){
     result = fifo_test(buffer);
+  }else if (strncmp(buffer,"disc_check",10)==0){
+    result = disc_check(buffer);
   }else if (strncmp(buffer,"mb_stability_test",17)==0){
     result = mb_stability_test(buffer);
   }else if (strncmp(buffer,"chinj_scan",10)==0){

@@ -322,7 +322,7 @@ void *pt_cgt_test(void *args)
           if (chan_errors[slot][i] > 0)
             passflag = 0;
         }
-        json_append_member(newdoc,"channel_errors",chan_errs);
+        json_append_member(newdoc,"errors",chan_errs);
         json_append_member(newdoc,"printout",json_mkstring(error_history[slot]));
         json_append_member(newdoc,"pass",json_mkbool(passflag));
 

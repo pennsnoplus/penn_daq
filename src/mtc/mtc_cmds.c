@@ -21,6 +21,78 @@
 #include "mtc_utils.h"
 #include "mtc_cmds.h"
 
+int mrw(char *buffer, int rw)
+{
+  mrw_t *args;
+  args = malloc(sizeof(mrw_t));
+
+  args->rw = rw;
+  args->register_num = 0;
+  args->data = 0x0;
+
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'r'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->register_num = atoi(words2);
+      }else if (words[1] == 'd'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->data = strtoul(words2,(char**)NULL,16);
+      }else if (words[1] == 'h'){
+        if (rw == 0)
+          pt_printsend("Usage: mr -r [register number (int)]\n");
+        else if (rw == 1)
+          pt_printsend("Usage: mw -r [register number (int)] -d [data (hex)]\n");
+        pt_printsend("type \"help mtc_registers\" to get "
+            "a list of registers with numbers and descriptions\n");
+        free(args);
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(1,0x0,&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_mrw,(void *)args);
+  return 0; 
+}
+
+void *pt_mrw(void *args)
+{
+  mrw_t arg = *(mrw_t *) args;
+  free(args);
+
+  if (arg.register_num > 20){
+    pt_printsend("Not a valid register.\n");
+    unthread_and_unlock(1,0x0,arg.thread_num);
+    return;
+  }
+
+  uint32_t result;
+  if (arg.rw == 0){
+    mtc_reg_read(mtc_reg_addresses[arg.register_num], &result);
+    pt_printsend("%08x\n",result);
+    //pt_printsend("Read out %08x from register %d (%08x)\n",result,arg.register_num,xl3_reg_addresses[arg.register_num]);
+  }else{
+    mtc_reg_write(mtc_reg_addresses[arg.register_num], arg.data);
+    pt_printsend("%08x\n",arg.data);
+    //pt_printsend("Wrote %08x to register %d (%08x)\n",arg.data,arg.register_num,xl3_reg_addresses[arg.register_num]);
+  }
+
+  unthread_and_unlock(1,0x0,arg.thread_num);
+  return;
+}
+
+
 int sbc_control(char *buffer)
 {
   sbc_control_t *args;

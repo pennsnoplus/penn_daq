@@ -3,6 +3,9 @@
 #ifndef __MTC_CMDS_H
 #define __MTC_CMDS_H
 
+int mrw(char *buffer, int rw);
+void *pt_mrw(void *args);
+
 int sbc_control(char *buffer);
 void *pt_sbc_control(void *args);
 int mtc_read(char *buffer);
@@ -31,6 +34,13 @@ int cmd_send_softgt(char *buffer);
 void *pt_cmd_send_softgt(void *args);
 int cmd_multi_softgt(char *buffer);
 void *pt_cmd_multi_softgt(void *args);
+
+typedef struct{
+  int thread_num;
+  int rw;
+  int register_num;
+  uint32_t data;
+} mrw_t;
 
 typedef struct{
   int thread_num;

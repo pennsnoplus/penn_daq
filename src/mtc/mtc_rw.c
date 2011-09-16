@@ -132,6 +132,7 @@ int mtc_reg_write(uint32_t address, uint32_t data)
 {
   SBC_Packet *packet;
   packet = malloc(sizeof(SBC_Packet));
+  memset(packet,0,sizeof(SBC_Packet));
   packet->cmdHeader.destination = 0x1;
   packet->cmdHeader.cmdID = MTC_WRITE_ID;
   packet->cmdHeader.numberBytesinPayload  = sizeof(SBC_VmeWriteBlockStruct)+sizeof(uint32_t);
@@ -157,7 +158,7 @@ int mtc_reg_read(uint32_t address, uint32_t *data)
 {
   SBC_Packet *packet;
   packet = malloc(sizeof(SBC_Packet));
-  memset(packet,0,1000);
+  memset(packet,0,sizeof(SBC_Packet));
   uint32_t *result;
   packet->cmdHeader.destination = 0x1;
   packet->cmdHeader.cmdID = MTC_READ_ID;

@@ -106,6 +106,7 @@ void *pt_mem_test(void *args)
 
     // results of pattern test, where first error was
     JsonNode* pattern_test = json_mkobject();
+    json_append_member(pattern_test,"error",json_mkbool(packet_results->error_location!=0xFFFFFFFF));
     sprintf(hextostr,"%08x",packet_results->error_location);
     json_append_member(pattern_test,"error_location",json_mkstring(hextostr));
     sprintf(hextostr,"%08x",packet_results->expected_data);

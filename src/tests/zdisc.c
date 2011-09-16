@@ -147,13 +147,13 @@ void *pt_zdisc(void *args)
           json_append_element(zerodacnode,json_mknumber((double)packet_results->ZeroDacSetting[j]));	
           json_append_element(errorsnode,json_mkbool(0));//FIXME	
         }
-        json_append_member(newdoc,"Max_rate",maxratenode);
-        json_append_member(newdoc,"Lower_rate",lowerratenode);
-        json_append_member(newdoc,"Upper_rate",upperratenode);
-        json_append_member(newdoc,"Max_Dac_setting",maxdacnode);
-        json_append_member(newdoc,"Lower_Dac_setting",lowerdacnode);
-        json_append_member(newdoc,"Upper_Dac_setting",upperdacnode);
-        json_append_member(newdoc,"Zero_Dac_setting",zerodacnode);
+        json_append_member(newdoc,"max_rate",maxratenode);
+        json_append_member(newdoc,"lower_rate",lowerratenode);
+        json_append_member(newdoc,"upper_rate",upperratenode);
+        json_append_member(newdoc,"max_dac",maxdacnode);
+        json_append_member(newdoc,"lower_dac",lowerdacnode);
+        json_append_member(newdoc,"upper_dac",upperdacnode);
+        json_append_member(newdoc,"zero_dac",zerodacnode);
         json_append_member(newdoc,"errors",errorsnode);
         json_append_member(newdoc,"pass",json_mkbool(1));//FIXME
         if (arg.final_test)

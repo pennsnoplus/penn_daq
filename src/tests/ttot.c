@@ -123,17 +123,20 @@ void *pt_get_ttot(void *args)
         JsonNode *newdoc = json_mkobject();
         json_append_member(newdoc,"type",json_mkstring("get_ttot"));
         json_append_member(newdoc,"targettime",json_mknumber((double)arg.target_time));
-        JsonNode *times_node = json_mkarray();
-        JsonNode *error_node = json_mkarray();
+
+        JsonNode *channels = json_mkarray();
         int passflag = 1;
         for (i=0;i<32;i++){
           if (tot_errors[slot][i] == 1)
             passflag = 0;
-          json_append_element(error_node,json_mkbool(tot_errors[slot][i]));
-          json_append_element(times_node,json_mknumber((double)times[slot*32+i]));
+          JsonNode *one_chan = json_mkobject();
+          json_append_member(one_chan,"id",json_mknumber((double) i));
+          json_append_member(one_chan,"time",json_mknumber((double) times[slot*32+i]));
+          json_append_member(one_chan,"errors",json_mkbool(tot_errors[slot][i]));
+          json_append_element(channels,one_chan);
         }
-        json_append_member(newdoc,"times",times_node);
-        json_append_member(newdoc,"errors",error_node);
+        json_append_member(newdoc,"channels",channels);
+
         json_append_member(newdoc,"pass",json_mkbool(passflag));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
@@ -313,27 +316,24 @@ end:
             JsonNode *newdoc = json_mkobject();
             json_append_member(newdoc,"type",json_mkstring("set_ttot"));
             json_append_member(newdoc,"targettime",json_mknumber((double)arg.target_time));
-            JsonNode *rmp = json_mkarray();
-            JsonNode *vsi = json_mkarray();
-            JsonNode *times = json_mkarray();
-            JsonNode *error_node = json_mkarray();
+
+            JsonNode *all_chips = json_mkarray();
             int passflag = 1;
             for (i=0;i<8;i++){
               if (tot_errors[slot][i] == 1)
                 passflag = 0;
-              json_append_element(rmp,json_mknumber((double)allrmps[slot][i]));
-              json_append_element(vsi,json_mknumber((double)allvsis[slot][i]));
-              json_append_element(error_node,json_mkbool(tot_errors[slot][i]));
-              JsonNode *times_temp = json_mkarray();
-              for (j=0;j<4;j++){
-                json_append_element(times_temp,json_mknumber((double)alltimes[slot*32+i*4+j]));
-              }
-              json_append_element(times,times_temp);
+              JsonNode *one_chip = json_mkobject();
+              json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][i]));
+              json_append_member(one_chip,"vsi",json_mknumber((double) allrmps[slot][i]));
+              json_append_member(one_chip,"errors",json_mkbool(tot_errors[slot][i]));
+              JsonNode *one_chan = json_mkarray();
+              for (j=0;j<4;j++)
+                json_append_element(one_chan,json_mknumber((double) alltimes[slot*32+i*4+j]));
+              json_append_member(one_chip,"times",one_chan);
+              json_append_element(all_chips,one_chip);
             }
-            json_append_member(newdoc,"rmp",rmp);
-            json_append_member(newdoc,"vsi",vsi);
-            json_append_member(newdoc,"times",times);
-            json_append_member(newdoc,"errors",error_node);
+            json_append_member(newdoc,"chips",all_chips);
+
             json_append_member(newdoc,"pass",json_mkbool(passflag));
             if (arg.final_test)
               json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	

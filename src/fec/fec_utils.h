@@ -6,6 +6,12 @@
 #define FEC_CSR_CRATE_OFFSET 11
 #define MAX_FEC_COMMANDS 60000
 
+// hv
+#define HV_CSR_CLK 0x1
+#define HV_CSR_DATIN 0x2
+#define HV_CSR_LOAD 0x4
+#define HV_CSR_DATOUT 0x8
+
 void dump_pmt_verbose(int n, uint32_t *pmt_buf, char* msg_buf);
 int get_cmos_total_count(int crate, int slot, uint32_t *total_count, fd_set *thread_fdset);
 int loadsDac(uint32_t dac_num, uint32_t dac_value, int crate_num, int slot_num, fd_set *thread_fdset);

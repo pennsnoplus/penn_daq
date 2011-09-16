@@ -1,5 +1,7 @@
 /** \file xl3_registers.h */
 
+#include <stdint.h>
+
 #ifndef __XL3_REGISTERS_H
 #define __XL3_REGISTERS_H
 
@@ -58,10 +60,11 @@
 #define CMOS_SPARE_COUNT(num) (0x100+0x5+0x8*num)
 #define CMOS_ARRAY_PTR(num) (0x100+0x6+0x8*num)
 #define CMOS_COUNT_INFO(num) (0x100+0x7+0x8*num)
-// hv
-#define HV_CSR_CLK 0x1
-#define HV_CSR_DATIN 0x2
-#define HV_CSR_LOAD 0x4
-#define HV_CSR_DATOUT 0x8
+
+static const uint32_t xl3_reg_addresses[14] = {XL_RESET_R, XL_DATA_AVAIL_R, XL_CSR_R, XL_DAV_MASK_R, XL_CLOCK_R, XL_RELAY_R, XL_XLCON_R, XL_TEST_R, XL_HV_CSR_R, XL_HV_SP_R, XL_HV_VR_R, XL_HV_CR_R, XL_BVM_R, XL_BVR_R};
+static const char xl3_reg_names[14][50] = {"Reset","Data Available","Control Status","Data Available Mask","Clock Control","Relay","Xilinx Control","Test","HV Control Status","HV Setpoints","HV Voltage Readback","HV Current Readback","Voltage Monitoring","Low Voltage Readback"};
+static const uint32_t fec_reg_addresses[28] = {GENERAL_CSR_R,ADC_VALUE_R,VOLTAGE_MON_R,PED_ENABLE_R,DAC_PROG_R,CALDAC_PROG_R,FEC_HV_CSR_R,CMOS_PROG_LOW_R,CMOS_PROG_HIGH_R,CMOS_LGISEL_R,BOARD_ID_R,SEQ_OUT_CSR_R,SEQ_IN_CSR_R,CMOS_DAV_R,CMOS_CHIPSEL_R,CMOS_CHIP_DISABLE_R,CMOS_DATAOUT_R,FIFO_READ_PTR_R,FIFO_WRITE_PTR_R,FIFO_DIFF_PTR_R,CMOS_AUTO_INCR_PTR(0),CMOS_BUSY_BIT(0),CMOS_MISSED_COUNT(0),CMOS_INTERN_TOTAL(0),CMOS_INTERN_TEST(0),CMOS_SPARE_COUNT(0),CMOS_ARRAY_PTR(0),CMOS_COUNT_INFO(0)};
+static const char fec_reg_names[28][50] = {"General Control Status","ADC Value","Voltage Monitoring","Pedestal Enable","DAC Programming","Calibration DAC Programming","FEC HV Control Status","CMOS Programming Low Bits","CMOS Programming High Bits","CMOS LGI Select","Board ID","Sequencer Out Control Status","Sequencer In Control Status","CMOS Data Available","CMOS Chip Select","CMOS Chip Disable","CMOS Data Out","FIFO Read Pointer","FIFO Write Pointer","FIFO Difference Pointer","CMOS Auto Increment Pointer","CMOS Busy Bit","CMOS Missed Count","CMOS Internal Total Count","CMOS Internal Test","CMOS Spare Count","CMOS Array Pointer","CMOS Count Info"};
+
 
 #endif

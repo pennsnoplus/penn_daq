@@ -10,6 +10,7 @@ typedef struct{
   int crate_num;
   uint16_t slot_mask;
   int tub_tests;
+  int skip;
 } final_test_t;
 
 int final_test(char *buffer);

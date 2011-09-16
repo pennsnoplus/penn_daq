@@ -3,6 +3,8 @@
 #ifndef __XL3_CMDS_H
 #define __XL3_CMDS_H
 
+int xrw(char *buffer, int rw);
+void *pt_xrw(void *args);
 int debugging_mode(char *buffer, int onoff);
 void *pt_debugging_mode(void *args);
 int cmd_change_mode(char *buffer);
@@ -13,6 +15,14 @@ int cmd_xl3_rw(char *buffer);
 void *pt_cmd_xl3_rw(void* args);
 int xl3_queue_rw(char *buffer);
 void *pt_xl3_queue_rw(void* args);
+
+typedef struct{
+  int thread_num;
+  int rw;
+  int crate_num;
+  int register_num;
+  uint32_t data;
+} xrw_t;
 
 typedef struct{
   int thread_num;

@@ -32,13 +32,14 @@ int chinj_scan(char *buffer)
   args->pattern = 0xFFFFFFFF;
   args->gtdelay = DEFAULT_GT_DELAY;
   args->ped_width = DEFAULT_PED_WIDTH;
-  args->num_pedestals = 50;
+  args->num_pedestals = 1;
   args->chinj_lower = 500;
   args->chinj_upper = 800;
   args->q_select = 0;
   args->ped_on = 0;
   args->update_db = 0;
   args->final_test = 0;
+
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -123,36 +124,66 @@ void *pt_chinj_scan(void *args)
   pt_printsend("-------------------------------------------\n");
   pt_printsend("Crate:		    %2d\n",arg.crate_num);
   pt_printsend("Slot Mask:		    0x%4hx\n",arg.slot_mask);
-  pt_printsend("Pedestal Mask:	    0x%08lx\n",arg.pattern);
+  pt_printsend("Pedestal Mask:	    0x%08x\n",arg.pattern);
   pt_printsend("GT delay (ns):	    %3hu\n", arg.gtdelay);
   pt_printsend("Pedestal Width (ns):    %2d\n",arg.ped_width);
   pt_printsend("Pulser Frequency (Hz):  %3.0f\n",arg.frequency);
 
-  float qhls[16*32*2][26];
-  float qhss[16*32*2][26];
-  float qlxs[16*32*2][26];
-  float tacs[16*32*2][26];
-  int scan_errors[16*32*2][26];
+
+  float *qhls;
+  float *qhss;
+  float *qlxs;
+  float *tacs;
+  int *scan_errors;
+  int errors = 0;
   int count,crateID,ch,cell,num_events;
   uint16_t dacvalue;
   uint32_t *pmt_buffer,*pmt_iter;
   struct pedestal *ped;
   uint32_t result, select_reg;
-  int errors;
   uint32_t default_ch_mask;
   int chinj_err[16];
 
-  pmt_buffer = malloc( 0x100000*sizeof(uint32_t));
+  pmt_buffer = malloc( 0x20000*sizeof(uint32_t));
   ped = malloc( 32 * sizeof(struct pedestal));
-  if (pmt_buffer == NULL || ped == NULL){
+  qhls = malloc(32*16*2*26*sizeof(float));
+  qhss = malloc(32*16*2*26*sizeof(float));
+  qlxs = malloc(32*16*2*26*sizeof(float));
+  tacs = malloc(32*16*2*26*sizeof(float));
+  scan_errors = malloc(32*16*2*26*sizeof(int));
+  if (pmt_buffer == NULL || ped == NULL || qhls == NULL || qhss == NULL || qlxs == NULL || tacs == NULL || scan_errors == NULL){
     pt_printsend("Problem mallocing! Exiting\n");
+    if (pmt_buffer != NULL)
+      free(pmt_buffer);
+    if (ped != NULL)
+      free(ped);
+    if (qhls != NULL)
+      free(qhls);
+    if (qhss != NULL)
+      free(qhss);
+    if (qlxs != NULL)
+      free(qlxs);
+    if (tacs != NULL)
+      free(tacs);
+    if (scan_errors != NULL)
+      free(scan_errors);
+
     unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
     return;
   }
 
-  int i,j,k;
+  int i,j,k,l;
   for (i=0;i<16;i++){
     chinj_err[i] = 0;
+    for (j=0;j<32;j++)
+      for (k=0;k<26;k++)
+        for (l=0;l<2;l++){
+          qhls[k*16*32*2+i*32*2+j*2+l] = 0;
+          qhss[k*16*32*2+i*32*2+j*2+l] = 0;
+          qlxs[k*16*32*2+i*32*2+j*2+l] = 0;
+          tacs[k*16*32*2+i*32*2+j*2+l] = 0;
+          scan_errors[k*16*32*2+i*32*2+j*2+l] = 0;
+        }
   }
   int dac_iter;
 
@@ -188,6 +219,11 @@ void *pt_chinj_scan(void *args)
       pt_printsend("error setting up FEC crate for pedestals. Exiting.\n");
       free(pmt_buffer);
       free(ped);
+      free(qhls);
+      free(qhss);
+      free(qlxs);
+      free(tacs);
+      free(scan_errors);
       unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
       return;
     }
@@ -203,6 +239,11 @@ void *pt_chinj_scan(void *args)
       unset_gt_crate_mask(MASKALL);
       free(pmt_buffer);
       free(ped);
+      free(qhls);
+      free(qhss);
+      free(qlxs);
+      free(tacs);
+      free(scan_errors);
       unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
       return;
     }
@@ -335,18 +376,16 @@ void *pt_chinj_scan(void *args)
           //pt_printsend("Ch Cell  #   Qhl         Qhs         Qlx         TAC\n");
           for (j=0;j<16;j++){
             if (j == 0){
-              scan_errors[slot_iter*32+i*2][dac_iter] = 0;
-              qhls[slot_iter*32+i*2][dac_iter] = ped[i].thiscell[j].qhlbar;
-              qhss[slot_iter*32+i*2][dac_iter] = ped[i].thiscell[j].qhsbar;
-              qlxs[slot_iter*32+i*2][dac_iter] = ped[i].thiscell[j].qlxbar;
-              tacs[slot_iter*32+i*2][dac_iter] = ped[i].thiscell[j].tacbar;
+              qhls[dac_iter*16*32*2+slot_iter*32*2+i*2] = ped[i].thiscell[j].qhlbar;
+              qhss[dac_iter*16*32*2+slot_iter*32*2+i*2] = ped[i].thiscell[j].qhsbar;
+              qlxs[dac_iter*16*32*2+slot_iter*32*2+i*2] = ped[i].thiscell[j].qlxbar;
+              tacs[dac_iter*16*32*2+slot_iter*32*2+i*2] = ped[i].thiscell[j].tacbar;
             }
             if (j == 1){
-              scan_errors[slot_iter*32+i*2][dac_iter] = 0;
-              qhls[slot_iter*32+i*2+1][dac_iter] = ped[i].thiscell[j].qhlbar;
-              qhss[slot_iter*32+i*2+1][dac_iter] = ped[i].thiscell[j].qhsbar;
-              qlxs[slot_iter*32+i*2+1][dac_iter] = ped[i].thiscell[j].qlxbar;
-              tacs[slot_iter*32+i*2+1][dac_iter] = ped[i].thiscell[j].tacbar;
+              qhls[dac_iter*16*32*2+slot_iter*32*2+i*2+1] = ped[i].thiscell[j].qhlbar;
+              qhss[dac_iter*16*32*2+slot_iter*32*2+i*2+1] = ped[i].thiscell[j].qhsbar;
+              qlxs[dac_iter*16*32*2+slot_iter*32*2+i*2+1] = ped[i].thiscell[j].qlxbar;
+              tacs[dac_iter*16*32*2+slot_iter*32*2+i*2+1] = ped[i].thiscell[j].tacbar;
             }
             if (arg.q_select == 0){
               if (ped[i].thiscell[j].qhlbar < arg.chinj_lower ||
@@ -354,9 +393,9 @@ void *pt_chinj_scan(void *args)
                 chinj_err[slot_iter]++;
                 //pt_printsend(">>>>>Qhl Extreme Value<<<<<\n");
                 if (j%2 == 0)
-                  scan_errors[slot_iter*32+i*2][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2]++;
                 else
-                  scan_errors[slot_iter*32+i*2+1][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2+1]++;
               }
             }
             else if (arg.q_select == 1){
@@ -365,9 +404,9 @@ void *pt_chinj_scan(void *args)
                 chinj_err[slot_iter]++;
                 //pt_printsend(">>>>>Qhs Extreme Value<<<<<\n");
                 if (j%2 == 0)
-                  scan_errors[slot_iter*32+i*2][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2]++;
                 else
-                  scan_errors[slot_iter*32+i*2+1][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2+1]++;
               }
             }
             else if (arg.q_select == 2){
@@ -376,9 +415,9 @@ void *pt_chinj_scan(void *args)
                 chinj_err[slot_iter]++;
                 //pt_printsend(">>>>>Qlx Extreme Value<<<<<\n");
                 if (j%2 == 0)
-                  scan_errors[slot_iter*32+i*2][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2]++;
                 else
-                  scan_errors[slot_iter*32+i*2+1][dac_iter]++;
+                  scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2+1]++;
               }
             }
             pt_printsend("%2d %3d %4d %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f\n",
@@ -393,20 +432,20 @@ void *pt_chinj_scan(void *args)
       } // end if slotmask
     } // end loop over slots
 
-    /*
-       if (arg.q_select == 0){
-       pt_printsend("Qhl lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-       pt_printsend("Number of Qhl overflows = %d\n",chinj_err[slot_iter]);
-       }
-       else if (arg.q_select == 1){
-       pt_printsend("Qhs lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-       pt_printsend("Number of Qhs overflows = %d\n",chinj_err[slot_iter]);
-       }
-       else if (arg.q_select == 2){
-       pt_printsend("Qlx lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-       pt_printsend("Number of Qlx overflows = %d\n",chinj_err[slot_iter]);
-       }
-     */
+   
+   //    if (arg.q_select == 0){
+   //    pt_printsend("Qhl lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+  //    pt_printsend("Number of Qhl overflows = %d\n",chinj_err[slot_iter]);
+   //    }
+   //    else if (arg.q_select == 1){
+   //    pt_printsend("Qhs lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+   //    pt_printsend("Number of Qhs overflows = %d\n",chinj_err[slot_iter]);
+   //    }
+   //    else if (arg.q_select == 2){
+   //    pt_printsend("Qlx lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+   //    pt_printsend("Number of Qlx overflows = %d\n",chinj_err[slot_iter]);
+   //    }
+     
 
 
     //disable trigger enables
@@ -451,16 +490,16 @@ void *pt_chinj_scan(void *args)
           JsonNode *erroreventemp = json_mkarray();
           JsonNode *erroroddtemp = json_mkarray();
           for (k=0;k<26;k++){
-            json_append_element(qhleventemp,json_mknumber(qhls[i*32+j*2][k]));	
-            json_append_element(qhloddtemp,json_mknumber(qhls[i*32+j*2+1][k]));	
-            json_append_element(qhseventemp,json_mknumber(qhss[i*32+j*2][k]));	
-            json_append_element(qhsoddtemp,json_mknumber(qhss[i*32+j*2+1][k]));	
-            json_append_element(qlxeventemp,json_mknumber(qlxs[i*32+j*2][k]));	
-            json_append_element(qlxoddtemp,json_mknumber(qlxs[i*32+j*2+1][k]));	
-            json_append_element(taceventemp,json_mknumber(tacs[i*32+j*2][k]));	
-            json_append_element(tacoddtemp,json_mknumber(tacs[i*32+j*2+1][k]));	
-            json_append_element(erroreventemp,json_mknumber((double)scan_errors[i*32+j*2][k]));	
-            json_append_element(erroroddtemp,json_mknumber((double)scan_errors[i*32+j*2+1][k]));	
+            json_append_element(qhleventemp,json_mknumber(qhls[k*16*32*2+i*32*2+j*2]));	
+            json_append_element(qhloddtemp,json_mknumber(qhls[k*16*32*2+i*32*2+j*2+1]));	
+            json_append_element(qhseventemp,json_mknumber(qhss[k*16*32*2+i*32*2+j*2]));	
+            json_append_element(qhsoddtemp,json_mknumber(qhss[k*16*32*2+i*32*2+j*2+1]));	
+            json_append_element(qlxeventemp,json_mknumber(qlxs[k*16*32*2+i*32*2+j*2]));	
+            json_append_element(qlxoddtemp,json_mknumber(qlxs[k*16*32*2+i*32*2+j*2+1]));	
+            json_append_element(taceventemp,json_mknumber(tacs[k*16*32*2+i*32*2+j*2]));	
+            json_append_element(tacoddtemp,json_mknumber(tacs[k*16*32*2+i*32*2+j*2+1]));	
+            json_append_element(erroreventemp,json_mkbool(scan_errors[k*16*32*2+i*32*2+j*2]));	
+            json_append_element(erroroddtemp,json_mkbool(scan_errors[k*16*32*2+i*32*2+j*2+1]));	
           }
           json_append_element(qhl_even,qhleventemp);
           json_append_element(qhl_odd,qhloddtemp);
@@ -493,11 +532,17 @@ void *pt_chinj_scan(void *args)
     }
   }
 
-
   if (errors)
     pt_printsend("There were %d errors\n", errors);
   else
     pt_printsend("No errors seen\n");
+
+  free(qhls);
+  free(qhss);
+  free(qlxs);
+  free(tacs);
+  free(scan_errors);
+
   pt_printsend("*************************************\n");
 
   unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);

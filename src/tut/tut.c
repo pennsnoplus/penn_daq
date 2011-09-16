@@ -52,9 +52,10 @@ int com_help();
    { $command_name_string, (Function *)NULL, (char *)NULL },
  */
 COMMAND commands[] = {
-    { "help", com_help, (char *)NULL },
+    //{ "help", com_help, (char *)NULL },
     //_!_begin_commands_!_
     { "exit", (Function *)NULL, (char *)NULL },
+    { "help", (Function *)NULL, (char *)NULL },
     { "print_connected", (Function *)NULL, (char *)NULL },
     { "stop_logging", (Function *)NULL, (char *)NULL },
     { "set_location", (Function *)NULL, (char *)NULL },
@@ -65,6 +66,12 @@ COMMAND commands[] = {
     { "kill_threads", (Function *)NULL, (char *)NULL },
     { "run_macro", (Function *)NULL, (char *)NULL },
     { "stop_macro", (Function *)NULL, (char *)NULL },
+    { "xr", (Function *)NULL, (char *)NULL },
+    { "xw", (Function *)NULL, (char *)NULL },
+    { "fr", (Function *)NULL, (char *)NULL },
+    { "fw", (Function *)NULL, (char *)NULL },
+    { "mr", (Function *)NULL, (char *)NULL },
+    { "mw", (Function *)NULL, (char *)NULL },
     { "debugging_on", (Function *)NULL, (char *)NULL },
     { "debugging_off", (Function *)NULL, (char *)NULL },
     { "change_mode", (Function *)NULL, (char *)NULL },
@@ -107,6 +114,7 @@ COMMAND commands[] = {
     { "get_ttot", (Function *)NULL, (char *)NULL },
     { "set_ttot", (Function *)NULL, (char *)NULL },
     { "fifo_test", (Function *)NULL, (char *)NULL },
+    { "disc_check", (Function *)NULL, (char *)NULL },
     { "mb_stability_test", (Function *)NULL, (char *)NULL },
     { "chinj_scan", (Function *)NULL, (char *)NULL },
     { "final_test", (Function *)NULL, (char *)NULL },
@@ -488,7 +496,8 @@ int main(int argc, char *argv[])
           perror("send");
       }else if (buf && *buf){
         add_history(buf);			// if there's something in the buffer, add it to history
-        if(strncmp(buf, "help", 4) != 0 && strncmp(buf, "exit", 4) != 0){
+        //if(strncmp(buf, "help", 4) != 0 && strncmp(buf, "exit", 4) != 0){
+        if(strncmp(buf, "exit", 4) != 0){
           i = 0;
           memset(command, '\0', MAXDATASIZE);
           while (*buf != '\0' && i <= MAXDATASIZE){

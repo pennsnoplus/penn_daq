@@ -3,6 +3,9 @@
 #ifndef __MTC_REGISTERS_H
 #define __MTC_REGISTERS_H
 
+#include <stdint.h>
+#include <string.h>
+
 // define MTC register space
 #define MTCRegAddressBase  (0x00007000)
 #define MTCRegAddressMod   (0x29)
@@ -152,5 +155,8 @@
 #define TMON_OWLEHI     0x00100000UL
 #define TMON_OWLN       0x000c0000UL
 
+
+static const uint32_t mtc_reg_addresses[21] = {MTCControlReg,MTCSerialReg,MTCDacCntReg,MTCSoftGTReg,MTCPedWidthReg,MTCCoarseDelayReg,MTCFineDelayReg,MTCThresModReg,MTCPmskReg,MTCScaleReg,MTCBwrAddOutReg,MTCBbaReg,MTCGtLockReg,MTCMaskReg,MTCXilProgReg,MTCGmskReg,MTCOcGtReg,MTCC50_0_31Reg,MTCC50_32_42Reg,MTCC10_0_31Reg,MTCC10_32_52Reg};
+static const char mtc_reg_names[21][50] = {"Control","Serial","DAC Control","Soft GT","Pedestal Width","Coarse GT Delay","Fine GT Delay","Threshold Monitor","Pedestal Crate Mask","Prescale Value","Next Write Pointer","Memory Access Pointer","Lockout Width","GT Mask","Xilinx Program","GT Crate Mask","GT Count","Lower 50MHz Count","Upper 50MHz Count","Lower 10MHz Count","Upper 10MHz Count"};
 
 #endif

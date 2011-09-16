@@ -17,7 +17,7 @@ void dump_pmt_verbose(int n, uint32_t *pmt_buf, char* msg_buf)
 {
   int i,j;
   char msg[10000];
-  sprintf(msg,"\0");
+  memset(msg,'\0',10000);
   for (i=0;i<n*3;i+=3)
   {
     if (!(i%32)){

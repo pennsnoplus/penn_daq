@@ -1,0 +1,3 @@
+sbc_control
+mtc_init -x
+crate_init -c 2 -s 80 -x

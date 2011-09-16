@@ -384,13 +384,11 @@ float set_fine_delay(float delay)
   float addel_slope;   /* ADDEL value per ns of delay */
   float fdelay_set;
 
-  //FIXME
-  addel_slope = 0.1;
-  /*
+  //addel_slope = 0.1;
   // get up to date fine slope value
   pouch_request *response = pr_init();
   char get_db_address[500];
-  sprintf(get_db_address,"http://%s:%s/%s/MTC_doc",DB_ADDRESS,DB_PORT,DB_BASE_NAME);
+  sprintf(get_db_address,"%s/%s/MTC_doc",DB_SERVER,DB_BASE_NAME);
   pr_set_method(response, GET);
   pr_set_url(response, get_db_address);
   pr_do(response);
@@ -409,7 +407,6 @@ float set_fine_delay(float delay)
     pt_printsend("Fine delay value out of range\n");
     return -1.0;
   }
-  */
   addel_value = (uint32_t)(delay / addel_slope);
 
   mtc_reg_write(MTCFineDelayReg,addel_value);
