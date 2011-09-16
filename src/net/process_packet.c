@@ -224,6 +224,10 @@ int process_control_command(char *buffer)
     result = mtc_init(buffer);
   }else if (strncmp(buffer,"sm_reset",8)==0){
     result = sm_reset(buffer);
+  }else if (strncmp(buffer,"read_local_voltage",18)==0){
+    result = read_local_voltage(buffer);
+  }else if (strncmp(buffer,"hv_readback",11)==0){
+    result = hv_readback(buffer);
   }else if (strncmp(buffer,"xl3_rw",6)==0){
     result = cmd_xl3_rw(buffer);
   }else if (strncmp(buffer,"xl3_queue_rw",13)==0){

@@ -225,6 +225,22 @@ typedef struct{
 } multi_loadsdac_results_t;
 
 typedef struct{
+  uint32_t voltage_select;
+} read_local_voltage_args_t;
+
+typedef struct{
+  uint32_t error_flags;
+  float voltage;
+} read_local_voltage_results_t;
+
+typedef struct{
+  float voltage_a;
+  float voltage_b;
+  float current_a;
+  float current_b;
+} hv_readback_results_t;
+
+typedef struct{
   uint32_t slot_mask;
 } reset_fifos_args_t;
 

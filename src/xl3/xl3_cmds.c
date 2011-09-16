@@ -420,3 +420,148 @@ void *pt_cmd_change_mode(void* args)
 
   unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
+
+int read_local_voltage(char *buffer)
+{
+  read_local_voltage_t *args;
+  args = malloc(sizeof(read_local_voltage_t));
+
+  args->crate_num = 2;
+  args->voltage_select = 0;
+
+  char *words,*words2;
+  words = strtok(buffer," ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'c'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->crate_num = atoi(words2);
+      }else if (words[1] == 'v'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->voltage_select = atoi(words2);
+      }else if (words[1] == 'h'){
+        printsend("Usage: read_local_voltage -c [crate num (int)]"
+            "-v [voltage number]\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_read_local_voltage,(void *)args);
+  return 0; 
+}
+
+void *pt_read_local_voltage(void* args)
+{
+  read_local_voltage_t arg = *(read_local_voltage_t *) args;
+  free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
+  XL3_Packet packet;
+  read_local_voltage_args_t *packet_args = (read_local_voltage_args_t *) packet.payload;
+  read_local_voltage_results_t *packet_results = (read_local_voltage_results_t *) packet.payload;
+  packet.cmdHeader.packet_type = READ_LOCAL_VOLTAGE_ID;
+  packet_args->voltage_select = arg.voltage_select;
+  SwapLongBlock(packet_args,sizeof(read_local_voltage_args_t)/sizeof(uint32_t));
+  do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
+  SwapLongBlock(packet_results,sizeof(read_local_voltage_results_t)/sizeof(uint32_t));
+
+  pt_printsend("Voltage #%d: %6.2f\n",arg.voltage_select,packet_results->voltage);
+
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+}
+
+int hv_readback(char *buffer)
+{
+  hv_readback_t *args;
+  args = malloc(sizeof(hv_readback_t));
+
+  args->crate_num = 2;
+  args->show_a = 0;
+  args->show_b = 0;
+
+  char *words,*words2;
+  words = strtok(buffer," ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'c'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->crate_num = atoi(words2);
+      }else if (words[1] == 'a'){args->show_a = 1;
+      }else if (words[1] == 'b'){args->show_b = 1;
+      }else if (words[1] == 'h'){
+        printsend("Usage: hv_readback -c [crate num (int)]"
+            "-a (read out supply A) -b (read out supply B)\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  if (args->show_b == 0)
+    args->show_a = 1;
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_hv_readback,(void *)args);
+  return 0; 
+}
+
+void *pt_hv_readback(void* args)
+{
+  hv_readback_t arg = *(hv_readback_t *) args;
+  free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
+  float voltage_a = 0, voltage_b = 0;
+  float current_a = 0, current_b = 0;
+  int i,nt = 10;
+
+  XL3_Packet packet;
+  hv_readback_results_t *packet_results = (hv_readback_results_t *) packet.payload;
+  
+  for (i=0;i<nt;i++){
+    packet.cmdHeader.packet_type = HV_READBACK_ID;
+    do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
+    SwapLongBlock(packet_results,sizeof(hv_readback_results_t)/sizeof(uint32_t));
+    voltage_a += packet_results->voltage_a;
+    voltage_b += packet_results->voltage_b;
+    current_a += packet_results->current_a;
+    current_b += packet_results->current_b;
+  }
+
+  voltage_a /= (float) nt;
+  voltage_b /= (float) nt;
+  current_a /= (float) nt;
+  current_b /= (float) nt;
+
+  if (arg.show_a)
+    pt_printsend("Supply A - Voltage: %6.3f volts, Current: %6.4f mA\n",voltage_a*300.0,current_a*10.0);
+  if (arg.show_b)
+    pt_printsend("Supply B - Voltage: %6.3f volts, Current: %6.4f mA\n",voltage_b*300.0,current_b*10.0);
+
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+}
+
+

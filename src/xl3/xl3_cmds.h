@@ -15,6 +15,11 @@ int cmd_xl3_rw(char *buffer);
 void *pt_cmd_xl3_rw(void* args);
 int xl3_queue_rw(char *buffer);
 void *pt_xl3_queue_rw(void* args);
+int read_local_voltage(char *buffer);
+void *pt_read_local_voltage(void* args);
+int hv_readback(char *buffer);
+void *pt_hv_readback(void* args);
+
 
 typedef struct{
   int thread_num;
@@ -48,5 +53,18 @@ typedef struct{
   int crate_num;
   int onoff;
 } debugging_mode_t;
+
+typedef struct{
+  int thread_num;
+  int crate_num;
+  int voltage_select;
+} read_local_voltage_t;
+
+typedef struct{
+  int thread_num;
+  int crate_num;
+  int show_a;
+  int show_b;
+} hv_readback_t;
 
 #endif

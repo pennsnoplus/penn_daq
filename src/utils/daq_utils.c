@@ -92,6 +92,8 @@ int print_help(char *buffer)
     pt_printsend("debugging_off\t\tTurn off debugging output to serial port\n");
     pt_printsend("change_mode\t\tTurn readout on or off\n");
     pt_printsend("sm_reset\t\tReset vhdl state mahine\n");
+    pt_printsend("read_local_voltage\t\tRead a voltage on the xl3\n");
+    pt_printsend("hv_readbck\t\tMonitor HV voltage and current\n");
     pt_printsend("crate_init\t\tInitialize crate\n");
   }
   if (which == 5 || which == 9){

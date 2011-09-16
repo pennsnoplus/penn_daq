@@ -78,6 +78,8 @@ COMMAND commands[] = {
     { "crate_init", (Function *)NULL, (char *)NULL },
     { "mtc_init", (Function *)NULL, (char *)NULL },
     { "sm_reset", (Function *)NULL, (char *)NULL },
+    { "read_local_voltage", (Function *)NULL, (char *)NULL },
+    { "hv_readback", (Function *)NULL, (char *)NULL },
     { "xl3_rw", (Function *)NULL, (char *)NULL },
     { "xl3_queue_rw", (Function *)NULL, (char *)NULL },
     { "read_bundle", (Function *)NULL, (char *)NULL },
