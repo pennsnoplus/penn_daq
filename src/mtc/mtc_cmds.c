@@ -162,7 +162,6 @@ void *pt_sbc_control(void *args)
       close(rw_sbc_fd);
       FD_CLR(rw_sbc_fd,&main_fdset);
       rw_sbc_fd = -1;
-      sbc_connected = 0;
     }
     char kill_cmd[500];
     sprintf(kill_cmd,"%s /etc/rc.d/orcareadout stop",base_cmd);
@@ -227,7 +226,6 @@ void *pt_sbc_control(void *args)
     int32_t test_word = 0x000DCBA;
     int n = write(rw_sbc_fd,(char*)&test_word,4);
     pt_printsend("sbc_connect: Connected to SBC\n");
-    sbc_connected = 1;
   } // end if connecting or reconnecting
 
   pthread_mutex_unlock(&main_fdset_lock);

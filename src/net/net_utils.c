@@ -22,7 +22,7 @@ int print_connected()
   int i,y = 0;
   printsend("CONNECTED CLIENTS:\n");
 
-  if (cont_connected){
+  if (rw_cont_fd > 0){
     printsend("\t Controller (socket: %d)\n",rw_cont_fd);
     y++;
   }
@@ -32,12 +32,12 @@ int print_connected()
       y++;
     }
   }
-  if (sbc_connected){
+  if (rw_sbc_fd > 0){
     printsend("\t SBC (socket: %d)\n",rw_sbc_fd);
     y++;
   }
   for (i=0;i<MAX_XL3_CON;i++){
-    if (xl3_connected[i]){
+    if (rw_xl3_fd[i] > 0){
       printsend("\t XL3 #%d (socket: %d)\n",i,rw_xl3_fd[i]);
       y++;
     }

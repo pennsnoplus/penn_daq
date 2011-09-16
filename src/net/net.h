@@ -59,10 +59,7 @@ int xl3_lock[MAX_XL3_CON];
 int cont_lock;
 
 // connection flag
-int sbc_connected;
-int cont_connected;
 int views_connected;
-int xl3_connected[MAX_XL3_CON];
 
 char buffer[MAX_PACKET_SIZE];
 

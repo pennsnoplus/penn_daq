@@ -67,7 +67,6 @@ int read_xl3_packet(int fd)
     FD_CLR(fd,&main_fdset);
     close(fd);
     pthread_mutex_unlock(&main_fdset_lock);
-    xl3_connected[crate] = 0;
     rw_xl3_fd[crate] = -1;
     return -1;
   }else if (numbytes == 0){
@@ -77,7 +76,6 @@ int read_xl3_packet(int fd)
     FD_CLR(fd,&main_fdset);
     close(fd);
     pthread_mutex_unlock(&main_fdset_lock);
-    xl3_connected[crate] = 0;
     rw_xl3_fd[crate] = -1;
     return -1;
   }
@@ -98,7 +96,6 @@ int read_control_command(int fd)
     FD_CLR(fd,&main_fdset);
     close(fd);
     pthread_mutex_unlock(&main_fdset_lock);
-    cont_connected = 0;
     rw_cont_fd = -1;
     return -1;
   }else if (numbytes == 0){
@@ -108,7 +105,6 @@ int read_control_command(int fd)
     FD_CLR(fd,&main_fdset);
     close(fd);
     pthread_mutex_unlock(&main_fdset_lock);
-    cont_connected = 0;
     rw_cont_fd = -1;
     return -1;
   }

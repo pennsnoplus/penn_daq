@@ -57,7 +57,6 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -67,7 +66,6 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -216,7 +214,6 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -226,7 +223,6 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -348,7 +344,6 @@ int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_bu
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -358,7 +353,6 @@ int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_bu
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -473,7 +467,6 @@ int read_from_tut(char *result, fd_set *thread_fdset)
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -483,7 +476,6 @@ int read_from_tut(char *result, fd_set *thread_fdset)
             FD_CLR(rw_xl3_fd[i],&xl3_fdset);
             FD_CLR(rw_xl3_fd[i],&main_fdset);
             close(rw_xl3_fd[i]);
-            xl3_connected[i] = 0;
             rw_xl3_fd[i] = -1;
             pthread_mutex_unlock(&main_fdset_lock);
             return -1;
@@ -530,7 +522,6 @@ int read_from_tut(char *result, fd_set *thread_fdset)
         FD_CLR(rw_cont_fd,&main_fdset);
         close(rw_cont_fd);
         pthread_mutex_unlock(&main_fdset_lock);
-        cont_connected = 0;
         rw_cont_fd = -1;
         return -1;
       }else if (n == 0){
@@ -540,7 +531,6 @@ int read_from_tut(char *result, fd_set *thread_fdset)
         FD_CLR(rw_cont_fd,&main_fdset);
         close(rw_cont_fd);
         pthread_mutex_unlock(&main_fdset_lock);
-        cont_connected = 0;
         rw_cont_fd = -1;
         return -1;
       }

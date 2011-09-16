@@ -242,7 +242,7 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
       // locked, cant do this right now
       return -1;
     }
-    if (sbc_connected == 0 && sbc != 2){
+    if ((rw_sbc_fd > 0) == 0 && (sbc != 2)){
       if (running_macro == 0)
         pt_printsend("SBC is not connected. Exiting!\n");
       return -2;
@@ -255,7 +255,7 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
         // locked, cant do this right now
         return -1;
       }
-      if (xl3_connected[i] == 0){
+      if (rw_xl3_fd[i] <= 0){
         if (running_macro == 0)
           pt_printsend("XL3 #%d is not connected. Exiting!\n",i);
         return -3;

@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     // reset our fdsets
     pthread_mutex_lock(&main_fdset_lock);
     fd_set temp = main_fdset;
-    if (sbc_lock && sbc_connected)
+    if (sbc_lock && rw_sbc_fd > 0)
       FD_CLR(rw_sbc_fd,&temp);
     for (i=0;i<MAX_XL3_CON;i++)
       if (xl3_lock[i] && rw_xl3_fd[i] > 0)

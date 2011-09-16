@@ -43,5 +43,5 @@ tut:
 	$(CC) -lreadline -lncurses -o $(BDIR)/tut $(CDIR)/tut/tut.c $(CFLAGS)
     
 clean: 
-	rm -f $(ODIR)/*.o core $(BDIR)/*
+	rm -f $(ODIR)/* $(BDIR)/*
 #rm -f $(ODIR)/*.o core $(IDIR)/* $(BDIR)/*

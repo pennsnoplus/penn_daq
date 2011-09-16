@@ -49,7 +49,6 @@ int do_mtc_cmd(SBC_Packet *packet)
     pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(rw_sbc_fd,&main_fdset);
     close(rw_sbc_fd);
-    sbc_connected = 0;
     rw_sbc_fd = -1;
     pthread_mutex_unlock(&main_fdset_lock);
     return -1;
@@ -58,7 +57,6 @@ int do_mtc_cmd(SBC_Packet *packet)
     pthread_mutex_lock(&main_fdset_lock);
     FD_CLR(rw_sbc_fd,&main_fdset);
     close(rw_sbc_fd);
-    sbc_connected = 0;
     rw_sbc_fd = -1;
     pthread_mutex_unlock(&main_fdset_lock);
     return -1;
@@ -109,7 +107,6 @@ int do_mtc_xilinx_cmd(SBC_Packet *packet)
       pthread_mutex_lock(&main_fdset_lock);
       FD_CLR(rw_sbc_fd,&main_fdset);
       close(rw_sbc_fd);
-      sbc_connected = 0;
       rw_sbc_fd = -1;
       pthread_mutex_unlock(&main_fdset_lock);
       return -1;
@@ -118,7 +115,6 @@ int do_mtc_xilinx_cmd(SBC_Packet *packet)
       pthread_mutex_lock(&main_fdset_lock);
       FD_CLR(rw_sbc_fd,&main_fdset);
       close(rw_sbc_fd);
-      sbc_connected = 0;
       rw_sbc_fd = -1;
       pthread_mutex_unlock(&main_fdset_lock);
       return -1;

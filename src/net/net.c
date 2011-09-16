@@ -74,11 +74,7 @@ void setup_sockets()
   rw_sbc_fd = -1;
 
   // set up flags
-  sbc_connected = 0;
-  cont_connected = 0;
   views_connected = 0;
-  for (i=0;i<MAX_XL3_CON;i++)
-    xl3_connected[i] = 0;
 
   // set up locks
   sbc_lock = 0;
@@ -172,7 +168,7 @@ int accept_connection(int fd)
 
   // now check which socket type it was
   if (fd == listen_cont_fd){
-    if (cont_connected){
+    if (rw_cont_fd > 0){
       printsend("Another controller tried to connect and was rejected.\n");
       sprintf(rejectmsg,"Too many controller connections already. Goodbye.\n");
       send(new_fd,rejectmsg,sizeof(rejectmsg),0);
@@ -182,7 +178,6 @@ int accept_connection(int fd)
       printsend("New connection: CONTROLLER (%s) on socket %d\n",
           inet_ntop(remoteaddr.ss_family, get_in_addr((struct sockaddr*)&remoteaddr),
             remoteIP, INET6_ADDRSTRLEN), new_fd);
-      cont_connected = 1;
       rw_cont_fd = new_fd;
       FD_SET(new_fd,&cont_fdset);
     }
@@ -210,7 +205,7 @@ int accept_connection(int fd)
     int i;
     for (i=0;i<MAX_XL3_CON;i++){
       if (fd == listen_xl3_fd[i]){
-        if (xl3_connected[i]){
+        if (rw_xl3_fd[i] > 0){
           // xl3s dont close their connections,
           // so we assume this means its reconnecting
           printsend("Going to reconnect.\n");
@@ -225,7 +220,6 @@ int accept_connection(int fd)
         }
         printsend("New connection: XL3 #%d on socket %d\n",i,new_fd); 
         rw_xl3_fd[i] = new_fd;
-        xl3_connected[i] = 1;
         FD_SET(new_fd,&xl3_fdset);
       }
     } 
