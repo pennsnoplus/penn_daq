@@ -27,7 +27,13 @@ $(ODIR)/%.o: %.c $(_DEPS)
 #	cp $^ $(IDIR)/.
 
 #all: penn_daq tut $(DEPS)
-all: penn_daq tut
+all: directories penn_daq tut
+
+directories:
+	test -d $(ODIR) || mkdir $(ODIR) 
+	test -d $(BDIR) || mkdir $(BDIR) 
+	test -d logs || mkdir logs 
+	test -d macro || mkdir macro 
 
 penn_daq: $(OBJ)
 	$(CC) -g -o $(BDIR)/$@ $^ $(CFLAGS) $(LIBS) 

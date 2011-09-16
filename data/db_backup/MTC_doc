@@ -1,0 +1,163 @@
+{
+   "_id": "MTC_doc",
+   "_rev": "7-e3fee6170ad5bc27f3e94b7e617491f4",
+   "name": "MTC",
+   "time ": null,
+   "board_id": null,
+   "mtcd": {
+       "lockout_width": 420,
+       "pedestal_width": 52,
+       "nhit100_lo_prescale": 1,
+       "pulser_period": 10,
+       "low10Mhz_clock": 0,
+       "high10Mhz_clock": 0,
+       "fine_slope": 0.1,
+       "min_delay_offset": 18,
+       "coarse_delay": 60,
+       "fine_delay": 0,
+       "gt_mask": "00000000",
+       "gt_crate_mask": "00000000",
+       "ped_crate_mask": "00000000",
+       "control_mask": "00000000"
+   },
+   "mtca": {
+       "nhit": {
+           "id": [
+               "NHit100Hi",
+               "NHit100Med",
+               "NHit100Lo",
+               "NHit20",
+               "NHit20LB",
+               "OWLN"
+           ],
+           "threshold": [
+               0,
+               0,
+               0,
+               0,
+               0,
+               0
+           ],
+           "mv_per_adc": [
+               10,
+               20,
+               30,
+               40,
+               50,
+               60
+           ],
+           "mv_per_hit": [
+               10,
+               20,
+               30,
+               40,
+               50,
+               60
+           ],
+           "dc_offset": [
+               10,
+               20,
+               30,
+               40,
+               50,
+               60
+           ]
+       },
+       "esum": {
+           "id": [
+               "ESumLo",
+               "ESumHi",
+               "OWLELo",
+               "OWLEHi"
+           ],
+           "threshold": [
+               0,
+               0,
+               0,
+               0
+           ],
+           "mv_per_adc": [
+               10,
+               20,
+               30,
+               40
+           ],
+           "mv_per_pc": [
+               10,
+               20,
+               30,
+               40
+           ],
+           "dc_offset": [
+               10,
+               20,
+               30,
+               40
+           ]
+       },
+       "spare": {
+           "id": [
+               "spare1",
+               "spare2",
+               "spare3",
+               "spare4"
+           ],
+           "threshold": [
+               0,
+               0,
+               0,
+               0
+           ],
+           "mv_per_adc": [
+               10,
+               20,
+               30,
+               40
+           ],
+           "mv_per_pc": [
+               10,
+               20,
+               30,
+               40
+           ],
+           "dc_offset": [
+               10,
+               20,
+               30,
+               40
+           ]
+       },
+       "crate_status": {
+           "id": [
+               "n100",
+               "n20",
+               "esumL",
+               "esumH",
+               "owlN",
+               "owlEL",
+               "owlEH"
+           ],
+           "disable_mask": [
+               0,
+               0,
+               0,
+               0,
+               0,
+               0,
+               0
+           ]
+       },
+       "retrigger": [
+           0,
+           0,
+           0,
+           0,
+           0,
+           0,
+           0
+       ]
+   },
+   "tub_bits": null,
+   "digitizer": null,
+   "comments": null
+}
