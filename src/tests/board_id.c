@@ -89,8 +89,7 @@ void *pt_board_id(void *args)
   }
   pt_printsend("**********************************\n");
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
   return 0;
 }
 

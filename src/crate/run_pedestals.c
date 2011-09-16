@@ -216,13 +216,7 @@ void *pt_run_pedestals(void *args)
       pt_printsend("run_pedestals: Error setting up MTC. Exiting\n");
       unset_ped_crate_mask(MASKALL);
       unset_gt_crate_mask(MASKALL);
-      if (arg.crate)
-        for (i=0;i<19;i++)
-          if ((0x1<<i) & arg.crate_mask)
-            xl3_lock[i] = 0;
-      if (arg.mtc)
-        sbc_lock = 0;
-      thread_done[arg.thread_num] = 1;
+      unthread_and_unlock(arg.mtc,arg.crate_mask,arg.thread_num);
       return;
     }
   }
@@ -233,13 +227,7 @@ void *pt_run_pedestals(void *args)
       if ((0x1<<i) & arg.crate_mask)
         change_mode(NORMAL_MODE,arg.slot_mask[i],i,&thread_fdset);
 
-  if (arg.crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & arg.crate_mask)
-        xl3_lock[i] = 0;
-  if (arg.mtc)
-    sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(arg.mtc,arg.crate_mask,arg.thread_num);
 }
 
 int run_pedestals_end(char *buffer, int mtc, int crate)
@@ -322,11 +310,5 @@ void *pt_run_pedestals_end(void *args)
     unset_gt_crate_mask(MASKALL);
   }
 
-  if (arg.crate)
-    for (i=0;i<19;i++)
-      if ((0x1<<i) & arg.crate_mask)
-        xl3_lock[i] = 0;
-  if (arg.mtc)
-    sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(arg.mtc,arg.crate_mask,arg.thread_num);
 }

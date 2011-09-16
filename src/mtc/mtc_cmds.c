@@ -177,8 +177,7 @@ void *pt_sbc_control(void *args)
     if (rw_sbc_fd > 0){
       pt_printsend("sbc_control: Already was connected (socket %d)\n",rw_sbc_fd);
       pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
+      unthread_and_unlock(1,0x0,thread_num);
       return;
     }
 
@@ -193,8 +192,7 @@ void *pt_sbc_control(void *args)
     if (rw_sbc_fd <= 0){
       pt_printsend("sbc_control: Error opening a new socket\n");
       pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
+      unthread_and_unlock(1,0x0,thread_num);
       return;
     }
 
@@ -213,8 +211,7 @@ void *pt_sbc_control(void *args)
       rw_sbc_fd = -1;
       pt_printsend("sbc_control: Error connecting to SBC (errno %d)\n",errno);
       pthread_mutex_unlock(&main_fdset_lock);
-      sbc_lock = 0;
-      thread_done[thread_num] = 1;
+      unthread_and_unlock(1,0x0,thread_num);
       return;
     }
 
@@ -229,8 +226,7 @@ void *pt_sbc_control(void *args)
   } // end if connecting or reconnecting
 
   pthread_mutex_unlock(&main_fdset_lock);
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
 }
 
 int mtc_read(char *buffer)
@@ -264,9 +260,6 @@ int mtc_read(char *buffer)
     return -1;
   }
 
-  // we have a thread so lock it
-  sbc_lock = 1;
-
   args->thread_num = thread_num;
   pthread_create(new_thread,NULL,pt_mtc_read,(void *)args);
   return 0; 
@@ -281,8 +274,7 @@ void *pt_mtc_read(void *args)
   mtc_reg_read(arg.address, &data);
   pt_printsend("Received %08x\n",data);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -335,8 +327,7 @@ void *pt_mtc_write(void *args)
   mtc_reg_write(arg.address, arg.data);
   pt_printsend("Wrote %08x\n",arg.data);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -432,8 +423,7 @@ void *pt_set_mtca_thresholds(void *args)
 
   load_mtca_dacs(arg.dac_voltages);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -486,8 +476,7 @@ void *pt_cmd_set_gt_mask(void *args)
     mtc_reg_read(MTCMaskReg, &temp);
   mtc_reg_write(MTCMaskReg, temp | arg.mask);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -540,8 +529,7 @@ void *pt_cmd_set_gt_crate_mask(void *args)
     mtc_reg_read(MTCGmskReg, &temp);
   mtc_reg_write(MTCGmskReg, temp | arg.mask);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -594,8 +582,7 @@ void *pt_cmd_set_ped_crate_mask(void *args)
     mtc_reg_read(MTCPmskReg, &temp);
   mtc_reg_write(MTCPmskReg, temp | arg.mask);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -630,8 +617,7 @@ void *pt_cmd_enable_pulser(void *args)
   int thread_num = *(int *) args;
   free(args);
   enable_pulser();
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
   return;
 }
 
@@ -666,8 +652,7 @@ void *pt_cmd_disable_pulser(void *args)
   int thread_num = *(int *) args;
   free(args);
   disable_pulser();
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
   return;
 }
 
@@ -702,8 +687,7 @@ void *pt_cmd_enable_pedestal(void *args)
   int thread_num = *(int *) args;
   free(args);
   enable_pedestal();
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
   return;
 }
 
@@ -738,8 +722,7 @@ void *pt_cmd_disable_pedestal(void *args)
   int thread_num = *(int *) args;
   free(args);
   disable_pedestal();
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
   return;
 }
 
@@ -783,8 +766,7 @@ void *pt_set_pulser_freq(void *args)
   free(args);
 
   set_pulser_frequency(arg.frequency);
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 
@@ -804,10 +786,10 @@ int cmd_send_softgt(char *buffer)
 
 void *pt_cmd_send_softgt(void *args)
 {
-  send_softgt();
-  sbc_lock = 0;
-  thread_done[*(int *) args] = 1;
+  int thread_num = *(int *) args;
   free(args);
+  send_softgt();
+  unthread_and_unlock(1,0x0,thread_num);
   return;
 }
 
@@ -853,8 +835,7 @@ void *pt_cmd_multi_softgt(void *args)
 
   multi_softgt(arg.number);
 
-  sbc_lock = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(1,0x0,arg.thread_num);
   return;
 }
 

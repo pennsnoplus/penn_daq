@@ -148,8 +148,6 @@ void *pt_vmon(void *args)
     }
   }
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
-  return 0;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
 

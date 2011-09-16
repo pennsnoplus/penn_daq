@@ -218,9 +218,7 @@ void *pt_load_relays(void *args)
   xl3_rw(XL_RELAY_R + WRITE_REG, 0x4,&result,arg.crate_num,&thread_fdset);
 
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
-  return;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
 
 int read_bundle(char *buffer)
@@ -285,8 +283,7 @@ void *pt_read_bundle(void *args)
   errors += xl3_rw(READ_MEM+arg.slot_num*FEC_SEL,0x0,pmtword+2,arg.crate_num,&thread_fdset);
   if (errors != 0){
     pt_printsend("There were %d errors reading out the bundles.\n",errors);
-    xl3_lock[arg.crate_num] = 0;
-    thread_done[arg.thread_num] = 1;
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
     return;
   }
   pt_printsend("%08x %08x %08x\n",pmtword[0],pmtword[1],pmtword[2]);
@@ -310,9 +307,7 @@ void *pt_read_bundle(void *args)
         crate,slot,chan,cell,gt8,
         gt16,cmos_es16,cgt_es16,cgt_es8,nc_cc,qlx,qhs,qhl,tac);
   }
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
-  return;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
 
 

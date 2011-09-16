@@ -60,8 +60,7 @@ void *pt_mtc_init(void *args)
     errors = mtc_xilinx_load();
 
   if (errors < 0){
-    sbc_lock = 0;
-    thread_done[thread_num] = 1;
+    unthread_and_unlock(1,0x0,thread_num);
     return;
   }
 
@@ -70,8 +69,7 @@ void *pt_mtc_init(void *args)
   {
     pt_printsend("error: malloc in mtc_init\n");
     free(mtc);
-    sbc_lock = 0;
-    thread_done[thread_num] = 1;
+    unthread_and_unlock(1,0x0,thread_num);
     return;
   }
 
@@ -85,8 +83,7 @@ void *pt_mtc_init(void *args)
     pt_printsend("Unable to connect to database. error code %d\n",(int)response->httpresponse);
     free(response);
     free(mtc);
-    sbc_lock = 0;
-    thread_done[thread_num] = 1;
+    unthread_and_unlock(1,0x0,thread_num);
     return;
   }
   JsonNode *doc = json_decode(response->resp.data);
@@ -160,6 +157,5 @@ void *pt_mtc_init(void *args)
     pt_printsend("MTC finished initializing\n");
   }
 
-  sbc_lock = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(1,0x0,thread_num);
 }

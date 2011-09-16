@@ -140,8 +140,7 @@ void *pt_sm_reset(void *args)
   packet.cmdHeader.packet_type = STATE_MACHINE_RESET_ID;
   do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
   return;
 }
 
@@ -206,8 +205,7 @@ void *pt_cmd_xl3_rw(void *args)
   else 
     pt_printsend("there was a bus error! %d\n",errors);
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
   return;
 }
 
@@ -278,8 +276,7 @@ void *pt_xl3_queue_rw(void *args)
   int errors = do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
   if (errors < 0){
     pt_printsend("Error queuing command\n");
-    xl3_lock[arg.crate_num] = 0;
-    thread_done[arg.thread_num] = 1;
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
     return;
   }
   
@@ -287,15 +284,13 @@ void *pt_xl3_queue_rw(void *args)
   errors = wait_for_multifc_results(1,command_number[arg.crate_num]-1,arg.crate_num,&result,&thread_fdset);
   if (errors < 0){
     pt_printsend("Error getting result\n");
-    xl3_lock[arg.crate_num] = 0;
-    thread_done[arg.thread_num] = 1;
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
     return;
   }
 
   pt_printsend("result was %08x\n",result);
   
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
   return;
 }
 
@@ -360,8 +355,7 @@ void *pt_debugging_mode(void* args)
       pt_printsend("Debugging turned off\n");
   }
 
-  xl3_lock[crate_num] = 0;
-  thread_done[thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<crate_num),thread_num);
 }
 
 int cmd_change_mode(char *buffer)
@@ -424,6 +418,5 @@ void *pt_cmd_change_mode(void* args)
       pt_printsend("Mode changed to normal mode\n");
   }
 
-  xl3_lock[arg.crate_num] = 0;
-  thread_done[arg.thread_num] = 1;
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
