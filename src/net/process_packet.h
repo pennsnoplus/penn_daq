@@ -12,6 +12,9 @@ int read_control_command(int fd);
 int read_viewer_data(int fd);
 int process_control_command(char *buffer);
 int process_xl3_packet(char *buffer, int xl3num);
+int handle_error_packet(XL3_Packet *packet, int xl3num);
+int handle_screwed_packet(XL3_Packet *packet, int xl3num);
+
 
 #endif
 

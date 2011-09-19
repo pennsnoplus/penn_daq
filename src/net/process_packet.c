@@ -327,10 +327,9 @@ int process_xl3_packet(char *buffer, int xl3num)
     store_mega_bundle();
   }else if (packet->cmdHeader.packet_type == SCREWED_ID){
     printf("got a screwed packet\n"); //FIXME
-    //handle_screwed_packet();
+    handle_screwed_packet(packet,xl3num);
   }else if (packet->cmdHeader.packet_type == ERROR_ID){
-    printf("got an error packet: number %d\n",packet->cmdHeader.packet_num); //FIXME
-    //handle_error_packet();
+    handle_error_packet(packet,xl3num);
   }else if (packet->cmdHeader.packet_type == PING_ID){
     packet->cmdHeader.packet_type = PONG_ID;
     int n = write(rw_xl3_fd[xl3num],(char *)packet,MAX_PACKET_SIZE);
@@ -375,5 +374,39 @@ int store_mega_bundle(XL3_Packet *packet)
 //        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
     recv_fake_bytes = 0;
   }
+  return 0;
+}
+
+int handle_error_packet(XL3_Packet *packet, int xl3num)
+{
+  pt_printsend("Got an error packet from XL3 #%d:\n",xl3num);
+  error_packet_t *errors = (error_packet_t *) packet->payload;
+  if (errors->cmd_in_rejected)
+    pt_printsend("\tCommand in rejected\n");
+  if (errors->transfer_error)
+    pt_printsend("\tTransfer error: %d\n",errors->transfer_error);
+  if (errors->xl3_data_avail_unknown)
+    pt_printsend("\tXL3 data available unknown\n");
+  if (errors->bundle_read_error)
+    pt_printsend("\tBundle read error\n");
+  if (errors->bundle_resync_error)
+    pt_printsend("\tBundle resync error\n");
+  int i;
+  for (i=0;i<16;i++)
+    if (errors->mem_level_unknown[i])
+      pt_printsend("\tMemory level unknown FEC %d\n",i);
+
+  return 0;
+}
+
+int handle_screwed_packet(XL3_Packet *packet, int xl3num)
+{
+  pt_printsend("Got a screwed packet from XL3 #%d:\n",xl3num);
+  screwed_packet_t *errors = (screwed_packet_t *) packet->payload;
+  int i;
+  for (i=0;i<16;i++)
+    if (errors->screwed[i])
+      pt_printsend("\tFEC %d\n",i);
+
   return 0;
 }
