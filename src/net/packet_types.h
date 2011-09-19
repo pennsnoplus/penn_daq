@@ -293,6 +293,18 @@ typedef struct{
   uint32_t count[32];
 } check_total_count_results_t;
 
+typedef struct{
+  uint32_t cmd_in_rejected;
+  uint32_t transfer_error;
+  uint32_t xl3_data_avail_unknown;
+  uint32_t bundle_read_error;
+  uint32_t bundle_resync_error;
+  uint32_t mem_level_unknown[16];
+} error_packet_t;
+
+typedef struct{
+  uint32_t screwed[16];
+} screwed_packet_t;
 
 /*! \name sbc_send_packet_type
  *  Types of packets that will be sent to the sbc from the xl3
