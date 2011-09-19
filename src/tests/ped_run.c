@@ -324,9 +324,9 @@ void *pt_ped_run(void *args)
             //printsend("%d %d %d %d\n",ped[i].thiscell[j].qhlbar,ped[i].thiscell[j].qhsbar,ped[i].thiscell[j].qlxbar,ped[i].thiscell[j].tacbar);
           }
           if (error_flag[i] & 0x1)
-            pt_printsend(">>>Bad Q pedestal for this channel\n");
-          if (error_flag[i] & 0x2)
             printsend(">>>Wrong no of pedestals for this channel\n");
+          if (error_flag[i] & 0x2)
+            pt_printsend(">>>Bad Q pedestal for this channel\n");
         }
       }
 
