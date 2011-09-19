@@ -280,7 +280,7 @@ void *pt_chinj_scan(void *args)
         // READOUT BUNDLES //
         /////////////////////
 
-        count = read_out_bundles(arg.crate_num, slot_iter, arg.num_pedestals*32*16,pmt_buffer,&thread_fdset);
+        count = read_out_bundles(arg.crate_num, slot_iter, arg.num_pedestals*32*16,1,pmt_buffer,&thread_fdset);
 
         //check for readout errors
         if (count <= 0){

@@ -124,6 +124,9 @@ void *pt_disc_check(void *args)
     if ((0x1<<i) & arg.slot_mask)
       result = get_cmos_total_count(arg.crate_num,i,count_i[i],&thread_fdset);
 
+  // let the main loop send pongs back until we need xl3 again
+  temp_unlock(0x1<<arg.crate_num);
+
   // fire pedestals
   i = arg.num_pedestals;
   while (i>0){
@@ -137,6 +140,9 @@ void *pt_disc_check(void *args)
     if (i%50000 == 0)
       pt_printsend("%d\n",i);
   }
+
+  // lock it back
+  relock(0x1<<arg.crate_num);
 
   // get final data
   for (i=0;i<16;i++)
@@ -187,6 +193,7 @@ void *pt_disc_check(void *args)
 
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+        pt_printsend("lock has been set to %d\n",xl3_lock[arg.crate_num]);
         post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
         json_delete(newdoc); // only need to delete the head node
       }

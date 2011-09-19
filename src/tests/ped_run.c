@@ -205,7 +205,7 @@ void *pt_ped_run(void *args)
 
       // readout bundles
       int count = read_out_bundles(arg.crate_num,slot,arg.num_pedestals*16*num_channels,
-          pmt_buffer,&thread_fdset);
+          1,pmt_buffer,&thread_fdset);
 
       if (count <= 0){
         pt_printsend("There was an error in the count!\n");

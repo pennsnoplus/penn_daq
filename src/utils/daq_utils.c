@@ -281,13 +281,35 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
   }
 
   // we have a thread, so lock everything down
+  //pthread_mutex_lock(&socket_lock);
   if (sbc)
     sbc_lock = 1;
   for (i=0;i<19;i++)
     if ((0x1<<i) & crate_mask)
       xl3_lock[i] = 1;
+  //pthread_mutex_unlock(&socket_lock);
 
   return thread_num;
+}
+
+int temp_unlock(uint32_t crate_mask)
+{
+  pthread_mutex_lock(&socket_lock);
+  int i;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask)
+      xl3_lock[i] = 2;
+  pthread_mutex_unlock(&socket_lock);
+}
+
+int relock(uint32_t crate_mask)
+{
+  pthread_mutex_lock(&socket_lock);
+  int i;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask)
+      xl3_lock[i] = 1;
+  pthread_mutex_unlock(&socket_lock);
 }
 
 int read_configuration_file()

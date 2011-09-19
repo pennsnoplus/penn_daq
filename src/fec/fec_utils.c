@@ -97,7 +97,7 @@ int loadsDac(uint32_t dac_num, uint32_t dac_value, int crate_num, int slot_num, 
   return packet_results->error_flags;
 }
 
-int32_t read_out_bundles(int crate, int slot, int limit, uint32_t *pmt_buf, fd_set *thread_fdset)
+int32_t read_out_bundles(int crate, int slot, int limit, int check_limit, uint32_t *pmt_buf, fd_set *thread_fdset)
 {
   XL3_Packet packet;
   MultiFC *commands = (MultiFC *) packet.payload;
@@ -112,15 +112,19 @@ int32_t read_out_bundles(int crate, int slot, int limit, uint32_t *pmt_buf, fd_s
   diff = diff - (diff%3);
 
   // check if there are more bundles than expected
-  if ((3*limit) < diff){
-    if (diff > 1.5*(3*limit))
-      pt_printsend("Memory level much higher than expected (%d > %d). "
-          "Possible fifo overflow\n",diff,3*limit);
-    else
-      pt_printsend("Memory level over expected (%d > %d)\n",diff,3*limit);
-    diff = 3*limit;
-  }else if ((3*limit) > diff){
-    pt_printsend("Memory level under expected (%d < %d)\n",diff,3*limit);
+  if (check_limit){
+    if ((3*limit) < diff){
+      if (diff > 1.5*(3*limit))
+        pt_printsend("Memory level much higher than expected (%d > %d). "
+            "Possible fifo overflow\n",diff,3*limit);
+      else
+        pt_printsend("Memory level over expected (%d > %d)\n",diff,3*limit);
+      diff = 3*limit;
+    }else if ((3*limit) > diff){
+      pt_printsend("Memory level under expected (%d < %d)\n",diff,3*limit);
+    }
+  }else{
+    diff = diff >= 3*limit ? 3*limit : diff;
   }
 
   // lets read out the bundles!

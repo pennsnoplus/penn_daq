@@ -310,13 +310,12 @@ void *pt_final_test(void *args)
     sprintf(command_buffer,"disc_check -c %d -s %04x -n 500000 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (disc_check(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
-/*
+
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"cmos_m_gtvalid -c %d -s %04x -g 400 -n -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (cmos_m_gtvalid(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
-  */
 
   // would put see_reflections here
 
@@ -379,13 +378,21 @@ void *pt_final_test(void *args)
   }
 
   pt_printsend("-------------------------------------------\n");
+  do {
+    sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
+  } while (crate_init(command_buffer) != 0);
+  while (xl3_lock[arg.crate_num] != 0){}
+
+  pt_printsend("-------------------------------------------\n");
   pt_printsend("Final test finished. Now updating the database.\n");
 
   // update the database
   for (i=0;i<16;i++){
     if ((0x1<<i) & arg.slot_mask){
       json_append_member(ft_docs[i],"type",json_mkstring("final_test"));
+      pthread_mutex_lock(&socket_lock);
       xl3_lock[arg.crate_num] = 1; // we gotta lock this shit down before we call post_doc
+      pthread_mutex_unlock(&socket_lock);
       post_debug_doc_with_id(arg.crate_num, i, ft_ids[i], ft_docs[i],&thread_fdset);
       json_delete(ft_docs[i]);
     }
