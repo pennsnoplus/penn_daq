@@ -504,7 +504,7 @@ void *pt_cmos_m_gtvalid(void *args)
         json_append_member(newdoc,"pass",json_mkbool(1));//FIXME
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
-        post_debug_doc(arg.crate_num,j,newdoc,&thread_fdset);
+        post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
         json_delete(newdoc); // only delete the head
       }
 

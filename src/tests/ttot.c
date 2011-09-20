@@ -13,6 +13,7 @@
 #include "net.h"
 #include "net_utils.h"
 #include "daq_utils.h"
+#include "mtc_utils.h"
 #include "ttot.h"
 
 #define MAX_TIME 1100
@@ -266,7 +267,7 @@ void *pt_set_ttot(void *args)
           // if diffs all positive, that chip is finished
           if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0) && (diff[4*j+3] > 0) && ((0x1<<j) & chips_not_finished)){
             chips_not_finished &= ~(0x1<<j);
-            pt_printsend("Fit channel %d (RMP/VSI %d %d) Times:\t%d\t%d\t%dt%d\n",
+            pt_printsend("Fit channel %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
                 j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
                 alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
             allrmps[i][j] = rmp[j];
@@ -307,7 +308,6 @@ void *pt_set_ttot(void *args)
       } // end while chips_not_finished
 
 end:
-      continue;
       if (arg.update_db){
         pt_printsend("updating the database\n");
         int slot;
@@ -345,13 +345,16 @@ end:
     } // if in slot mask
   } // end loop over slots
 
+  pt_printsend("Set ttot complete\n");
+  pt_printsend("**************************\n");
+
   unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
 }
 
 
 int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_times, fd_set *thread_fdset)
 {
-  int increment = 1;
+  int increment = 10;
   int time;
   uint32_t chan_done_mask;
   float real_delay;

@@ -237,7 +237,7 @@ int read_bundle(char *buffer)
       if (words[1] == 'c'){
         if ((words2 = strtok(NULL, " ")) != NULL)
           args->crate_num = atoi(words2);
-      }else if (words[1] == 'a'){
+      }else if (words[1] == 's'){
         if ((words2 = strtok(NULL, " ")) != NULL)
           args->slot_num = atoi(words2);
       }else if (words[1] == 'q'){

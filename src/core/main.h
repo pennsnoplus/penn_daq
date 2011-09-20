@@ -67,4 +67,6 @@ int VIEW_PORT;
 int BUNDLE_PRINT;
 int CURRENT_LOCATION;
 
+char *PENN_DAQ_ROOT;
+
 #endif

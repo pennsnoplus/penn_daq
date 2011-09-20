@@ -204,8 +204,12 @@ int parse_macro(char *filename)
 {
   FILE *macro_file;
   char long_filename[250];
-  sprintf(long_filename,"macro/%s",filename);
+  sprintf(long_filename,"%s/macro/%s",PENN_DAQ_ROOT,filename);
   macro_file = fopen(long_filename,"r");
+  if (macro_file == NULL){
+    pt_printsend("Could not open macro file!\n");
+    return 0;
+  }
   macro_tot_cmds = 0;
   macro_cur_cmd = 0;
   while (fgets(macro_cmds[macro_tot_cmds],250,macro_file) != NULL){
@@ -281,19 +285,47 @@ int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread)
   }
 
   // we have a thread, so lock everything down
+  //pthread_mutex_lock(&socket_lock);
   if (sbc)
     sbc_lock = 1;
   for (i=0;i<19;i++)
     if ((0x1<<i) & crate_mask)
       xl3_lock[i] = 1;
+  //pthread_mutex_unlock(&socket_lock);
 
   return thread_num;
+}
+
+int temp_unlock(uint32_t crate_mask)
+{
+  pthread_mutex_lock(&socket_lock);
+  int i;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask)
+      xl3_lock[i] = 2;
+  pthread_mutex_unlock(&socket_lock);
+}
+
+int relock(uint32_t crate_mask)
+{
+  pthread_mutex_lock(&socket_lock);
+  int i;
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & crate_mask)
+      xl3_lock[i] = 1;
+  pthread_mutex_unlock(&socket_lock);
 }
 
 int read_configuration_file()
 {
   FILE *config_file;
-  config_file = fopen(CONFIG_FILE_LOC,"r");
+  char filename[1000];
+  sprintf(filename,"%s/%s",PENN_DAQ_ROOT,CONFIG_FILE_LOC);
+  config_file = fopen(filename,"r");
+  if (config_file == NULL){
+    printf("Could not open configuration file! Looking for %s\n",filename);
+    return -1;
+  }
   int i,n = 0;
   char line_in[100][100];
   memset(DB_USERNAME,0,100);
@@ -347,7 +379,12 @@ int read_configuration_file()
         }else if (strcmp(var_name,"BUNDLE_PRINT")==0){
           BUNDLE_PRINT = atoi(var_value);
         }else if (strcmp(var_name,"CURRENT_LOCATION")==0){
-          CURRENT_LOCATION = atoi(var_value);
+	  if (strncmp(var_value,"penn",3) == 0)
+	    CURRENT_LOCATION = PENN_TESTSTAND;
+	  else if (strncmp(var_value,"ag",2) == 0)
+	    CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
+	  else
+	    CURRENT_LOCATION = UNDERGROUND;
         }
       }
     }
@@ -439,17 +476,23 @@ void sigint_func(int sig)
 int start_logging(){
   if(!write_log){
     write_log = 1;
-    char log_name[256] = {'\0'};  // random size, it's a pretty nice number though.
+    char log_name[500] = {'\0'};  // random size, it's a pretty nice number though.
     time_t curtime = time(NULL);
     struct timeval moretime;
     gettimeofday(&moretime,0);
     struct tm *loctime = localtime(&curtime);
 
-    strftime(log_name, 256, "%Y_%m_%d_%H_%M_%S_", loctime);
+    sprintf(log_name,"%s/log/",PENN_DAQ_ROOT);
+    strftime(log_name+strlen(log_name), 256, "%Y_%m_%d_%H_%M_%S_", loctime);
     sprintf(log_name+strlen(log_name), "%d.log", (int)moretime.tv_usec);
     ps_log_file = fopen(log_name, "a+");
-    printsend( "Enabled logging\n");
-    printsend( "Opened log file: %s\n", log_name);
+    if (ps_log_file == NULL){
+	printsend("Problem enabling logging: Could not open log file!\n");
+	write_log = 0;
+    }else{
+	printsend( "Enabled logging\n");
+	printsend( "Opened log file: %s\n", log_name);
+    }
 
   }
   else{

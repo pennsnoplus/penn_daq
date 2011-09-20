@@ -54,6 +54,10 @@ int read_xl3_packet(int fd)
     printsend("Incorrect xl3 fd? No matching crate\n");
     return -1;
   }
+  if (xl3_lock[crate] == 1){
+    // this socket is locked and we arent supposed to be reading it
+    return 0;
+  }
   memset(buffer,'\0',MAX_PACKET_SIZE);
   int numbytes = recv(fd, buffer, MAX_PACKET_SIZE, 0);
   // check if theres any errors or an EOF packet
@@ -86,6 +90,10 @@ int read_xl3_packet(int fd)
 
 int read_control_command(int fd)
 {
+  if (cont_lock == 1){
+    // this socket is locked and we aren't supposed to be reading it
+    return 0;
+  }
   memset(buffer,'\0',MAX_PACKET_SIZE);
   int numbytes = recv(fd, buffer, MAX_PACKET_SIZE, 0);
   // check if theres any errors or an EOF packet
@@ -340,6 +348,7 @@ int process_xl3_packet(char *buffer, int xl3num)
   }else{
     // got the wrong type of ack packet
     pt_printsend("process_xl3_packet: Got unexpected packet type in main loop: %08x\n",packet->cmdHeader.packet_type);
+    pt_printsend("lock is %d\n",xl3_lock[xl3num]);
   } // end switch on packet type
   return 0;
 }

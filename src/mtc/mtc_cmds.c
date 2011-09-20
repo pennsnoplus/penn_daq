@@ -154,7 +154,7 @@ void *pt_sbc_control(void *args)
     sprintf(base_cmd,"ssh %s@%s -i %s",SBC_USER,SBC_SERVER,identity_file);
   else
     sprintf(base_cmd,"ssh %s@%s",SBC_USER,SBC_SERVER);
-
+    
   pthread_mutex_lock(&main_fdset_lock);
   // if killing or reconnecting, close socket and stop the service
   if (sbc_action == 1 || sbc_action == 2){
@@ -164,7 +164,7 @@ void *pt_sbc_control(void *args)
       rw_sbc_fd = -1;
     }
     char kill_cmd[500];
-    sprintf(kill_cmd,"%s /etc/rc.d/orcareadout stop",base_cmd);
+    sprintf(kill_cmd,"%s /home/daq/orcareadout stop",base_cmd);
     pt_printsend("sbc_control: Stopping remote OrcaReadout process\n");
     system(kill_cmd);
   }
@@ -183,7 +183,7 @@ void *pt_sbc_control(void *args)
 
     if (manual == 0){
       char start_cmd[500];
-      sprintf(start_cmd,"%s /etc/rc.d/orcareadout start",base_cmd);
+      sprintf(start_cmd,"%s /home/daq/orcareadout start",base_cmd);
       pt_printsend("sbc_control: Starting remote OrcaReadout process\n");
       system(start_cmd);
     }

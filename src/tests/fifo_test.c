@@ -89,6 +89,8 @@ void *pt_fifo_test(void *args)
   uint32_t *readout_data;
   int gtstofire;
 
+  pt_printsend("Starting fifo test\n");
+
 
   readout_data = (uint32_t *) malloc( 0x000FFFFF * sizeof(uint32_t));
   if (readout_data == NULL){
@@ -130,6 +132,9 @@ void *pt_fifo_test(void *args)
     }
   }
 
+  // let main loop get pongs
+  temp_unlock(0x1<<arg.crate_num);
+
   // now pulse the soft gts
   // we will fill the fifos almost to the top
   gtstofire = (0xFFFFF-32)/3;
@@ -148,6 +153,9 @@ void *pt_fifo_test(void *args)
       fflush(stdout);
     }
   }
+
+  // take back control
+  relock(0x1<<arg.crate_num);
 
   pt_printsend("\n");
 
@@ -178,12 +186,16 @@ void *pt_fifo_test(void *args)
       // turn off all but one slot
       set_crate_pedestals(arg.crate_num,0x1<<i,0x1,&thread_fdset);
 
+      temp_unlock(0x1<<arg.crate_num);
+
       // now pulse the last soft gts to fill fifo to the top
       remainder = diff/3;
       sprintf(cur_msg,"Slot %d - Now firing %d more soft gts\n",i,remainder);
       pt_printsend("%s",cur_msg);
       sprintf(error_history+strlen(error_history),"%s",cur_msg);
       multi_softgt(remainder);
+
+      relock(0x1<<arg.crate_num);
 
       check_fifo(&diff,arg.crate_num,i,error_history,&thread_fdset);
 
@@ -237,7 +249,7 @@ void *pt_fifo_test(void *args)
       sprintf(cur_msg,"Slot %d - Dumping all but the last %d events.\n",i,j);
       sprintf(error_history+strlen(error_history),"%s",cur_msg);
       pt_printsend("%s",cur_msg);
-      int count = read_out_bundles(arg.crate_num,i,(0xFFFFF-diff)/3-j,readout_data,&thread_fdset);
+      int count = read_out_bundles(arg.crate_num,i,(0xFFFFF-diff)/3-j,0,readout_data,&thread_fdset);
       printf("Managed to read out %d bundles\n",count);
 
       check_fifo(&diff,arg.crate_num,i,error_history,&thread_fdset);
@@ -251,7 +263,7 @@ void *pt_fifo_test(void *args)
         pt_printsend("There was an error calculating how much to read out. Will attempt to read everything thats left\n");
         j = 0xFFFFF/3;
       }
-      read_out_bundles(arg.crate_num, i, j, readout_data,&thread_fdset);
+      read_out_bundles(arg.crate_num, i, j, 0, readout_data,&thread_fdset);
       dump_pmt_verbose(j, readout_data,error_history);
       check_fifo(&diff,arg.crate_num,i,error_history,&thread_fdset);
 

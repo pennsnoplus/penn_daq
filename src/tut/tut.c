@@ -127,7 +127,10 @@ COMMAND commands[] = {
 int read_configuration_file()
 {
   FILE *config_file;
-  config_file = fopen(CONFIG_FILE_LOC,"r");
+  char filename[500];
+  char *PENN_DAQ_ROOT = getenv("PENN_DAQ_ROOT");
+  sprintf(filename,"%s/%s",PENN_DAQ_ROOT,CONFIG_FILE_LOC);
+  config_file = fopen(filename,"r");
   int i,n = 0;
   char line_in[100][100];
   while (fscanf(config_file,"%s",line_in[n]) == 1){

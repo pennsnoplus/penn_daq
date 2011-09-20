@@ -57,6 +57,7 @@ pthread_mutex_t main_fdset_lock;
 int sbc_lock;
 int xl3_lock[MAX_XL3_CON];
 int cont_lock;
+pthread_mutex_t socket_lock;
 
 // connection flag
 int views_connected;

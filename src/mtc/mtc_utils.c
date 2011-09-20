@@ -489,9 +489,11 @@ static char* getXilinxData(long *howManyBits)
   char c;
   FILE *fp;
   char *data = NULL;
+  char filename[500];
+  sprintf(filename,"%s/%s",PENN_DAQ_ROOT,MTC_XILINX_LOCATION);
 
-  if ((fp = fopen(MTC_XILINX_LOCATION, "r")) == NULL ) {
-    pt_printsend( "getXilinxData:  cannot open file %s\n", MTC_XILINX_LOCATION);
+  if ((fp = fopen(filename, "r")) == NULL ) {
+    pt_printsend( "getXilinxData:  cannot open file %s\n", filename);
     return (char*) NULL;
   }
 

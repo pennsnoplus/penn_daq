@@ -12,6 +12,8 @@ int parse_macro(char *filename);
 int reset_speed();
 void unthread_and_unlock(int sbc, uint32_t crate_mask, int thread_num);
 int thread_and_lock(int sbc, uint32_t crate_mask, pthread_t **new_thread);
+int temp_unlock(uint32_t crate_mask);
+int relock(uint32_t crate_mask);
 int set_location(char *buffer); //!< Changes the global location variable, which is used when posting to debug database
 int start_logging(); //!< Starts printing anything that would go to viewer terminal to a file
 int stop_logging(); //!< Stops printing to log file

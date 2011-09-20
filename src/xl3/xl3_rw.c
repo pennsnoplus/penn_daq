@@ -31,7 +31,10 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   fd_set readable_fdset = *(thread_fdset);
 
   struct timeval delay_value;
-  delay_value.tv_sec = 30;
+  if (sent_packet_type == MEM_TEST_ID || sent_packet_type == ZDISC_ID)
+    delay_value.tv_sec = 30;
+  else
+    delay_value.tv_sec = 10;
   delay_value.tv_usec = 0;
   // lets get a response back from the xl3
   while (1){
@@ -160,6 +163,7 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
   int i,current_num = 0;
   // First we check if there's any acks left in our buffer
   if (multifc_buffer_full[xl3num] != 0){
+    pt_printsend("there was stuff in the buffer\n");
     for (i=0;i<multifc_buffer[xl3num].howmany;i++){
       // loop through each command ack in the buffer and see if any
       // matches the command number that we are waiting for
@@ -181,6 +185,8 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
           multifc_buffer_full[xl3num] = 0;
           multifc_buffer[xl3num].howmany = 0;
         }
+      }else{
+        pt_printsend("There's already stuff waiting and its not for us?\n");
       }
     }
   }

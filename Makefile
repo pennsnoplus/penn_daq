@@ -5,7 +5,7 @@ BDIR = bin
 CC = gcc
 #CFLAGS = -I$(IDIR)
 CFLAGS = $(patsubst %,-I%,$(CDIRS))
-LIBS = -lcurl -lpthread
+LIBS = -lcurl -lpthread -lm
 
 _CDIRS = core utils db net crate xl3 fec mtc tut tests
 CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))

@@ -18,6 +18,11 @@ int main(int argc, char *argv[])
   // set up a signal handler to handle ctrl-C
   (void) signal(SIGINT, sigint_func);
 
+  PENN_DAQ_ROOT = getenv("PENN_DAQ_ROOT");
+  if (PENN_DAQ_ROOT == NULL){
+    printf("You need to set the environment variable PENN_DAQ_ROOT to the penn_daq directory\n");
+    return -1;
+  }
   CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
   write_log = 0;
   start_time = 0;
@@ -33,6 +38,7 @@ int main(int argc, char *argv[])
     thread_done[i] = 0;
   pthread_mutex_init(&printsend_buffer_lock,NULL);
   pthread_mutex_init(&main_fdset_lock,NULL);
+  pthread_mutex_init(&socket_lock,NULL);
   pthread_mutex_init(&final_test_cmd_lock,NULL);
   pthread_cond_init(&final_test_cmd_cv,NULL);
   memset(printsend_buffer,'\0',sizeof(printsend_buffer));
@@ -44,7 +50,11 @@ int main(int argc, char *argv[])
   memset(crate_config,0,sizeof(crate_config));
 
   // update configuration from config file
-  read_configuration_file();
+  int rc = read_configuration_file();
+  if (rc < 0){
+    printf("error reading configuration, exiting\n");
+    return -1;
+  }
     sprintf(DB_SERVER,"http://%s:%s@%s:%s",DB_USERNAME,DB_PASSWORD,DB_ADDRESS,DB_PORT);
 
   // get command line options
@@ -133,11 +143,12 @@ int main(int argc, char *argv[])
       run_macro();
     // reset our fdsets
     pthread_mutex_lock(&main_fdset_lock);
+    pthread_mutex_lock(&socket_lock);
     fd_set temp = main_fdset;
     if (sbc_lock && rw_sbc_fd > 0)
       FD_CLR(rw_sbc_fd,&temp);
     for (i=0;i<MAX_XL3_CON;i++)
-      if (xl3_lock[i] && rw_xl3_fd[i] > 0)
+      if ((xl3_lock[i] == 1) && rw_xl3_fd[i] > 0)
         FD_CLR(rw_xl3_fd[i],&temp);
     if (cont_lock && rw_cont_fd > 0)
       FD_CLR(rw_cont_fd,&temp);
@@ -162,6 +173,8 @@ int main(int argc, char *argv[])
         } // end if fd is readable
       } // end loop over all fds
     }// end if select returns > 0
+    // let functions know its ok to change which sockets this loop checks now
+    pthread_mutex_unlock(&socket_lock);
   } // end main loop
 
   sigint_func(SIGINT);
