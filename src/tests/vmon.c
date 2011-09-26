@@ -128,7 +128,7 @@ void *pt_vmon(void *args)
           json_append_member(one_volt,"name",json_mkstring(voltages_name[j]));
           json_append_member(one_volt,"nominal",json_mknumber((double) voltages_nom[j]));
           json_append_member(one_volt,"value",json_mknumber((double)voltages[slot][j]));
-          json_append_member(one_volt,"within_spec",json_mkbool((voltages[slot][j] >= voltages_min[j]) && (voltages[slot][j] <= voltages_max[j])));
+          json_append_member(one_volt,"ok",json_mkbool((voltages[slot][j] >= voltages_min[j]) && (voltages[slot][j] <= voltages_max[j])));
           json_append_element(all_volts,one_volt);
           if ((voltages[slot][j] < voltages_min[j]) || (voltages[slot][j] > voltages_max[j]))
             pass_flag = 0;

@@ -102,7 +102,7 @@ void *pt_mem_test(void *args)
       json_append_element(address_test,
           json_mkbool(!(packet_results->address_bit_failures & (0x1<<i))));
     }
-    json_append_member(newdoc,"address_test",address_test);
+    json_append_member(newdoc,"address_test_ok",address_test);
 
     // results of pattern test, where first error was
     JsonNode* pattern_test = json_mkobject();

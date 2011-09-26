@@ -33,8 +33,8 @@ int chinj_scan(char *buffer)
   args->gtdelay = DEFAULT_GT_DELAY;
   args->ped_width = DEFAULT_PED_WIDTH;
   args->num_pedestals = 1;
-  args->chinj_lower = 500;
-  args->chinj_upper = 800;
+  args->chinj_lower = 0;
+  args->chinj_upper = 5000;
   args->q_select = 0;
   args->ped_on = 0;
   args->update_db = 0;
