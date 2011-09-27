@@ -164,7 +164,7 @@ void *pt_sbc_control(void *args)
       rw_sbc_fd = -1;
     }
     char kill_cmd[500];
-    sprintf(kill_cmd,"%s /home/daq/orcareadout stop",base_cmd);
+    sprintf(kill_cmd,"%s %s stop",base_cmd,ORCA_READOUT_PATH);
     pt_printsend("sbc_control: Stopping remote OrcaReadout process\n");
     system(kill_cmd);
   }
@@ -183,7 +183,7 @@ void *pt_sbc_control(void *args)
 
     if (manual == 0){
       char start_cmd[500];
-      sprintf(start_cmd,"%s /home/daq/orcareadout start",base_cmd);
+      sprintf(start_cmd,"%s %s start",base_cmd,ORCA_READOUT_PATH);
       pt_printsend("sbc_control: Starting remote OrcaReadout process\n");
       system(start_cmd);
     }

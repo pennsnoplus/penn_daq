@@ -368,6 +368,8 @@ int read_configuration_file()
           strcpy(SBC_USER,var_value);
         }else if (strcmp(var_name,"SBC_SERVER")==0){
           strcpy(SBC_SERVER,var_value);
+        }else if (strcmp(var_name,"ORCA_READOUT_PATH")==0){
+          strcpy(ORCA_READOUT_PATH,var_value);
         }else if (strcmp(var_name,"CONT_PORT")==0){
           CONT_PORT = atoi(var_value);
         }else if (strcmp(var_name,"CONT_CMD_ACK")==0){
