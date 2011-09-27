@@ -19,6 +19,9 @@
 #include "daq_utils.h"
 #include "ped_run.h"
 
+#define TACBAR_MAX 2600
+#define TACBAR_MIN 1800
+
 int ped_run(char *buffer)
 {
   ped_run_t *args;
@@ -319,7 +322,10 @@ void *pt_ped_run(void *args)
                 ped[i].thiscell[j].qhsbar < arg.ped_low ||
                 ped[i].thiscell[j].qhsbar > arg.ped_high ||
                 ped[i].thiscell[j].qlxbar < arg.ped_low ||
-                ped[i].thiscell[j].qlxbar > arg.ped_high)
+                ped[i].thiscell[j].qlxbar > arg.ped_high ||
+		ped[i].thiscell[j].tacbar > TACBAR_MAX ||
+		ped[i].thiscell[j].tacbar < TACBAR_MIN)
+		
               error_flag[i] |= 0x2;
             //printsend("%d %d %d %d\n",ped[i].thiscell[j].qhlbar,ped[i].thiscell[j].qhsbar,ped[i].thiscell[j].qlxbar,ped[i].thiscell[j].tacbar);
           }
