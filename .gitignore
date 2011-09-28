@@ -1,0 +1,7 @@
+bin/*
+build/*
+logs/*
+*.swp
+*.log
+ssh_key*
+data/config.cfg
