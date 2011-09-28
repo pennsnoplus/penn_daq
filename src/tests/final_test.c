@@ -361,16 +361,18 @@ void *pt_final_test(void *args)
   } while (cald_test(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
-  pt_printsend("-------------------------------------------\n");
-  do {
-    sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
-  while (xl3_lock[arg.crate_num] != 0){}
-
   for (i=0;i<16;i++){
     if ((0x1<<i) & arg.slot_mask){
-      pt_printsend("-------------------------------------------\n");
       do {
+
+        pt_printsend("-------------------------------------------\n");
+        do {
+          sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
+        } while (crate_init(command_buffer) != 0);
+        while (xl3_lock[arg.crate_num] != 0){}
+
+        pt_printsend("-------------------------------------------\n");
+
         sprintf(command_buffer,"mem_test -c %d -s %d -d -# %s",arg.crate_num,i,ft_ids[i]);
       } while (mem_test(command_buffer) != 0);
       while (xl3_lock[arg.crate_num] != 0){}
