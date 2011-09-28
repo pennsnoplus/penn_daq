@@ -319,34 +319,35 @@ end:
 
             JsonNode *all_chips = json_mkarray();
             int passflag = 1;
-            for (i=0;i<8;i++){
+            int k;
+            for (k=0;k<8;k++){
               if (tot_errors[slot][i] == 1)
                 passflag = 0;
               JsonNode *one_chip = json_mkobject();
-              json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][i]));
-              json_append_member(one_chip,"vsi",json_mknumber((double) allrmps[slot][i]));
-              json_append_member(one_chip,"errors",json_mkbool(tot_errors[slot][i]));
+              json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][k]));
+              json_append_member(one_chip,"vsi",json_mknumber((double) allrmps[slot][k]));
+              json_append_member(one_chip,"errors",json_mkbool(tot_errors[slot][k]));
 
-	      JsonNode *all_chans = json_mkarray();
-	      for (j=0;j<4;j++){
+              JsonNode *all_chans = json_mkarray();
+              for (j=0;j<4;j++){
                 JsonNode *one_chan = json_mkobject();
-		json_append_member(one_chan,"id",json_mknumber((double) i*4+j));
-		json_append_member(one_chan,"time",json_mknumber((double) alltimes[slot*32+i*4+j]));
-		json_append_element(all_chans,one_chan);
-	      }
-	      json_append_member(one_chip,"channels",all_chans);
+                json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
+                json_append_member(one_chan,"time",json_mknumber((double) alltimes[slot*32+k*4+j]));
+                json_append_element(all_chans,one_chan);
+              }
+              json_append_member(one_chip,"channels",all_chans);
 
-	      json_append_element(all_chips,one_chip);
-	    }
-	    json_append_member(newdoc,"chips",all_chips);
+              json_append_element(all_chips,one_chip);
+            }
+            json_append_member(newdoc,"chips",all_chips);
 
-	    json_append_member(newdoc,"pass",json_mkbool(passflag));
-	    if (arg.final_test)
-		json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
-	    post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
-	    json_delete(newdoc); // head node needs deleting
-	  }
-	}
+            json_append_member(newdoc,"pass",json_mkbool(passflag));
+            if (arg.final_test)
+              json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+            post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
+            json_delete(newdoc); // head node needs deleting
+          }
+        }
       }
     } // if in slot mask
   } // end loop over slots
@@ -360,43 +361,43 @@ end:
 
 int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_times, fd_set *thread_fdset)
 {
-    int increment = 10;
-    int time;
-    uint32_t chan_done_mask;
-    float real_delay;
-    uint32_t init[32],fin[32];
-    int i,j;
+  int increment = 10;
+  int time;
+  uint32_t chan_done_mask;
+  float real_delay;
+  uint32_t init[32],fin[32];
+  int i,j;
 
-    for (i=0;i<16;i++){
-	if ((0x1<<i) & slot_mask){
-	    int result = set_crate_pedestals(crate,0x1<<i,0xFFFFFFFF,thread_fdset);
-	    chan_done_mask = 0x0;
-	    for (time = start_time;time<=MAX_TIME;time+=increment){
-		// set up gt delay
-		real_delay = set_gt_delay((float) time);
-		// get the cmos count before sending pulses
-		result = get_cmos_total_count(crate,i,init,thread_fdset);
-		// send some pulses
-		multi_softgt(NUM_PEDS);
-		//now read out the count again to get the rate
-		result = get_cmos_total_count(crate,i,fin,thread_fdset);
-		for (j=0;j<32;j++){
-		    fin[j] -= init[j];
-		    // check if we got all the pedestals from the TUB too
-		    if ((fin[j] >= 2*NUM_PEDS) && !(chan_done_mask & (0x1<<j))){
-			chan_done_mask |= 0x1<<j;
-			disc_times[i*32+j] = time+TUB_DELAY;
-		    }
-		}
-		if (chan_done_mask == 0xFFFFFFFF)
-		    break;
-		if (time == MAX_TIME)
-		    for (j=0;j<32;j++)
-			if ((0x1<<j) & !chan_done_mask)
-			    disc_times[i*32+j] = time+TUB_DELAY;
+  for (i=0;i<16;i++){
+    if ((0x1<<i) & slot_mask){
+      int result = set_crate_pedestals(crate,0x1<<i,0xFFFFFFFF,thread_fdset);
+      chan_done_mask = 0x0;
+      for (time = start_time;time<=MAX_TIME;time+=increment){
+        // set up gt delay
+        real_delay = set_gt_delay((float) time);
+        // get the cmos count before sending pulses
+        result = get_cmos_total_count(crate,i,init,thread_fdset);
+        // send some pulses
+        multi_softgt(NUM_PEDS);
+        //now read out the count again to get the rate
+        result = get_cmos_total_count(crate,i,fin,thread_fdset);
+        for (j=0;j<32;j++){
+          fin[j] -= init[j];
+          // check if we got all the pedestals from the TUB too
+          if ((fin[j] >= 2*NUM_PEDS) && !(chan_done_mask & (0x1<<j))){
+            chan_done_mask |= 0x1<<j;
+            disc_times[i*32+j] = time+TUB_DELAY;
+          }
+        }
+        if (chan_done_mask == 0xFFFFFFFF)
+          break;
+        if (time == MAX_TIME)
+          for (j=0;j<32;j++)
+            if ((0x1<<j) & !chan_done_mask)
+              disc_times[i*32+j] = time+TUB_DELAY;
 
-	    } // for time<=MAX_TIME
-	} // end if slot mask
-    } // end loop over slots
-    return 0;
+      } // for time<=MAX_TIME
+    } // end if slot mask
+  } // end loop over slots
+  return 0;
 }
