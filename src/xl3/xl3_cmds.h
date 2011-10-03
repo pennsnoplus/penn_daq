@@ -19,6 +19,8 @@ int read_local_voltage(char *buffer);
 void *pt_read_local_voltage(void* args);
 int hv_readback(char *buffer);
 void *pt_hv_readback(void* args);
+int set_alarm_dac(char *buffer);
+void *pt_set_alarm_dac(void* args);
 
 
 typedef struct{
@@ -66,5 +68,13 @@ typedef struct{
   int show_a;
   int show_b;
 } hv_readback_t;
+
+typedef struct{
+  int thread_num;
+  int crate_num;
+  uint32_t dac0;
+  uint32_t dac1;
+  uint32_t dac2;
+} set_alarm_dac_t;
 
 #endif
