@@ -442,6 +442,7 @@ int read_local_voltage(char *buffer)
       }else if (words[1] == 'h'){
         printsend("Usage: read_local_voltage -c [crate num (int)]"
             "-v [voltage number]\n");
+        printsend("0 - VCC\n1 - VEE\n2 - VP8\n3 - V24P\n4 - V24M\n5,6,7 - temperature monitors\n");
         return 0;
       }
     }
