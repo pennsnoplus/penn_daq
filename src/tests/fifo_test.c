@@ -115,8 +115,13 @@ void *pt_fifo_test(void *args)
   for (i=0;i<16;i++){
     if ((0x1<<i) & arg.slot_mask){
       uint32_t select_reg = FEC_SEL*i;
-      xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,0xf,&result,arg.crate_num,&thread_fdset);
-      xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,arg.crate_num<<FEC_CSR_CRATE_OFFSET,&result,arg.crate_num,&thread_fdset);
+      int busstop =  xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,0xf,&result,arg.crate_num,&thread_fdset);
+      busstop += xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,arg.crate_num<<FEC_CSR_CRATE_OFFSET,&result,arg.crate_num,&thread_fdset);
+      if (busstop != 0){
+        pt_printsend("FEC is not responding. Exiting\n");
+        unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
+        return;
+      }
     }
   }
 
