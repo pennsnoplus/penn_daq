@@ -186,7 +186,7 @@ int process_control_command(char *buffer)
     printsend("Exiting daq.\n");
     sigint_func(SIGINT);
   }else if (strncmp(buffer,"help",4) == 0){
-    result = print_help();
+    result = print_help(buffer);
   }else if (strncmp(buffer,"print_connected",10)==0){
     result = print_connected();
   }else if (strncmp(buffer,"stop_logging",12)==0){
