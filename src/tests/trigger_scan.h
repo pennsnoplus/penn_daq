@@ -1,4 +1,4 @@
-/** \file fec_test.h */
+/** \file trigger_scan.h */
 
 #ifndef __TRIGGER_SCAN_H
 #define __TRIGGER_SCAN_H

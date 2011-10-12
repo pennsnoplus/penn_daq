@@ -286,11 +286,14 @@ void *pt_final_test(void *args)
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
-  if (arg.tub_tests == 1)
+  if (arg.tub_tests == 1){
+    pt_printsend("You should now connect the cable to ext_ped for ttot tests\nHit enter when ready\n");
+    read_from_tut(comments);
     do {
       sprintf(command_buffer,"set_ttot -c %d -s %04x -t 440 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
     } while (set_ttot(command_buffer)!= 0);
-  while (xl3_lock[arg.crate_num] != 0){}
+    while (xl3_lock[arg.crate_num] != 0){}
+  }
 
   pt_printsend("-------------------------------------------\n");
   do {
@@ -299,13 +302,16 @@ void *pt_final_test(void *args)
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
-  if (arg.tub_tests == 1)
+  if (arg.tub_tests == 1){
     do {
       sprintf(command_buffer,"get_ttot -c %d -s %04x -t 440 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
     } while (get_ttot(command_buffer) != 0);
-  while (xl3_lock[arg.crate_num] != 0){}
+    while (xl3_lock[arg.crate_num] != 0){}
+  }
 
   pt_printsend("-------------------------------------------\n");
+  pt_printsend("You should now disconnect the cable to ext_ped\nHit enter when ready\n");
+  read_from_tut(comments);
   do {
     sprintf(command_buffer,"disc_check -c %d -s %04x -n 500000 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (disc_check(command_buffer) != 0);

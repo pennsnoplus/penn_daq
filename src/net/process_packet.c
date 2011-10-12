@@ -41,6 +41,7 @@
 #include "chinj_scan.h"
 #include "final_test.h"
 #include "trigger_scan.h"
+#include "see_refl.h"
 #include "process_packet.h"
 
 int read_xl3_packet(int fd)
@@ -240,6 +241,8 @@ int process_control_command(char *buffer)
     result = cmd_xl3_rw(buffer);
   }else if (strncmp(buffer,"xl3_queue_rw",13)==0){
     result = xl3_queue_rw(buffer);
+  }else if (strncmp(buffer,"set_alarm_dac",13)==0){
+    result = set_alarm_dac(buffer);
   }else if (strncmp(buffer,"read_bundle",11)==0){
     result = read_bundle(buffer);
   }else if (strncmp(buffer,"mtc_read",8)==0){
@@ -282,6 +285,8 @@ int process_control_command(char *buffer)
     result = cmd_multi_softgt(buffer);
   }else if (strncmp(buffer,"trigger_scan",12)==0){
     result = trigger_scan(buffer);
+  }else if (strncmp(buffer,"see_refl",8)==0){
+    result = see_refl(buffer);
   }else if (strncmp(buffer,"fec_test",8)==0){
     result = fec_test(buffer);
   }else if (strncmp(buffer,"mem_test",8)==0){

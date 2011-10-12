@@ -442,6 +442,7 @@ int read_local_voltage(char *buffer)
       }else if (words[1] == 'h'){
         printsend("Usage: read_local_voltage -c [crate num (int)]"
             "-v [voltage number]\n");
+        printsend("0 - VCC\n1 - VEE\n2 - VP8\n3 - V24P\n4 - V24M\n5,6,7 - temperature monitors\n");
         return 0;
       }
     }
@@ -560,6 +561,76 @@ void *pt_hv_readback(void* args)
     pt_printsend("Supply A - Voltage: %6.3f volts, Current: %6.4f mA\n",voltage_a*300.0,current_a*10.0);
   if (arg.show_b)
     pt_printsend("Supply B - Voltage: %6.3f volts, Current: %6.4f mA\n",voltage_b*300.0,current_b*10.0);
+
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+}
+
+int set_alarm_dac(char *buffer)
+{
+  set_alarm_dac_t *args;
+  args = malloc(sizeof(set_alarm_dac_t));
+
+  args->crate_num = 2;
+  args->dac0 = 0xFFFFFFFF;
+  args->dac1 = 0xFFFFFFFF;
+  args->dac2 = 0xFFFFFFFF;
+
+  char *words,*words2;
+  words = strtok(buffer," ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'c'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->crate_num = atoi(words2);
+      }else if (words[1] == '0'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->dac0 = strtoul(words2,(char**)NULL,16);
+      }else if (words[1] == '1'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->dac1 = strtoul(words2,(char**)NULL,16);
+      }else if (words[1] == '2'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->dac2 = strtoul(words2,(char**)NULL,16);
+      }else if (words[1] == 'h'){
+        printsend("Usage: hv_readback -c [crate num (int)]"
+            "-a (read out supply A) -b (read out supply B)\n");
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_set_alarm_dac,(void *)args);
+  return 0; 
+}
+
+void *pt_set_alarm_dac(void* args)
+{
+  set_alarm_dac_t arg = *(set_alarm_dac_t *) args;
+  free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
+  XL3_Packet packet;
+  set_alarm_dac_args_t *packet_args = (set_alarm_dac_args_t *) packet.payload;
+  
+  packet_args->dacs[0] = arg.dac0;
+  packet_args->dacs[1] = arg.dac1;
+  packet_args->dacs[2] = arg.dac2;
+  SwapLongBlock(packet_args,sizeof(set_alarm_dac_args_t)/sizeof(uint32_t));
+  packet.cmdHeader.packet_type = SET_ALARM_DAC_ID;
+  do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
+
 
   unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }

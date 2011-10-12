@@ -64,6 +64,7 @@ typedef struct {
 #define RESET_FIFOS_ID            (0x2C) //!< resets all the fec fifos
 #define READ_LOCAL_VOLTAGE_ID     (0x2D) //!< read a single voltage on XL3 
 #define CHECK_TOTAL_COUNT_ID      (0x2E) //!< readout cmos total count register 
+#define SET_ALARM_DAC_ID          (0x2F) //!< Set alarm dac
 // HV Tasks
 #define SET_HV_RELAYS_ID          (0x40) //!< turns on/off hv relays
 #define GET_HV_STATUS_ID          (0x41) //!< checks voltage and current readback
@@ -255,6 +256,10 @@ typedef struct{
   uint32_t offset;
   float rate;
 } zdisc_args_t;
+
+typedef struct{
+  uint32_t dacs[3];
+} set_alarm_dac_args_t;
 
 typedef struct{
   uint32_t error_flag;

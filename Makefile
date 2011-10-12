@@ -13,7 +13,7 @@ CDIRS = $(patsubst %,$(CDIR)/%,$(_CDIRS))
 vpath %.h $(CDIRS)
 vpath %.c $(CDIRS)
 
-_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o mtc_cmds.o db.o net.o process_packet.o mtc_init.o mtc_rw.o fec_test.o xl3_cmds.o fec_cmds.o run_pedestals.o fec_utils.o trigger_scan.o mem_test.o vmon.o board_id.o ped_run.o zdisc.o crate_cbal.o cgt_test.o cmos_m_gtvalid.o cald_test.o ttot.o fifo_test.o mb_stability_test.o chinj_scan.o final_test.o disc_check.o
+_OBJ = main.o daq_utils.o net_utils.o pouch.o json.o xl3_utils.o xl3_rw.o crate_init.o mtc_utils.o mtc_cmds.o db.o net.o process_packet.o mtc_init.o mtc_rw.o fec_test.o xl3_cmds.o fec_cmds.o run_pedestals.o fec_utils.o trigger_scan.o mem_test.o vmon.o board_id.o ped_run.o zdisc.o crate_cbal.o cgt_test.o cmos_m_gtvalid.o cald_test.o ttot.o fifo_test.o mb_stability_test.o chinj_scan.o final_test.o disc_check.o see_refl.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 _DEPS = $(_OBJ:.o=.h) packet_types.h db_types.h mtc_registers.h xl3_registers.h unpack_bundles.h dac_number.h
