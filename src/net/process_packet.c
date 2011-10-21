@@ -245,6 +245,8 @@ int process_control_command(char *buffer)
     result = set_alarm_dac(buffer);
   }else if (strncmp(buffer,"read_bundle",11)==0){
     result = read_bundle(buffer);
+  }else if (strncmp(buffer,"setup_chinj",11)==0){
+    result = cmd_setup_chinj(buffer);
   }else if (strncmp(buffer,"mtc_read",8)==0){
     result = mtc_read(buffer);
   }else if (strncmp(buffer,"mtc_write",9)==0){

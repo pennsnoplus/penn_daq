@@ -9,6 +9,8 @@ int read_bundle(char *buffer);
 void *pt_read_bundle(void* args);
 int load_relays(char *buffer);
 void *pt_load_relays(void* args);
+int cmd_setup_chinj(char *buffer);
+void *pt_cmd_setup_chinj(void* args);
 
 typedef struct{
   int thread_num;
@@ -31,5 +33,14 @@ typedef struct{
   int crate_num;
   uint16_t pattern[16];
 } load_relays_t;
+
+typedef struct{
+  int thread_num;
+  int crate_num;
+  uint16_t slot_mask;
+  uint32_t default_ch_mask;
+  int dacvalue;
+} cmd_setup_chinj_t;
+
 
 #endif
