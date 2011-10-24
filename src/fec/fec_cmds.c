@@ -13,6 +13,7 @@
 #include "daq_utils.h"
 #include "xl3_utils.h"
 #include "fec_cmds.h"
+#include "chinj_scan.h"
 
 int frw(char *buffer, int rw)
 {
@@ -307,6 +308,69 @@ void *pt_read_bundle(void *args)
         crate,slot,chan,cell,gt8,
         gt16,cmos_es16,cgt_es16,cgt_es8,nc_cc,qlx,qhs,qhl,tac);
   }
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+}
+
+int cmd_setup_chinj(char *buffer)
+{
+  cmd_setup_chinj_t *args;
+  args = malloc(sizeof(cmd_setup_chinj_t));
+
+  args->crate_num = 2;
+  args->slot_mask = 0x80;
+  args->default_ch_mask = 0xFFFFFFFF;
+  args->dacvalue = 0;
+
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'c'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->crate_num = atoi(words2);
+      }else if (words[1] == 's'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->slot_mask = strtoul(words2,(char**)NULL, 16);
+      }else if (words[1] == 'p'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->default_ch_mask = strtoul(words2,(char**)NULL, 16);
+      }else if (words[1] == 'd'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->dacvalue = atoi(words2);
+      }else if (words[1] == 'h'){
+        pt_printsend("Usage: setup_chinj -c [crate num (int)] "
+            "-s [slot mask (hex)] -p [channel mask (hex)] -d [dac value (int)]\n");
+        free(args);
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_setup_chinj,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_setup_chinj(void *args)
+{
+  cmd_setup_chinj_t arg = *(cmd_setup_chinj_t *) args;
+  free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+
+  setup_chinj(arg.crate_num, arg.slot_mask, arg.default_ch_mask, arg.dacvalue, &thread_fdset);
+  pt_printsend("Set up charge injection\n");
+
   unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
 }
 

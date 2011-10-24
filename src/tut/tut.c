@@ -84,6 +84,7 @@ COMMAND commands[] = {
     { "xl3_queue_rw", (Function *)NULL, (char *)NULL },
     { "set_alarm_dac", (Function *)NULL, (char *)NULL },
     { "read_bundle", (Function *)NULL, (char *)NULL },
+    { "setup_chinj", (Function *)NULL, (char *)NULL },
     { "mtc_read", (Function *)NULL, (char *)NULL },
     { "mtc_write", (Function *)NULL, (char *)NULL },
     { "set_mtca_thresholds", (Function *)NULL, (char *)NULL },

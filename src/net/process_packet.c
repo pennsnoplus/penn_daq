@@ -187,7 +187,7 @@ int process_control_command(char *buffer)
     printsend("Exiting daq.\n");
     sigint_func(SIGINT);
   }else if (strncmp(buffer,"help",4) == 0){
-    result = print_help();
+    result = print_help(buffer);
   }else if (strncmp(buffer,"print_connected",10)==0){
     result = print_connected();
   }else if (strncmp(buffer,"stop_logging",12)==0){
@@ -245,6 +245,8 @@ int process_control_command(char *buffer)
     result = set_alarm_dac(buffer);
   }else if (strncmp(buffer,"read_bundle",11)==0){
     result = read_bundle(buffer);
+  }else if (strncmp(buffer,"setup_chinj",11)==0){
+    result = cmd_setup_chinj(buffer);
   }else if (strncmp(buffer,"mtc_read",8)==0){
     result = mtc_read(buffer);
   }else if (strncmp(buffer,"mtc_write",9)==0){
