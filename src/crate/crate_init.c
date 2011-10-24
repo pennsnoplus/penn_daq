@@ -231,7 +231,7 @@ void *pt_crate_init(void *args)
           pt_printsend("No zdisc documents for this configuration (%s). Continuing with default values.\n",config_string);
         }else{
           JsonNode* zdisc_doc = json_find_member(json_find_element(viewrows,0),"value");
-          JsonNode* vthr = json_find_member(zdisc_doc,"Zero_Dac_setting");
+          JsonNode* vthr = json_find_member(zdisc_doc,"zero_dac");
           for (j=0;j<32;j++){
             mb_consts->vthr[j] = (int)json_get_number(json_find_element(vthr,j));
           }
@@ -269,11 +269,11 @@ void *pt_crate_init(void *args)
           pt_printsend("No set_ttot documents for this configuration (%s). Continuing with default values.\n",config_string);
         }else{
           JsonNode* ttot_doc = json_find_member(json_find_element(viewrows,0),"value");
-          JsonNode* rmp = json_find_member(ttot_doc,"rmp");
-          JsonNode* vsi = json_find_member(ttot_doc,"vsi");
+          JsonNode* chips = json_find_member(ttot_doc,"chips");
           for (j=0;j<8;j++){
-            mb_consts->tdisc.rmp[j] = (int)json_get_number(json_find_element(rmp,j));
-            mb_consts->tdisc.vsi[j] = (int)json_get_number(json_find_element(vsi,j));
+            JsonNode* one_chip = json_find_element(chips,j);
+            mb_consts->tdisc.rmp[j] = (int)json_get_number(json_find_member(one_chip,"rmp"));
+            mb_consts->tdisc.vsi[j] = (int)json_get_number(json_find_member(one_chip,"vsi"));
           }
         }
         json_delete(viewdoc);
