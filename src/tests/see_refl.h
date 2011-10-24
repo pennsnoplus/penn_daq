@@ -9,10 +9,12 @@ typedef struct{
   int thread_num;
   int dac_value;
   int crate_num;
+  uint16_t slot_mask;
   uint32_t pattern;
-  int debug;
   float frequency;
-  int start_slot;
+  int update_db;
+  int final_test;
+  char ft_ids[16][50];
 } see_refl_t;
 
 int see_refl(char *buffer);

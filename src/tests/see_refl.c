@@ -25,10 +25,11 @@ int see_refl(char *buffer)
 
   args->dac_value = 0;
   args->crate_num = 2;
+  args->slot_mask = 0x0;
   args->pattern = 0xFFFFFFFF;
-  args->debug = 0;
   args->frequency = 1000.0;
-  args->start_slot = 0;
+  args->update_db = 0;
+  args->final_test = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -39,19 +40,26 @@ int see_refl(char *buffer)
           args->crate_num = atoi(words2);
       }else if (words[1] == 's'){
         if ((words2 = strtok(NULL," ")) != NULL)
-          args->start_slot = atoi(words2);
+          args->slot_mask = strtoul(words2,(char**)NULL,16);
       }else if (words[1] == 'v'){
         if ((words2 = strtok(NULL," ")) != NULL)
           args->dac_value = atoi(words2);
       }else if (words[1] == 'p'){
         if ((words2 = strtok(NULL," ")) != NULL)
           args->pattern = strtoul(words2,(char**)NULL,16);
-      }else if (words[1] == 'd'){args->debug = 1;
+      }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == '#'){
+        args->final_test = 1;
+        int i;
+        for (i=0;i<16;i++)
+          if ((0x1<<i) & args->slot_mask)
+            if ((words2 = strtok(NULL, " ")) != NULL)
+              strcpy(args->ft_ids[i],words2);
       }else if (words[1] == 'h'){
         printsend("Usage: see_refl -c [crate num (int)] "
-            "-v [dac value (int)] -s [starting slot (int)] "
+            "-v [dac value (int)] -s [slot mask (hex)] "
             "-f [frequency (float)] -p [channel mask (hex)] "
-            "-d (debugging on)\n");
+            "-d (update database)\n");
         free(args);
         return 0;
       }
@@ -77,7 +85,7 @@ void *pt_see_refl(void *args)
   see_refl_t arg = *(see_refl_t *) args; 
   free(args);
 
-  char comments[100];
+  char channel_results[32][100];
   int i,j;
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
@@ -97,38 +105,56 @@ void *pt_see_refl(void *args)
   }
 
   // loop over slots
-  for (i=arg.start_slot;i<16;i++){
-    // loop over channels
-    for (j=0;j<32;j++){
-      if ((0x1<<j) & arg.pattern){
-        uint32_t temp_pattern = 0x1<<j;
-        
-        // turn on pedestals for just this one channel
-        errors += set_crate_pedestals(arg.crate_num,(0x1<<i),temp_pattern,&thread_fdset);
-        if (errors){
-          pt_printsend("Error setting up pedestals, Slot %d, channel %d.\n",i,j);
-          if (errors > MAX_ERRORS){
-            pt_printsend("Too many errors. Exiting\n");
-            disable_pulser();
-            unset_ped_crate_mask(MASKALL);
-            unset_gt_crate_mask(MASKALL);
-            unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-            return;
+  for (i=0;i<16;i++){
+    if ((0x1<<i) & arg.slot_mask){
+      // loop over channels
+      for (j=0;j<32;j++){
+        if ((0x1<<j) & arg.pattern){
+          uint32_t temp_pattern = 0x1<<j;
+
+          // turn on pedestals for just this one channel
+          errors += set_crate_pedestals(arg.crate_num,(0x1<<i),temp_pattern,&thread_fdset);
+          if (errors){
+            pt_printsend("Error setting up pedestals, Slot %d, channel %d.\n",i,j);
+            if (errors > MAX_ERRORS){
+              pt_printsend("Too many errors. Exiting\n");
+              disable_pulser();
+              unset_ped_crate_mask(MASKALL);
+              unset_gt_crate_mask(MASKALL);
+              unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
+              return;
+            }
           }
-        }
 
-        // set up charge injection for this channel
-        setup_chinj(arg.crate_num,(0x1<<i),temp_pattern,arg.dac_value,&thread_fdset);
-        // wait until something is typed
-        pt_printsend("Slot %d, channel %d. Hit return for next channel.\n",i,j);
-        read_from_tut(comments);
-      } // end pattern mask
-    } // end loop over channels
+          // set up charge injection for this channel
+          setup_chinj(arg.crate_num,(0x1<<i),temp_pattern,arg.dac_value,&thread_fdset);
+          // wait until something is typed
+          pt_printsend("Slot %d, channel %d. If good, hit enter. Otherwise type in a description of the problem (or just \"fail\") and hit enter.\n",i,j);
+          read_from_tut(channel_results[j]);
 
-    // clear chinj for this slot
-    setup_chinj(arg.crate_num,(0x1<<i),0x0,arg.dac_value,&thread_fdset);
+        } // end pattern mask
+      } // end loop over channels
+
+      // clear chinj for this slot
+      setup_chinj(arg.crate_num,(0x1<<i),0x0,arg.dac_value,&thread_fdset);
+
+      // update the database
+      if (arg.update_db){
+        pt_printsend("updating the database\n");
+        pt_printsend("updating slot %d\n",i);
+        JsonNode *newdoc = json_mkobject();
+        json_append_member(newdoc,"type",json_mkstring("see_refl"));
+
+        int passflag = 1;
+        JsonNode *all_channels = json_mkarray();
+        if (arg.final_test)
+          json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
+        post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
+        json_delete(newdoc); // Only have to delete the head node
+      }
+    } // end if slot mask
   } // end loop over slots
-  
+
   disable_pulser();
   deselect_fecs(arg.crate_num,&thread_fdset);
 

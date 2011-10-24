@@ -190,10 +190,13 @@ int run_macro()
     printf("macro finished!\n");
     return 0;
   }
-  int result = process_control_command(macro_cmds[macro_cur_cmd]);
-  if (result == 0)
+  char temp_command[250];
+  strcpy(temp_command,macro_cmds[macro_cur_cmd]);
+  int result = process_control_command(temp_command);
+  if (result == 0){
+    pt_printsend("Finished command %d of %d\n",macro_cur_cmd+1,macro_tot_cmds);
     macro_cur_cmd++;
-  else if (result == 999){
+  }else if (result == 999){
     printf("Problem in macro!\n");
     macro_cur_cmd = macro_tot_cmds;
   }
@@ -219,7 +222,7 @@ int parse_macro(char *filename)
   fclose(macro_file);
   if (macro_tot_cmds > 0)
     running_macro = 1;
-  printf("done reading macro\n");
+  printf("done reading macro. Going to do %d commands.\n",macro_tot_cmds);
   return 0; 
 }
 
@@ -356,7 +359,7 @@ int read_configuration_file()
           strcpy(DB_PASSWORD,var_value);
         }else if (strcmp(var_name,"DB_BASE_NAME")==0){
           strcpy(DB_BASE_NAME,var_value);
-        }else if (strcmp(var_name,"DB_VIEW_DOC")==0){
+        }else if (strcmp(var_name,"DB_VIEWDOC")==0){
           strcpy(DB_VIEWDOC,var_value);
         }else if (strcmp(var_name,"MAX_PENDING_CONS")==0){
           MAX_PENDING_CONS = atoi(var_value);

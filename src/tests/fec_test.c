@@ -82,6 +82,45 @@ void *pt_fec_test(void *args)
   FD_ZERO(&thread_fdset);
   FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
 
+  /*
+  MultiFC *commands = (MultiFC *) packet.payload;
+  commands->howmany = 50;
+  int i;
+  for (i=0;i<25;i++){
+    commands->cmd[i*2].address = 0x10F00023;
+    commands->cmd[i*2+1].address = 0x00F00023;
+    commands->cmd[i*2+1].data = i<<16;
+  SwapLongBlock(&(commands->cmd[i*2].address),1);
+  SwapLongBlock(&(commands->cmd[i*2+1].address),1);
+  SwapLongBlock(&(commands->cmd[i*2+1].data),1);
+  }
+  SwapLongBlock(&(commands->howmany),1);
+
+  packet.cmdHeader.packet_type = QUEUE_CMDS_ID;
+  int errors = do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
+  if (errors < 0){
+    pt_printsend("Error queuing command\n");
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+    return;
+  }
+  
+  uint32_t result[50];
+  errors = wait_for_multifc_results(50,command_number[arg.crate_num]-1,arg.crate_num,&result,&thread_fdset);
+  if (errors < 0){
+    pt_printsend("Error getting result\n");
+    unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+    return;
+  }
+
+  for (i=0;i<50;i++){
+    pt_printsend("%d - %08x\n",i,result[i]);
+  }
+
+
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+  return;
+//////////////////////////////////
+*/
   do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
 
   SwapLongBlock(packet_results,sizeof(fec_test_results_t)/sizeof(uint32_t));
