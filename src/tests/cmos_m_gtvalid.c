@@ -21,7 +21,9 @@
 #define TACREF 72
 #define ISETM_START 147
 //#define ISETM 138
+//#define ISETM 110
 #define ISETM 110
+#define ISETM_LONG 100
 #define ISETA 70
 #define ISETA_NO_TWIDDLE 0
 
@@ -257,6 +259,7 @@ void *pt_cmos_m_gtvalid(void *args)
               cmin[wt] = j;
             }
 
+
         // initial printout
         if (wt == 1){
           pt_printsend("GTVALID initial results, time in ns:\n");
@@ -283,8 +286,7 @@ void *pt_cmos_m_gtvalid(void *args)
           done = 0;
           gt_temp = gmax[wt];
 
-          while (gt_temp > arg.gt_cutoff){
-            isetm_new[wt]++;
+          while (!done){
             // load a new dac value
             error = loadsDac(d_isetm[wt],isetm_new[wt],arg.crate_num,i,&thread_fdset);
             if (error){
@@ -300,8 +302,15 @@ void *pt_cmos_m_gtvalid(void *args)
               unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
               return;
             }
+            if (gt_temp <=  arg.gt_cutoff){
+              done = 1;
+            }else{
+              isetm_new[wt]++;
+            }
 
           } // end while gt_temp > gt_cutoff 
+
+          pt_printsend("Found ISETM value, checking new maximum\n");
 
           // check that we still have the max channel
           for (j=0;j<32;j++){
@@ -325,6 +334,7 @@ void *pt_cmos_m_gtvalid(void *args)
                 gt_max_sec = gtchan[j];
                 chan_max_sec = j;
               }
+
 
           // if the maximum channel has changed
           // refind the good isetm value
@@ -550,7 +560,7 @@ int get_gtdelay(int crate_num, int wt, float *get_gtchan, uint16_t isetm0, uint1
   // that way the TAC we are looking at should fail
   // first.
   int othertac = (wt+1)%2;
-  error = loadsDac(d_isetm[othertac],125,crate_num,slot,thread_fdset);
+  error = loadsDac(d_isetm[othertac],ISETM_LONG,crate_num,slot,thread_fdset);
 
   // find the time that the TAC stops firiing
   while (done == 0){
@@ -586,7 +596,7 @@ int get_gtdelay(int crate_num, int wt, float *get_gtchan, uint16_t isetm0, uint1
     // ok we know that lower limit is within the window, upper limit is outside
     // lets make sure its the right TAC failing by making the window longer and
     // seeing if the events show back up
-    error = loadsDac(d_isetm[wt],125,crate_num,slot,thread_fdset);
+    error = loadsDac(d_isetm[wt],ISETM_LONG,crate_num,slot,thread_fdset);
 
     // reset fifo
     xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,0x2,&result,crate_num,thread_fdset);

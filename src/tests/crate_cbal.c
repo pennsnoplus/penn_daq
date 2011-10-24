@@ -556,7 +556,7 @@ void *pt_crate_cbal(void *args)
         json_append_member(newdoc,"pass",json_mkbool(pass_flag));
 
         if (arg.final_test)
-          json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[j]));	
+          json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
         post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
         json_delete(newdoc); // delete the head
       }

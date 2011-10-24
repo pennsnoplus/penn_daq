@@ -246,18 +246,22 @@ void *pt_final_test(void *args)
   //sprintf(command_buffer,"stop_pulser");
   //stop_pulser(command_buffer);
   //////////////////////////////////////////////////////////////
+  pt_printsend("before ped_run id is .%s.\n",id_string);
 
   pt_printsend("-------------------------------------------\n");
   do {
-    sprintf(command_buffer,"ped_run -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+    sprintf(command_buffer,"ped_run -c %d -s %04x -l 400 -u 800 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (ped_run(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
+
+  pt_printsend("before crate_cbal id is .%s.\n",id_string);
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_cbal -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (crate_cbal(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
+  pt_printsend("after crate_cbal id is .%s.\n",id_string);
 
   //////////////////////////////////////////////////////////////
   // now gotta turn pulser on and off to get rid of garbage

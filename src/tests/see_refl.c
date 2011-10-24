@@ -85,6 +85,8 @@ void *pt_see_refl(void *args)
   see_refl_t arg = *(see_refl_t *) args; 
   free(args);
 
+  running_final_test = 1;
+
   char channel_results[32][100];
   int i,j;
   fd_set thread_fdset;
@@ -132,6 +134,13 @@ void *pt_see_refl(void *args)
           pt_printsend("Slot %d, channel %d. If good, hit enter. Otherwise type in a description of the problem (or just \"fail\") and hit enter.\n",i,j);
           read_from_tut(channel_results[j]);
 
+          if (strncmp(channel_results[j],"quit",4) == 0){
+            pt_printsend("Quitting.\n");
+            running_final_test = 0;
+            unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
+            return;
+          }
+
         } // end pattern mask
       } // end loop over channels
 
@@ -147,6 +156,17 @@ void *pt_see_refl(void *args)
 
         int passflag = 1;
         JsonNode *all_channels = json_mkarray();
+        for (j=0;j<32;j++){
+          JsonNode *one_chan = json_mkobject();
+          json_append_member(one_chan,"id",json_mknumber(j));
+          json_append_member(one_chan,"error",json_mkstring(channel_results[j]));
+          if (strncmp(channel_results[j],"\n",1) != 0){
+            passflag = 0;
+          }
+          json_append_element(all_channels,one_chan);
+        }
+        json_append_member(newdoc,"channels",all_channels);
+        json_append_member(newdoc,"pass",json_mkbool(passflag));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
         post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
@@ -157,6 +177,8 @@ void *pt_see_refl(void *args)
 
   disable_pulser();
   deselect_fecs(arg.crate_num,&thread_fdset);
+
+  running_final_test = 0;
 
   pt_printsend("-----------------------------------------\n");
   if (errors)

@@ -559,6 +559,7 @@ int setup_chinj(int crate, uint16_t slot_mask, uint32_t default_ch_mask, uint16_
   uint32_t result;
   int error;
 
+  pt_printsend("setting dac to %d\n",dacvalue);
   amask = default_ch_mask;
 
   for (slot_iter=0;slot_iter<16;slot_iter++){
