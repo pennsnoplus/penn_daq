@@ -169,6 +169,8 @@ void *pt_sbc_control(void *args)
     system(kill_cmd);
   }
 
+  usleep(50000);
+
   // if connecting or reconnecting, do that now
   if (sbc_action == 0 || sbc_action == 1)
   {
@@ -196,7 +198,7 @@ void *pt_sbc_control(void *args)
       return;
     }
 
-    usleep(1000);
+    usleep(50000);
 
     // we can connect, set up the address
     struct sockaddr_in sbc_addr;

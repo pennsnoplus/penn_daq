@@ -325,7 +325,7 @@ end:
                 passflag = 0;
               JsonNode *one_chip = json_mkobject();
               json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][k]));
-              json_append_member(one_chip,"vsi",json_mknumber((double) allrmps[slot][k]));
+              json_append_member(one_chip,"vsi",json_mknumber((double) allvsis[slot][k]));
               json_append_member(one_chip,"errors",json_mkbool(tot_errors[slot][k]));
 
               JsonNode *all_chans = json_mkarray();

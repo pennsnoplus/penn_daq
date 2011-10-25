@@ -246,7 +246,6 @@ void *pt_final_test(void *args)
   //sprintf(command_buffer,"stop_pulser");
   //stop_pulser(command_buffer);
   //////////////////////////////////////////////////////////////
-  pt_printsend("before ped_run id is .%s.\n",id_string);
 
   pt_printsend("-------------------------------------------\n");
   do {
@@ -254,7 +253,6 @@ void *pt_final_test(void *args)
   } while (ped_run(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
-  pt_printsend("before crate_cbal id is .%s.\n",id_string);
 
   pt_printsend("-------------------------------------------\n");
   do {
@@ -394,6 +392,18 @@ void *pt_final_test(void *args)
     sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
   } while (crate_init(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
+
+  pt_printsend("-------------------------------------------\n");
+  pt_printsend("Ready for see_refl test. Hit enter to begin or type \"skip\" to end the final test.\n");
+  read_from_tut(comments);
+  if (strncmp("skip",comments,4) != 0){
+    do {
+      sprintf(command_buffer,"see_refl -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+    } while (see_refl(command_buffer) != 0);
+    while (xl3_lock[arg.crate_num] != 0){}
+  }
+
+
 
   pt_printsend("-------------------------------------------\n");
   pt_printsend("Final test finished. Now updating the database.\n");

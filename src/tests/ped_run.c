@@ -174,7 +174,17 @@ void *pt_ped_run(void *args)
 
   // send pedestals
   if (arg.frequency == 0){
-    multi_softgt(arg.num_pedestals*16);
+    int num_to_send = arg.num_pedestals*16;
+    while (num_to_send > 0){
+      if (num_to_send > 1000){
+        multi_softgt(1000);
+        num_to_send-=1000;
+      }else{
+        multi_softgt(num_to_send);
+        num_to_send = 0;
+      }
+    }
+    //multi_softgt(arg.num_pedestals*16);
     disable_pulser();
   }else{
     float wait_time = (float) arg.num_pedestals*16.0/arg.frequency*1E6;
