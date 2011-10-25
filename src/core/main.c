@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
   recv_bytes = 0;
   recv_fake_bytes = 0;
   running_macro = 0;
+  reading_from_tut = 0;
   running_final_test = 0;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
@@ -148,7 +149,7 @@ int main(int argc, char *argv[])
     if (sbc_lock && rw_sbc_fd > 0)
       FD_CLR(rw_sbc_fd,&temp);
     for (i=0;i<MAX_XL3_CON;i++)
-      if ((xl3_lock[i] == 1) && rw_xl3_fd[i] > 0)
+      if ((xl3_lock[i] == 1) && (rw_xl3_fd[i] > 0) && (reading_from_tut == 0))
         FD_CLR(rw_xl3_fd[i],&temp);
     if (cont_lock && rw_cont_fd > 0)
       FD_CLR(rw_cont_fd,&temp);

@@ -580,7 +580,6 @@ int setup_chinj(int crate, uint16_t slot_mask, uint32_t default_ch_mask, uint16_
       // now toggle HVLOAD
       xl3_rw(FEC_HV_CSR_R + select_reg + WRITE_REG,0x0,&result,crate,thread_fdset);
       xl3_rw(FEC_HV_CSR_R + select_reg + WRITE_REG,HV_CSR_LOAD,&result,crate,thread_fdset);
-
       // now set the dac
       error = loadsDac(HV_HVREF_DAC,dacvalue,crate,slot_iter,thread_fdset);
       if (error){

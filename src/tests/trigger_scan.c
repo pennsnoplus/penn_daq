@@ -57,7 +57,7 @@ int trigger_scan(char *buffer)
       }else if (words[1] == 'd'){
         if ((words2 = strtok(NULL," ")) != NULL)
           args->thresh_dac = atoi(words2);
-      }else if (words[1] == 'n'){
+      }else if (words[1] == 'q'){
           args->quick_mode = 1;
       }else if (words[1] == '0'){
         if (words[2] == '0'){

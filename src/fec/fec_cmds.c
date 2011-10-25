@@ -375,3 +375,68 @@ void *pt_cmd_setup_chinj(void *args)
 }
 
 
+int cmd_load_dac(char *buffer)
+{
+  cmd_load_dac_t *args;
+  args = malloc(sizeof(cmd_load_dac_t));
+
+  args->crate_num = 2;
+  args->slot_num = 13;
+  args->dac_num = 0;
+  args->dac_value = 0;
+
+  char *words,*words2;
+  words = strtok(buffer, " ");
+  while (words != NULL){
+    if (words[0] == '-'){
+      if (words[1] == 'c'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->crate_num = atoi(words2);
+      }else if (words[1] == 's'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->slot_num = atoi(words2);
+      }else if (words[1] == 'd'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->dac_num = atoi(words2);
+      }else if (words[1] == 'v'){
+        if ((words2 = strtok(NULL, " ")) != NULL)
+          args->dac_value = atoi(words2);
+      }else if (words[1] == 'h'){
+        pt_printsend("Usage: load_dac -c [crate num (int)] "
+            "-s [slot num (int)] -d [dac num (int)] -v [dac value (int)]\n");
+        free(args);
+        return 0;
+      }
+    }
+    words = strtok(NULL, " ");
+  }
+
+  pthread_t *new_thread;
+  int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
+  if (thread_num < 0){
+    free(args);
+    return -1;
+  }
+
+  args->thread_num = thread_num;
+  pthread_create(new_thread,NULL,pt_cmd_load_dac,(void *)args);
+  return 0; 
+}
+
+void *pt_cmd_load_dac(void *args)
+{
+  cmd_load_dac_t arg = *(cmd_load_dac_t *) args;
+  free(args);
+
+  fd_set thread_fdset;
+  FD_ZERO(&thread_fdset);
+  FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
+  
+  loadsDac(arg.dac_num, arg.dac_value, arg.crate_num, arg.slot_num,&thread_fdset);
+
+  pt_printsend("Dac loaded\n");
+
+  unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+}
+
+

@@ -88,8 +88,8 @@ void *pt_crate_cbal(void *args)
   const int num_cells = 16;
   const int max_iterations = 40;
   const float acceptable_diff = 10;
-  const uint16_t low_dac_initial_setting = 0x32;
-  const uint16_t high_dac_initial_setting = 0xBE;
+  const uint16_t low_dac_initial_setting = 50;
+  const uint16_t high_dac_initial_setting = 225;
   const int vsi_test_val = 0;
   const int isetm_test_val = 85;
   const int rmp1_test_val = 100;
@@ -339,9 +339,20 @@ void *pt_crate_cbal(void *args)
               // make sure we straddle best fit point
               // i.e. the both have the sign on first run
               if (((f1[j]*f2[j]) > 0.0) && (iterations == 1)){
-                //pt_printsend("Error: channel %d does not appear balanceable. (%f, %f)\n",
-                //    j,f1[j],f2[j]);
+                pt_printsend("Error: channel %d does not appear balanceable. (%f, %f)\n",
+                    j,f1[j],f2[j]);
                 // turn this channel off and go on
+                if (fabs(f1[j]) < fabs(f2[j])){
+                  if (wg == 0)
+                    chan_param[j].high_gain_balance = x1_bal[j];
+                  else
+                    chan_param[j].low_gain_balance = x1_bal[j];
+                }else{
+                  if (wg == 0)
+                    chan_param[j].high_gain_balance = x2_bal[j];
+                  else
+                    chan_param[j].low_gain_balance = x2_bal[j];
+                }
                 active_chans &= ~(0x1<<j);
                 return_value += 100;
               }

@@ -152,11 +152,13 @@ int print_help(char *buffer)
 
 int read_from_tut(char *result)
 {
+  reading_from_tut = 1;
   pthread_mutex_lock(&final_test_cmd_lock);
   pthread_cond_wait(&final_test_cmd_cv, &final_test_cmd_lock);
   strcpy(result,final_test_cmd);
   memset(final_test_cmd,'\0',sizeof(final_test_cmd));
   pthread_mutex_unlock(&final_test_cmd_lock);
+  reading_from_tut = 0;
   return 0;
 }
 

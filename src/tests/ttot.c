@@ -257,6 +257,12 @@ void *pt_set_ttot(void *args)
       pt_printsend("Setting ttot for crate/board %d %d, target time %d\n",arg.crate_num,i,arg.target_time);
       chips_not_finished = 0xFF;
       while(chips_not_finished){
+        for (j=0;j<8;j++){
+          if ((0x1<<j) & chips_not_finished){
+            pt_printsend("rmp: %d, vsi: %d\n",rmp[j],vsi[j]);
+            break;
+          }
+        }
         int result = disc_m_ttot(arg.crate_num,0x1<<i,150,alltimes,&thread_fdset);
         // loop over disc chips
         for (j=0;j<8;j++){
@@ -361,7 +367,7 @@ end:
 
 int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_times, fd_set *thread_fdset)
 {
-  int increment = 10;
+  int increment = 1;
   int time;
   uint32_t chan_done_mask;
   float real_delay;

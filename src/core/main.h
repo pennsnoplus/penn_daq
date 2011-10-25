@@ -35,6 +35,7 @@ char macro_cmds[1000][250];
 int macro_tot_cmds;
 int macro_cur_cmd;
 
+int reading_from_tut;
 int running_final_test;
 pthread_mutex_t final_test_cmd_lock; 
 pthread_cond_t final_test_cmd_cv;

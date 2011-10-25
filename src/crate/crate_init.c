@@ -197,8 +197,8 @@ void *pt_crate_init(void *args)
           JsonNode* channels = json_find_member(cbal_doc,"channels");
           for (j=0;j<32;j++){
             JsonNode* one_channel = json_find_element(channels,j); 
-            mb_consts->vbal[0][j] = (int)json_get_number(json_find_member(one_channel,"vbal_low"));
-            mb_consts->vbal[1][j] = (int)json_get_number(json_find_member(one_channel,"vbal_high"));
+            mb_consts->vbal[1][j] = (int)json_get_number(json_find_member(one_channel,"vbal_low"));
+            mb_consts->vbal[0][j] = (int)json_get_number(json_find_member(one_channel,"vbal_high"));
           }
         }
         json_delete(viewdoc); // viewrows is part of viewdoc; only delete the head node

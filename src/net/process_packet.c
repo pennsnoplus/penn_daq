@@ -243,6 +243,8 @@ int process_control_command(char *buffer)
     result = xl3_queue_rw(buffer);
   }else if (strncmp(buffer,"set_alarm_dac",13)==0){
     result = set_alarm_dac(buffer);
+  }else if (strncmp(buffer,"load_dac",8)==0){
+    result = cmd_load_dac(buffer);
   }else if (strncmp(buffer,"read_bundle",11)==0){
     result = read_bundle(buffer);
   }else if (strncmp(buffer,"setup_chinj",11)==0){

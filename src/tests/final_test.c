@@ -292,7 +292,7 @@ void *pt_final_test(void *args)
     pt_printsend("You should now connect the cable to ext_ped for ttot tests\nHit enter when ready\n");
     read_from_tut(comments);
     do {
-      sprintf(command_buffer,"set_ttot -c %d -s %04x -t 440 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+      sprintf(command_buffer,"set_ttot -c %d -s %04x -t 400 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
     } while (set_ttot(command_buffer)!= 0);
     while (xl3_lock[arg.crate_num] != 0){}
   }

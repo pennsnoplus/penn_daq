@@ -11,6 +11,8 @@ int load_relays(char *buffer);
 void *pt_load_relays(void* args);
 int cmd_setup_chinj(char *buffer);
 void *pt_cmd_setup_chinj(void* args);
+int cmd_load_dac(char *buffer);
+void *pt_cmd_load_dac(void *args);
 
 typedef struct{
   int thread_num;
@@ -42,5 +44,12 @@ typedef struct{
   int dacvalue;
 } cmd_setup_chinj_t;
 
+typedef struct{
+  int thread_num;
+  int crate_num;
+  int slot_num;
+  int dac_num;
+  int dac_value; 
+} cmd_load_dac_t;
 
 #endif
