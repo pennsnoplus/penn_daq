@@ -218,6 +218,7 @@ void *pt_set_ttot(void *args)
   int tot_errors[16][8];
   int i,j,k,l;
   uint16_t rmp[8],vsi[8],rmpup[8],vli[8];
+  uint16_t rmp_high[8],rmp_low[8];
   uint16_t chips_not_finished;
   int32_t diff[32];
   uint32_t dac_nums[50],dac_values[50];
@@ -231,9 +232,11 @@ void *pt_set_ttot(void *args)
       // set default values
       for (j=0;j<8;j++){
         rmpup[j] = RMPUP_DEFAULT;
-        rmp[j] = RMP_DEFAULT-10;
         vsi[j] = VSI_DEFAULT;
         vli[j] = VLI_DEFAULT;
+        rmp_high[j] = MAX_RMP_VALUE;
+        rmp_low[j] = RMP_DEFAULT-10;
+        rmp[j] = (int) (rmp_high[j] + rmp_low[j])/2;
       }
       // load default values
       num_dacs = 0;
@@ -256,47 +259,59 @@ void *pt_set_ttot(void *args)
 
       pt_printsend("Setting ttot for crate/board %d %d, target time %d\n",arg.crate_num,i,arg.target_time);
       chips_not_finished = 0xFF;
+
+      // loop until all ttot measurements are larger than target ttime
       while(chips_not_finished){
-        for (j=0;j<8;j++){
-          if ((0x1<<j) & chips_not_finished){
-            pt_printsend("rmp: %d, vsi: %d\n",rmp[j],vsi[j]);
-            break;
-          }
-        }
+        // measure ttot for all chips
         int result = disc_m_ttot(arg.crate_num,0x1<<i,150,alltimes,&thread_fdset);
+
         // loop over disc chips
         for (j=0;j<8;j++){
-          // loop over channels in chip
-          for (k=0;k<4;k++)
-            diff[4*j+k] = alltimes[i*32+j*4+k] - arg.target_time;
+          if ((0x1<<j) & chips_not_finished){
 
-          // if diffs all positive, that chip is finished
-          if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0) && (diff[4*j+3] > 0) && ((0x1<<j) & chips_not_finished)){
-            chips_not_finished &= ~(0x1<<j);
-            pt_printsend("Fit channel %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
-                j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
-                alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
-            allrmps[i][j] = rmp[j];
-            allvsis[i][j] = vsi[j];
-          }else{
-            // if not done, adjust DACs
-            if ((rmp[j] <= MAX_RMP_VALUE) && (vsi[j] > MIN_VSI_VALUE) && ((0x1<<j) & chips_not_finished))
-              rmp[j]++;
-            if ((rmp[j] > MAX_RMP_VALUE) && (vsi[j] > MIN_VSI_VALUE) && ((0x1<<j) & chips_not_finished)){
-              rmp[j] = RMP_DEFAULT-10;
-              vsi[j] -= 2;
+            for (k=0;k<4;k++)
+              diff[4*j+k] = alltimes[i*32+j*4+k] - arg.target_time;
+
+            // check if above or below
+            if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0)
+                && (diff[4*j+3] > 0)){
+              rmp_high[j] = rmp[j];
+
+              // if we have narrowed it down to the first setting that works, we are done
+              if ((rmp[j] - rmp_low[j]) == 1){
+                chips_not_finished &= ~(0x1<<j);
+                pt_printsend("Fit channel %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
+                    j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
+                    alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
+                allrmps[i][j] = rmp[j];
+                allvsis[i][j] = vsi[j];
+              }
+            }else{
+              rmp_low[j] = rmp[j];
+              if (rmp[j] == MAX_RMP_VALUE){
+                if (vsi[j] > MIN_VSI_VALUE){
+                  rmp_high[j] = MAX_RMP_VALUE;
+                  rmp_low[j] = RMP_DEFAULT-10;
+                  vsi[j] -= 2;
+                }else{
+                  // out of bounds, end loop with error
+                  pt_printsend("RMP/VSI is too big for disc chip %d! (%d %d)\n",j,rmp[j],vsi[j]);
+                  pt_printsend("Aborting slot %d setup.\n",i);
+                  tot_errors[i][j] = 1;
+                  for (l=0;l<8;l++)
+                    if (chips_not_finished & (0x1<<l))
+                      pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,j,rmp[l],vsi[l]);
+                  chips_not_finished = 0x0;
+                }
+              }else if (rmp[j] == rmp_high[j]){
+                // in case it screws up and fails after it succeeded already
+                rmp_high[j]++;
+              }
             }
-            if ((vsi[j] <= MIN_VSI_VALUE) && ((0x1<<j) & chips_not_finished)){
-              // out of bounds, end loop with error
-              pt_printsend("RMP/VSI is too big for disc chip %d! (%d %d)\n",j,rmp[j],vsi[j]);
-              pt_printsend("Aborting slot %d setup.\n",i);
-              tot_errors[i][j] = 1;
-              for (l=0;l<8;l++)
-                if (chips_not_finished & (0x1<<l))
-                  pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,j,rmp[l],vsi[l]);
-              goto end; // oh the horror!
-            }
-          }
+
+            rmp[j] = (int) ((float) (rmp_high[j] + rmp_low[j])/2.0 + 0.5);
+
+          } // end if chip not finished
         } // end loop over disc chips
 
         // load new values
@@ -313,7 +328,6 @@ void *pt_set_ttot(void *args)
 
       } // end while chips_not_finished
 
-end:
       if (arg.update_db){
         pt_printsend("updating the database\n");
         int slot;
