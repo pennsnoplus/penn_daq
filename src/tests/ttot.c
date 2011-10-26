@@ -108,8 +108,12 @@ void *pt_get_ttot(void *args)
         tot_errors[i][j] = 0;
         pt_printsend("%d\t %d\t %d\t %d",arg.crate_num,i,j,times[i*32+j]);
         if (arg.target_time > times[i*32+j]){
-          pt_printsend(">>> Warning: Time less than %d nsec",arg.target_time);
-          tot_errors[i][j] = 1;
+          if (arg.target_time < 9999){
+            pt_printsend(">>> Warning: Time less than %d nsec",arg.target_time);
+            tot_errors[i][j] = 1;
+          }else{
+            tot_errors[i][j] = 2;
+          }
         }
         pt_printsend("\n");
       }
