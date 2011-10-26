@@ -220,9 +220,10 @@ void *pt_set_ttot(void *args)
   uint16_t rmp[8],vsi[8],rmpup[8],vli[8];
   uint16_t rmp_high[8],rmp_low[8];
   uint16_t chips_not_finished;
-  int32_t diff[32];
+  int diff[32];
   uint32_t dac_nums[50],dac_values[50];
   int num_dacs;
+  int result;
 
   // setup the mtc with the triggers going to the TUB
   int errors = setup_pedestals(0,60,100,0,(0x1<<arg.crate_num) | MSK_CRATE21,MSK_CRATE21);
@@ -262,31 +263,31 @@ void *pt_set_ttot(void *args)
 
       // loop until all ttot measurements are larger than target ttime
       while(chips_not_finished){
+        for (j=0;j<8;j++)
+          if ((0x1<<j) & chips_not_finished)
+
         // measure ttot for all chips
-        int result = disc_m_ttot(arg.crate_num,0x1<<i,150,alltimes,&thread_fdset);
+        result = disc_check_ttot(arg.crate_num,i,arg.target_time,diff,&thread_fdset);
 
         // loop over disc chips
         for (j=0;j<8;j++){
           if ((0x1<<j) & chips_not_finished){
 
-            for (k=0;k<4;k++)
-              diff[4*j+k] = alltimes[i*32+j*4+k] - arg.target_time;
-
             // check if above or below
             if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0)
                 && (diff[4*j+3] > 0)){
+              //pt_printsend("above\n");
               rmp_high[j] = rmp[j];
 
               // if we have narrowed it down to the first setting that works, we are done
               if ((rmp[j] - rmp_low[j]) == 1){
+                pt_printsend("Chip %d finished\n",j);
                 chips_not_finished &= ~(0x1<<j);
-                pt_printsend("Fit channel %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
-                    j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
-                    alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
                 allrmps[i][j] = rmp[j];
                 allvsis[i][j] = vsi[j];
               }
             }else{
+              //pt_printsend("below\n");
               rmp_low[j] = rmp[j];
               if (rmp[j] == MAX_RMP_VALUE){
                 if (vsi[j] > MIN_VSI_VALUE){
@@ -299,8 +300,11 @@ void *pt_set_ttot(void *args)
                   pt_printsend("Aborting slot %d setup.\n",i);
                   tot_errors[i][j] = 1;
                   for (l=0;l<8;l++)
-                    if (chips_not_finished & (0x1<<l))
+                    if (chips_not_finished & (0x1<<l)){
                       pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,j,rmp[l],vsi[l]);
+                      allrmps[i][l] = rmp[l];
+                      allvsis[i][l] = vsi[l];
+                    }
                   chips_not_finished = 0x0;
                 }
               }else if (rmp[j] == rmp_high[j]){
@@ -311,7 +315,7 @@ void *pt_set_ttot(void *args)
 
             rmp[j] = (int) ((float) (rmp_high[j] + rmp_low[j])/2.0 + 0.5);
 
-          } // end if chip not finished
+          } // end if this chip not finished
         } // end loop over disc chips
 
         // load new values
@@ -327,6 +331,27 @@ void *pt_set_ttot(void *args)
         multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
 
       } // end while chips_not_finished
+
+      // now get the final timing measurements
+      num_dacs = 0;
+      for (j=0;j<8;j++){
+        dac_nums[num_dacs] = d_rmp[j];
+        dac_values[num_dacs] = allrmps[i][j];
+        num_dacs++;
+        dac_nums[num_dacs] = d_vsi[j];
+        dac_values[num_dacs] = allvsis[i][j];
+        num_dacs++;
+      }
+      multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
+
+      result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
+      
+      pt_printsend("Final timing measurements:\n");
+      for (j=0;j<8;j++){
+        pt_printsend("Chip %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
+            j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
+            alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
+      }
 
       if (arg.update_db){
         pt_printsend("updating the database\n");
@@ -392,7 +417,8 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
     if ((0x1<<i) & slot_mask){
       int result = set_crate_pedestals(crate,0x1<<i,0xFFFFFFFF,thread_fdset);
       chan_done_mask = 0x0;
-      for (time = start_time;time<=MAX_TIME;time+=increment){
+      time = start_time;
+      while (chan_done_mask != 0xFFFFFFFF){
         // set up gt delay
         real_delay = set_gt_delay((float) time);
         // get the cmos count before sending pulses
@@ -411,13 +437,54 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
         }
         if (chan_done_mask == 0xFFFFFFFF)
           break;
-        if (time == MAX_TIME)
+        if (time >= MAX_TIME){
           for (j=0;j<32;j++)
-            if ((0x1<<j) & !chan_done_mask)
+            if (((0x1<<j) & chan_done_mask) == 0){
               disc_times[i*32+j] = time+TUB_DELAY;
-
+            }
+          chan_done_mask = 0xFFFFFFFF;
+        }else{
+          time += increment;
+        }
       } // for time<=MAX_TIME
     } // end if slot mask
   } // end loop over slots
+  return 0;
+}
+
+int disc_check_ttot(int crate, int slot_num, int goal_time, int *diff, fd_set *thread_fdset)
+{
+  float real_delay;
+  uint32_t init[32],fin[32];
+  int i,j;
+
+  int result = set_crate_pedestals(crate,0x1<<slot_num,0xFFFFFFFF,thread_fdset);
+
+  // initialize array
+  for (i=0;i<32;i++)
+    diff[i] = 0;
+
+  // measure it twice to make sure we are good
+  for (i=0;i<2;i++){
+    real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+    // get the cmos count before sending pulses
+    result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
+    // send some pulses
+    multi_softgt(NUM_PEDS);
+    // now read out the count again to get the rate
+    result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
+    for (j=0;j<32;j++){
+      fin[j] -= init[j];
+      // check if we got all the peds from the TUB too
+      if (fin[j] < 2*NUM_PEDS){
+        // we didnt get all the peds, so ttot is longer than our target time
+        if (i==0)
+          diff[j] = 1;
+      }else{
+        // if its shorter either time, flag it as too short
+        diff[j] = 0;
+      }
+    }
+  }
   return 0;
 }

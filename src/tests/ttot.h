@@ -33,5 +33,6 @@ void *pt_set_ttot(void *args);
 
 
 int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_times, fd_set *thread_fdset);
+int disc_check_ttot(int crate, int slot_num, int goal_time, int *diff, fd_set *thread_fdset);
   
 #endif
