@@ -215,7 +215,7 @@ void *pt_set_ttot(void *args)
   FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
 
   uint16_t allrmps[16][8],allvsis[16][8],alltimes[16*32];
-  int tot_errors[16][8];
+  int tot_errors[16][32];
   int i,j,k,l;
   uint16_t rmp[8],vsi[8],rmpup[8],vli[8];
   uint16_t rmp_high[8],rmp_low[8];
@@ -239,21 +239,41 @@ void *pt_set_ttot(void *args)
         rmp_low[j] = RMP_DEFAULT-10;
         rmp[j] = (int) (rmp_high[j] + rmp_low[j])/2;
       }
-      // load default values
+
+      // first check that if we make ttot as short as possible, triggers show up 
       num_dacs = 0;
       for (j=0;j<8;j++){
-        tot_errors[i][j] = 0;
         dac_nums[num_dacs] = d_rmpup[j];
         dac_values[num_dacs] = rmpup[j];
         num_dacs++;
+        dac_nums[num_dacs] = d_vli[j];
+        dac_values[num_dacs] = vli[j];
+        num_dacs++;
+        dac_nums[num_dacs] = d_rmp[j];
+        dac_values[num_dacs] = rmp_low[j];
+        num_dacs++;
+        dac_nums[num_dacs] = d_vsi[j];
+        dac_values[num_dacs] = vsi[j];
+        num_dacs++;
+      }
+      multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
+      result = disc_check_ttot(arg.crate_num,i,MAX_TIME,diff,&thread_fdset);
+      for (k=0;k<32;k++){
+        tot_errors[i][k] = 0;
+        if (diff[k] == 1){
+          pt_printsend("Error - Not getting TUB triggers on channel %d!\n",k);
+          tot_errors[i][k] = 2;
+        }
+      }
+
+      // load default values
+      num_dacs = 0;
+      for (j=0;j<8;j++){
         dac_nums[num_dacs] = d_rmp[j];
         dac_values[num_dacs] = rmp[j];
         num_dacs++;
         dac_nums[num_dacs] = d_vsi[j];
         dac_values[num_dacs] = vsi[j];
-        num_dacs++;
-        dac_nums[num_dacs] = d_vli[j];
-        dac_values[num_dacs] = vli[j];
         num_dacs++;
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
@@ -263,11 +283,19 @@ void *pt_set_ttot(void *args)
 
       // loop until all ttot measurements are larger than target ttime
       while(chips_not_finished){
-        for (j=0;j<8;j++)
-          if ((0x1<<j) & chips_not_finished)
+        //for (j=0;j<8;j++)
+          //if ((0x1<<j) & chips_not_finished)
+            //pt_printsend("hello");
 
         // measure ttot for all chips
         result = disc_check_ttot(arg.crate_num,i,arg.target_time,diff,&thread_fdset);
+        //result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
+        //for (j=0;j<8;j++){
+        //  diff[4*j+0] = alltimes[i*32+j*4+0] - arg.target_time;
+        //  diff[4*j+1] = alltimes[i*32+j*4+1] - arg.target_time;
+        //  diff[4*j+2] = alltimes[i*32+j*4+2] - arg.target_time;
+        //  diff[4*j+3] = alltimes[i*32+j*4+3] - arg.target_time;
+        //}
 
         // loop over disc chips
         for (j=0;j<8;j++){
@@ -294,11 +322,15 @@ void *pt_set_ttot(void *args)
                   rmp_high[j] = MAX_RMP_VALUE;
                   rmp_low[j] = RMP_DEFAULT-10;
                   vsi[j] -= 2;
+                  //pt_printsend("%d - vsi: %d\n",j,vsi[j]);
                 }else{
                   // out of bounds, end loop with error
                   pt_printsend("RMP/VSI is too big for disc chip %d! (%d %d)\n",j,rmp[j],vsi[j]);
                   pt_printsend("Aborting slot %d setup.\n",i);
-                  tot_errors[i][j] = 1;
+                  tot_errors[i][j*4+0] = 1;
+                  tot_errors[i][j*4+1] = 1;
+                  tot_errors[i][j*4+2] = 1;
+                  tot_errors[i][j*4+3] = 1;
                   for (l=0;l<8;l++)
                     if (chips_not_finished & (0x1<<l)){
                       pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,j,rmp[l],vsi[l]);
@@ -344,7 +376,7 @@ void *pt_set_ttot(void *args)
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
 
-      result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
+      result = disc_m_ttot(arg.crate_num,(0x1<<i),arg.target_time,alltimes,&thread_fdset);
       
       pt_printsend("Final timing measurements:\n");
       for (j=0;j<8;j++){
@@ -366,18 +398,18 @@ void *pt_set_ttot(void *args)
             int passflag = 1;
             int k;
             for (k=0;k<8;k++){
-              if (tot_errors[slot][i] == 1)
-                passflag = 0;
               JsonNode *one_chip = json_mkobject();
               json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][k]));
               json_append_member(one_chip,"vsi",json_mknumber((double) allvsis[slot][k]));
-              json_append_member(one_chip,"errors",json_mkbool(tot_errors[slot][k]));
 
               JsonNode *all_chans = json_mkarray();
               for (j=0;j<4;j++){
                 JsonNode *one_chan = json_mkobject();
+                if (tot_errors[slot][j]> 0)
+                  passflag = 0;
                 json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
                 json_append_member(one_chan,"time",json_mknumber((double) alltimes[slot*32+k*4+j]));
+                json_append_member(one_chan,"errors",json_mkbool(tot_errors[slot][j]));
                 json_append_element(all_chans,one_chan);
               }
               json_append_member(one_chip,"channels",all_chans);
@@ -411,7 +443,7 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
   uint32_t chan_done_mask;
   float real_delay;
   uint32_t init[32],fin[32];
-  int i,j;
+  int i,j,k;
 
   for (i=0;i<16;i++){
     if ((0x1<<i) & slot_mask){
@@ -429,24 +461,43 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
         result = get_cmos_total_count(crate,i,fin,thread_fdset);
         for (j=0;j<32;j++){
           fin[j] -= init[j];
+          //pt_printsend("for %d at time %d, got %d of %d\n",j,time,fin[j],2*NUM_PEDS);
           // check if we got all the pedestals from the TUB too
-          if ((fin[j] >= 2*NUM_PEDS) && !(chan_done_mask & (0x1<<j))){
-            chan_done_mask |= 0x1<<j;
+          if ((fin[j] >= 2*NUM_PEDS) && ((0x1<<j) & ~chan_done_mask)){
+            chan_done_mask |= (0x1<<j); 
             disc_times[i*32+j] = time+TUB_DELAY;
           }
         }
         if (chan_done_mask == 0xFFFFFFFF)
           break;
         if (time >= MAX_TIME){
-          for (j=0;j<32;j++)
-            if (((0x1<<j) & chan_done_mask) == 0){
-              disc_times[i*32+j] = time+TUB_DELAY;
-            }
-          chan_done_mask = 0xFFFFFFFF;
+          for (k=0;k<32;k++){
+            if ((0x1<<k) & ~chan_done_mask)
+              disc_times[i*32+k] = time+TUB_DELAY;
+            chan_done_mask = 0xFFFFFFFF;
+          }
         }else{
           time += increment;
         }
       } // for time<=MAX_TIME
+
+      // now that we got our times, check each channel one by one to ensure it was
+      // working on its own
+      for (j=0;j<32;j++){
+        result = set_crate_pedestals(crate,0x1<<i,0x1<<j,thread_fdset);
+        // if it worked before at time-tub_delay, it should work for time-tub_delay+50
+        real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
+        result = get_cmos_total_count(crate,i,init,thread_fdset);
+        multi_softgt(NUM_PEDS);
+        result = get_cmos_total_count(crate,i,fin,thread_fdset);
+        fin[j] -= init[j];
+        if (fin[j] < 2*NUM_PEDS){
+          // we didn't get the peds without the other channels enabled
+          pt_printsend("Error channel %d - pedestals went away after other channels turned off!\n",j);
+          disc_times[i*32+j] = 9999;
+        }
+      }
+
     } // end if slot mask
   } // end loop over slots
   return 0;
@@ -456,33 +507,34 @@ int disc_check_ttot(int crate, int slot_num, int goal_time, int *diff, fd_set *t
 {
   float real_delay;
   uint32_t init[32],fin[32];
-  int i,j;
-
-  int result = set_crate_pedestals(crate,0x1<<slot_num,0xFFFFFFFF,thread_fdset);
+  int i,j,k;
 
   // initialize array
   for (i=0;i<32;i++)
     diff[i] = 0;
 
-  // measure it twice to make sure we are good
-  for (i=0;i<2;i++){
-    real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
-    // get the cmos count before sending pulses
-    result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
-    // send some pulses
-    multi_softgt(NUM_PEDS);
-    // now read out the count again to get the rate
-    result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
-    for (j=0;j<32;j++){
-      fin[j] -= init[j];
+  for (k=0;k<32;k++){
+    int result = set_crate_pedestals(crate,0x1<<slot_num,(0x1<<k),thread_fdset);
+
+    // measure it twice to make sure we are good
+    for (i=0;i<2;i++){
+      real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+      // get the cmos count before sending pulses
+      result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
+      // send some pulses
+      multi_softgt(NUM_PEDS);
+      // now read out the count again to get the rate
+      result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
+      fin[k] -= init[k];
       // check if we got all the peds from the TUB too
-      if (fin[j] < 2*NUM_PEDS){
+      if (fin[k] < 2*NUM_PEDS){
         // we didnt get all the peds, so ttot is longer than our target time
         if (i==0)
-          diff[j] = 1;
+          diff[k] = 1;
       }else{
+        //pt_printsend("%d was short. Got %d out of %d (%d before, %d after)\n",k,fin[k],2*NUM_PEDS,init[k],fin[k]+init[k]);
         // if its shorter either time, flag it as too short
-        diff[j] = 0;
+        diff[k] = 0;
       }
     }
   }
