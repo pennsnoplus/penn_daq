@@ -311,6 +311,10 @@ typedef struct{
   uint32_t screwed[16];
 } screwed_packet_t;
 
+typedef struct{
+  uint32_t mem_level[16];
+} pong_packet_t;
+
 /*! \name sbc_send_packet_type
  *  Types of packets that will be sent to the sbc from the xl3
  */

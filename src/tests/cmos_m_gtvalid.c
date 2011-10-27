@@ -121,6 +121,7 @@ void *pt_cmos_m_gtvalid(void *args)
   uint16_t ncrates;
   int done;
   int slot_errors;
+  int chan_errors[32];
 
   // setup crate
   for (i=0;i<16;i++){
@@ -156,6 +157,8 @@ void *pt_cmos_m_gtvalid(void *args)
       uint32_t select_reg = FEC_SEL*i;
 
       slot_errors = 0;
+      for (j=0;j<32;j++)
+        chan_errors[j] = 0;
 
       // select which tac we are working on
       int wt;
@@ -305,7 +308,12 @@ void *pt_cmos_m_gtvalid(void *args)
             if (gt_temp <=  arg.gt_cutoff){
               done = 1;
             }else{
-              isetm_new[wt]++;
+              if (isetm_new[wt] == 255){
+                pt_printsend("warning - ISETM set to max!\n");
+                done = 1;
+              }else{
+                isetm_new[wt]++;
+              }
             }
 
           } // end while gt_temp > gt_cutoff 
@@ -364,6 +372,10 @@ void *pt_cmos_m_gtvalid(void *args)
             for (j=0;j<32;j++)
               gtflag[wt][j] = 0;
             gtflag[wt][cmax[wt]] = 1; // max channel is already done
+            for (j=0;j<32;j++){
+              if (gtchan[j] < 0)
+                gtflag[wt][cmax[wt]] = 1; // skip any buggy channels
+            }
             done = 0;
             while (!done){
               // loop over all channels not yet finished with
@@ -495,6 +507,10 @@ void *pt_cmos_m_gtvalid(void *args)
           isetm_save[1] > 180 || isetm_save[1] < 160 ||
           abs(isetm_save[1] - isetm_save[0]) > 10)
         slot_errors = 1;
+      for (j=0;j<32;j++){
+        if ((gtchan_set[0][j] < 0) || gtchan_set[1][j] < 0)
+          chan_errors[j] = 1;
+      }
 
       //store in DB
       if (arg.update_db){
@@ -521,7 +537,9 @@ void *pt_cmos_m_gtvalid(void *args)
           json_append_member(one_chan,"tac_shift",json_mknumber((double) (tacbits_save[1][j]*16+tacbits_save[0][1])));
           json_append_member(one_chan,"gtvalid0",json_mknumber((double) (gtchan_set[0][j])));
           json_append_member(one_chan,"gtvalid1",json_mknumber((double) (gtchan_set[1][j])));
-          json_append_member(one_chan,"errors",json_mkbool(0));//FIXME
+          json_append_member(one_chan,"errors",json_mkbool(chan_errors[j]));//FIXME
+          if (chan_errors[j])
+            slot_errors++;
           json_append_element(channels,one_chan);
         }
         json_append_member(newdoc,"channels",channels);
@@ -591,7 +609,7 @@ int get_gtdelay(int crate_num, int wt, float *get_gtchan, uint16_t isetm0, uint1
   // check if we actually found a good value or
   // if we just kept going to to the upper bound
   if (upper_limit == GTMAX){
-    *get_gtchan = 999;
+    *get_gtchan = -2;
   }else{
     // ok we know that lower limit is within the window, upper limit is outside
     // lets make sure its the right TAC failing by making the window longer and
@@ -612,7 +630,7 @@ int get_gtdelay(int crate_num, int wt, float *get_gtchan, uint16_t isetm0, uint1
     num_read = (result & 0x000FFFFF)/3;
     if (num_read < (NGTVALID*0.75)){
       pt_printsend("Uh oh, still not all the events! wrong TAC failing\n");
-      *get_gtchan = 999;
+      *get_gtchan = -1;
     }else{
       *get_gtchan = upper_limit;
     }
