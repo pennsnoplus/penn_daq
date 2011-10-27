@@ -662,6 +662,7 @@ int get_pedestal(struct pedestal *pedestals, struct channel_params *chan_params,
   // now read out memory
   XL3_Packet packet;
   read_pedestals_args_t *packet_args = (read_pedestals_args_t *) packet.payload;
+  read_pedestals_results_t *packet_results = (read_pedestals_results_t *) packet.payload;
   int reads_left = words_in_mem;
   int this_read;
   while (reads_left != 0){
@@ -674,10 +675,14 @@ int get_pedestal(struct pedestal *pedestals, struct channel_params *chan_params,
     packet_args->reads = this_read;
     SwapLongBlock(packet_args,sizeof(read_pedestals_args_t)/sizeof(uint32_t));
     do_xl3_cmd(&packet,crate,thread_fdset);
+    SwapLongBlock(packet_results,sizeof(read_pedestals_results_t)/sizeof(uint32_t));
+    this_read = packet_results->reads_queued;
 
-    // now wait for the data to come
-    wait_for_multifc_results(this_read,command_number[crate]-1,crate,pmt_buf+(words_in_mem-reads_left),thread_fdset);
-    reads_left -= this_read;
+    if (this_read > 0){
+      // now wait for the data to come
+      wait_for_multifc_results(this_read,command_number[crate]-1,crate,pmt_buf+(words_in_mem-reads_left),thread_fdset);
+      reads_left -= this_read;
+    }
   }
 
   // parse charge information

@@ -174,6 +174,10 @@ typedef struct{
 } read_pedestals_args_t;
 
 typedef struct{
+  uint32_t reads_queued;
+} read_pedestals_results_t;
+
+typedef struct{
   uint32_t mb_num;
   uint32_t xilinx_load;
   uint32_t hv_reset;

@@ -140,14 +140,19 @@ int32_t read_out_bundles(int crate, int slot, int limit, int check_limit, uint32
     // queue up all the reads
     packet.cmdHeader.packet_type = READ_PEDESTALS_ID;
     read_pedestals_args_t *packet_args = (read_pedestals_args_t *) packet.payload;
+    read_pedestals_results_t *packet_results = (read_pedestals_results_t *) packet.payload;
     packet_args->slot = slot;
     packet_args->reads = this_read;
     SwapLongBlock(packet_args,sizeof(read_pedestals_args_t)/sizeof(uint32_t));
     do_xl3_cmd(&packet,crate,thread_fdset);
+    SwapLongBlock(packet_results,sizeof(read_pedestals_results_t)/sizeof(uint32_t));
+    this_read = packet_results->reads_queued;
 
-    // now wait for the data to come
-    wait_for_multifc_results(this_read,command_number[crate]-1,crate,pmt_buf+(diff-reads_left),thread_fdset);
-    reads_left -= this_read;
+    if (this_read > 0){
+      // now wait for the data to come
+      wait_for_multifc_results(this_read,command_number[crate]-1,crate,pmt_buf+(diff-reads_left),thread_fdset);
+      reads_left -= this_read;
+    }
   }
 
   count = diff / 3;

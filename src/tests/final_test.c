@@ -69,6 +69,7 @@ void *pt_final_test(void *args)
   free(args);
 
   int i;
+  int result;
   // once this is set we can no longer send other commands
   running_final_test = 1;
   // now we can unlock our things, since nothing else should use them
@@ -95,7 +96,11 @@ void *pt_final_test(void *args)
 
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
   pt_printsend("------------------------------------------\n");
 
@@ -111,7 +116,12 @@ void *pt_final_test(void *args)
 
   do {
     sprintf(command_buffer,"mtc_init -x");
-  } while (mtc_init(command_buffer) != 0);
+    result = mtc_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
 
   while (sbc_lock != 0 || xl3_lock[arg.crate_num] != 0){}
   pt_printsend("------------------------------------------\n");
@@ -138,7 +148,12 @@ void *pt_final_test(void *args)
   pt_printsend("Now starting board_id\n");
   do {
     sprintf(command_buffer,"board_id -c %d -s %04x",arg.crate_num,arg.slot_mask);
-  } while (board_id(command_buffer) != 0);
+    result = board_id(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
   pt_printsend("-------------------------------------------\n");
 
@@ -224,19 +239,34 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"fec_test -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (fec_test(command_buffer) != 0);
+    result = fec_test(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"vmon -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (vmon(command_buffer) != 0);
+    result = vmon(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"cgt_test_1 -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (cgt_test(command_buffer) != 0);
+    result = cgt_test(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   //////////////////////////////////////////////////////////////
@@ -250,14 +280,24 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"ped_run -c %d -s %04x -l 400 -u 800 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (ped_run(command_buffer) != 0);
+    result = ped_run(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_cbal -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (crate_cbal(command_buffer) != 0);
+    result = crate_cbal(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   //////////////////////////////////////////////////////////////
@@ -271,19 +311,34 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -b",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"ped_run -c %d -s %04x -b -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (ped_run(command_buffer) != 0);
+    result = ped_run(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"chinj_scan -c %d -s %04x -l 0 -u 5000 -w 100 -n 10 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (chinj_scan(command_buffer) != 0);
+    result = chinj_scan(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
@@ -292,21 +347,39 @@ void *pt_final_test(void *args)
     read_from_tut(comments);
     do {
       sprintf(command_buffer,"set_ttot -c %d -s %04x -t 400 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-    } while (set_ttot(command_buffer)!= 0);
+      result = set_ttot(command_buffer);
+      if (result == -2 || result == -3){
+        return;
+      }
+
+    } while (result != 0);
     while (xl3_lock[arg.crate_num] != 0){}
   }
+
+
+
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -t",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   if (arg.tub_tests == 1){
     do {
       sprintf(command_buffer,"get_ttot -c %d -s %04x -t 440 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-    } while (get_ttot(command_buffer) != 0);
+      result = get_ttot(command_buffer);
+      if (result == -2 || result == -3){
+        return;
+      }
+
+    } while (result != 0);
     while (xl3_lock[arg.crate_num] != 0){}
   }
 
@@ -315,13 +388,23 @@ void *pt_final_test(void *args)
   read_from_tut(comments);
   do {
     sprintf(command_buffer,"disc_check -c %d -s %04x -n 500000 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (disc_check(command_buffer) != 0);
+    result = disc_check(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"cmos_m_gtvalid -c %d -s %04x -g 400 -n -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (cmos_m_gtvalid(command_buffer) != 0);
+    result = cmos_m_gtvalid(command_buffer); 
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   // would put see_reflections here
@@ -329,43 +412,78 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"zdisc -c %d -s %04x -o 0 -r 100 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (zdisc(command_buffer) != 0);
+    result = zdisc(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"mtc_init");
-  } while (mtc_init(command_buffer) != 0);
+    result = mtc_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (sbc_lock != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do{
     sprintf(command_buffer,"mb_stability_test -c %d -s %04x -n 50 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (mb_stability_test(command_buffer) != 0);
+    result = mb_stability_test(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"fifo_test -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (fifo_test(command_buffer) != 0);
+    result = fifo_test(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -X",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"cald_test -c %d -s %04x -l 750 -u 3500 -n 200 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-  } while (cald_test(command_buffer) != 0);
+    result = cald_test(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   for (i=0;i<16;i++){
@@ -375,13 +493,23 @@ void *pt_final_test(void *args)
         pt_printsend("-------------------------------------------\n");
         do {
           sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
-        } while (crate_init(command_buffer) != 0);
+          result = crate_init(command_buffer);
+          if (result == -2 || result == -3){
+            return;
+          }
+
+        } while (result != 0);
         while (xl3_lock[arg.crate_num] != 0){}
 
         pt_printsend("-------------------------------------------\n");
 
         sprintf(command_buffer,"mem_test -c %d -s %d -d -# %s",arg.crate_num,i,ft_ids[i]);
-      } while (mem_test(command_buffer) != 0);
+        result = mem_test(command_buffer);
+        if (result == -2 || result == -3){
+          return;
+        }
+
+      } while (result != 0);
       while (xl3_lock[arg.crate_num] != 0){}
     }
   }
@@ -389,7 +517,12 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   do {
     sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
-  } while (crate_init(command_buffer) != 0);
+    result = crate_init(command_buffer);
+    if (result == -2 || result == -3){
+      return;
+    }
+
+  } while (result != 0);
   while (xl3_lock[arg.crate_num] != 0){}
 
   pt_printsend("-------------------------------------------\n");
@@ -398,7 +531,12 @@ void *pt_final_test(void *args)
   if (strncmp("skip",comments,4) != 0){
     do {
       sprintf(command_buffer,"see_refl -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
-    } while (see_refl(command_buffer) != 0);
+      result = see_refl(command_buffer);
+      if (result == -2 || result == -3){
+        return;
+      }
+
+    } while (result != 0);
     while (xl3_lock[arg.crate_num] != 0){}
   }
 
