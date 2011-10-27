@@ -261,8 +261,8 @@ void *pt_set_ttot(void *args)
         num_dacs++;
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
-      result = disc_check_ttot(arg.crate_num,i,MAX_TIME,diff,&thread_fdset);
       for (k=0;k<32;k++){
+        result = disc_check_ttot(arg.crate_num,i,(0x1<<k),MAX_TIME,diff,&thread_fdset);
         tot_errors[i][k] = 0;
         if (diff[k] == 1){
           pt_printsend("Error - Not getting TUB triggers on channel %d!\n",k);
@@ -292,7 +292,7 @@ void *pt_set_ttot(void *args)
             //pt_printsend("hello");
 
         // measure ttot for all chips
-        result = disc_check_ttot(arg.crate_num,i,arg.target_time,diff,&thread_fdset);
+        result = disc_check_ttot(arg.crate_num,i,0xFFFFFFFF,arg.target_time,diff,&thread_fdset);
         //result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
         //for (j=0;j<8;j++){
         //  diff[4*j+0] = alltimes[i*32+j*4+0] - arg.target_time;
@@ -380,7 +380,7 @@ void *pt_set_ttot(void *args)
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
 
-      result = disc_m_ttot(arg.crate_num,(0x1<<i),arg.target_time,alltimes,&thread_fdset);
+      result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
       
       pt_printsend("Final timing measurements:\n");
       for (j=0;j<8;j++){
@@ -507,7 +507,7 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
   return 0;
 }
 
-int disc_check_ttot(int crate, int slot_num, int goal_time, int *diff, fd_set *thread_fdset)
+int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, int *diff, fd_set *thread_fdset)
 {
   float real_delay;
   uint32_t init[32],fin[32];
@@ -517,18 +517,18 @@ int disc_check_ttot(int crate, int slot_num, int goal_time, int *diff, fd_set *t
   for (i=0;i<32;i++)
     diff[i] = 0;
 
-  for (k=0;k<32;k++){
-    int result = set_crate_pedestals(crate,0x1<<slot_num,(0x1<<k),thread_fdset);
+  int result = set_crate_pedestals(crate,0x1<<slot_num,chan_mask,thread_fdset);
 
-    // measure it twice to make sure we are good
-    for (i=0;i<2;i++){
-      real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
-      // get the cmos count before sending pulses
-      result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
-      // send some pulses
-      multi_softgt(NUM_PEDS);
-      // now read out the count again to get the rate
-      result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
+  // measure it twice to make sure we are good
+  for (i=0;i<2;i++){
+    real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+    // get the cmos count before sending pulses
+    result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
+    // send some pulses
+    multi_softgt(NUM_PEDS);
+    // now read out the count again to get the rate
+    result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
+    for (k=0;k<32;k++){
       fin[k] -= init[k];
       // check if we got all the peds from the TUB too
       if (fin[k] < 2*NUM_PEDS){

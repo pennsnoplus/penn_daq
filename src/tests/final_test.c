@@ -259,7 +259,6 @@ void *pt_final_test(void *args)
     sprintf(command_buffer,"crate_cbal -c %d -s %04x -d -# %s",arg.crate_num,arg.slot_mask,id_string);
   } while (crate_cbal(command_buffer) != 0);
   while (xl3_lock[arg.crate_num] != 0){}
-  pt_printsend("after crate_cbal id is .%s.\n",id_string);
 
   //////////////////////////////////////////////////////////////
   // now gotta turn pulser on and off to get rid of garbage

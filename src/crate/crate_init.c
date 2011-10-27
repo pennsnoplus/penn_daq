@@ -64,7 +64,7 @@ int crate_init(char *buffer)
   int thread_num = thread_and_lock(0,(0x1<<args->crate_num),&new_thread);
   if (thread_num < 0){
     free(args);
-    return -1;
+    return thread_num;
   }
 
   args->thread_num = thread_num;

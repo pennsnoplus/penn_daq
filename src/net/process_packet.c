@@ -55,7 +55,7 @@ int read_xl3_packet(int fd)
     printsend("Incorrect xl3 fd? No matching crate\n");
     return -1;
   }
-  if (xl3_lock[crate] == 1){
+  if ((xl3_lock[crate] == 1) && (reading_from_tut == 0)){
     // this socket is locked and we arent supposed to be reading it
     return 0;
   }

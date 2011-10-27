@@ -390,7 +390,7 @@ void *pt_crate_cbal(void *args)
 
                 // make sure we arent stuck
                 if (tmp_bal[j] == x2_bal[j]){
-                  pt_printsend("channel %d in local trap. Nudging\n");
+                  pt_printsend("channel %d in local trap. Nudging\n",j);
                   int kick = (int) (rand()%35) + 150;
                   tmp_bal[j] = (tmp_bal[j] >= 45) ? (tmp_bal[j]-kick) : (tmp_bal[j] + kick);
                 }

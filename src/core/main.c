@@ -148,9 +148,11 @@ int main(int argc, char *argv[])
     fd_set temp = main_fdset;
     if (sbc_lock && rw_sbc_fd > 0)
       FD_CLR(rw_sbc_fd,&temp);
-    for (i=0;i<MAX_XL3_CON;i++)
+    for (i=0;i<MAX_XL3_CON;i++){
       if ((xl3_lock[i] == 1) && (rw_xl3_fd[i] > 0) && (reading_from_tut == 0))
         FD_CLR(rw_xl3_fd[i],&temp);
+    }
+      
     if (cont_lock && rw_cont_fd > 0)
       FD_CLR(rw_cont_fd,&temp);
     main_readable_fdset = temp;

@@ -610,10 +610,12 @@ int get_gtdelay(int crate_num, int wt, float *get_gtchan, uint16_t isetm0, uint1
 
     xl3_rw(FIFO_WRITE_PTR_R + select_reg + READ_REG,0x0,&result,crate_num,thread_fdset);
     num_read = (result & 0x000FFFFF)/3;
-    if (num_read < (NGTVALID*0.75))
+    if (num_read < (NGTVALID*0.75)){
       pt_printsend("Uh oh, still not all the events! wrong TAC failing\n");
-
-    *get_gtchan = upper_limit;
+      *get_gtchan = 999;
+    }else{
+      *get_gtchan = upper_limit;
+    }
   }
 
   // set TACs back to original time

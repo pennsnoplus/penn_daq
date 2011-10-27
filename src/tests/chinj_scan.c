@@ -420,32 +420,34 @@ void *pt_chinj_scan(void *args)
                   scan_errors[dac_iter*16*32*2+slot_iter*32*2+i*2+1]++;
               }
             }
-            pt_printsend("%2d %3d %4d %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f\n",
-            i,j,ped[i].thiscell[j].per_cell,
-            ped[i].thiscell[j].qhlbar, ped[i].thiscell[j].qhlrms,
-            ped[i].thiscell[j].qhsbar, ped[i].thiscell[j].qhsrms,
-            ped[i].thiscell[j].qlxbar, ped[i].thiscell[j].qlxrms,
-            ped[i].thiscell[j].tacbar, ped[i].thiscell[j].tacrms);
+            if (j==0){
+              pt_printsend("%2d %3d %4d %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f %6.1f %4.1f\n",
+                  dacvalue,i,ped[i].thiscell[j].per_cell,
+                  ped[i].thiscell[j].qhlbar, ped[i].thiscell[j].qhlrms,
+                  ped[i].thiscell[j].qhsbar, ped[i].thiscell[j].qhsrms,
+                  ped[i].thiscell[j].qlxbar, ped[i].thiscell[j].qlxrms,
+                  ped[i].thiscell[j].tacbar, ped[i].thiscell[j].tacrms);
+            }
           }
         }
 
       } // end if slotmask
     } // end loop over slots
 
-   
-   //    if (arg.q_select == 0){
-   //    pt_printsend("Qhl lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-  //    pt_printsend("Number of Qhl overflows = %d\n",chinj_err[slot_iter]);
-   //    }
-   //    else if (arg.q_select == 1){
-   //    pt_printsend("Qhs lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-   //    pt_printsend("Number of Qhs overflows = %d\n",chinj_err[slot_iter]);
-   //    }
-   //    else if (arg.q_select == 2){
-   //    pt_printsend("Qlx lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
-   //    pt_printsend("Number of Qlx overflows = %d\n",chinj_err[slot_iter]);
-   //    }
-     
+
+    //    if (arg.q_select == 0){
+    //    pt_printsend("Qhl lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+    //    pt_printsend("Number of Qhl overflows = %d\n",chinj_err[slot_iter]);
+    //    }
+    //    else if (arg.q_select == 1){
+    //    pt_printsend("Qhs lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+    //    pt_printsend("Number of Qhs overflows = %d\n",chinj_err[slot_iter]);
+    //    }
+    //    else if (arg.q_select == 2){
+    //    pt_printsend("Qlx lower, Upper bounds = %f %f\n",arg.chinj_lower,arg.chinj_upper);
+    //    pt_printsend("Number of Qlx overflows = %d\n",chinj_err[slot_iter]);
+    //    }
+
 
 
     //disable trigger enables
