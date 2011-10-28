@@ -373,7 +373,7 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   if (arg.tub_tests == 1){
     do {
-      sprintf(command_buffer,"get_ttot -c %d -s %04x -t 440 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+      sprintf(command_buffer,"get_ttot -c %d -s %04x -t 400 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
       result = get_ttot(command_buffer);
       if (result == -2 || result == -3){
         return;

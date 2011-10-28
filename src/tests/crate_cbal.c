@@ -302,7 +302,7 @@ void *pt_crate_cbal(void *args)
         do{
           // make sure we arent stuck forever
           if (iterations++ > max_iterations){
-            //pt_printsend("Too many interations, exiting with some channels unbalanced.\n");
+            pt_printsend("Too many interations, exiting with some channels unbalanced.\n");
             //pt_printsend("Making best guess for unbalanced channels\n");
             for (j=0;j<32;j++)
               if (wg == 0){
@@ -355,6 +355,7 @@ void *pt_crate_cbal(void *args)
                 }
                 active_chans &= ~(0x1<<j);
                 return_value += 100;
+                break;
               }
               // check if either high or low was balanced
               if (fabs(f2[j]) < acceptable_diff){

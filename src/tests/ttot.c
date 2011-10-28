@@ -137,7 +137,7 @@ void *pt_get_ttot(void *args)
           JsonNode *one_chan = json_mkobject();
           json_append_member(one_chan,"id",json_mknumber((double) i));
           json_append_member(one_chan,"time",json_mknumber((double) times[slot*32+i]));
-          json_append_member(one_chan,"errors",json_mkbool(tot_errors[slot][i]));
+          json_append_member(one_chan,"errors",json_mknumber(tot_errors[slot][i]));
           json_append_element(channels,one_chan);
         }
         json_append_member(newdoc,"channels",channels);
@@ -413,7 +413,7 @@ void *pt_set_ttot(void *args)
                   passflag = 0;
                 json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
                 json_append_member(one_chan,"time",json_mknumber((double) alltimes[slot*32+k*4+j]));
-                json_append_member(one_chan,"errors",json_mkbool(tot_errors[slot][j]));
+                json_append_member(one_chan,"errors",json_mknumber(tot_errors[slot][j]));
                 json_append_element(all_chans,one_chan);
               }
               json_append_member(one_chip,"channels",all_chans);

@@ -263,9 +263,9 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
               }
               for (i=0;i<commands.howmany;i++){
                 // check if it has the right packet number
-                if (commands.cmd[i].packet_num == packet_num){
+                if (commands.cmd[i].packet_num == (packet_num%65536)){
                   // if it does, make sure the individual rw acks are coming in order
-                  if (commands.cmd[i].cmd_num == current_num){
+                  if (commands.cmd[i].cmd_num == (current_num)){
                     // if they are, add to the buffer
                     *(buffer + current_num) = commands.cmd[i].data;
                     if (commands.cmd[i].flags != 0)
@@ -276,16 +276,17 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
                     return -1;
                   }
                 }else{
+                  pt_printsend("expecting packet number %d, got number %d\n",packet_num,commands.cmd[i].packet_num);
                   // we have results from a different packet, so buffer it
                   //  and let the next call to this function get it
-                  if (multifc_buffer_full[xl3num] == 0){
+                  //if (multifc_buffer_full[xl3num] == 0){
                     multifc_buffer_full[xl3num] = 1;
                     multifc_buffer[xl3num].cmd[multifc_buffer[xl3num].howmany] = commands.cmd[i];
                     multifc_buffer[xl3num].howmany++;
-                  }else{
-                    pt_printsend("wait_for_multifc_results: Result buffer already full, packets mixed up?\n");
-                    return -1;
-                  }
+                  //}else{
+                  //  pt_printsend("wait_for_multifc_results: Result buffer already full, packets mixed up?\n");
+                  //  return -1;
+                  //}
                 }
               } // end looping over all commands in this packet
               if (current_num == num_cmds){

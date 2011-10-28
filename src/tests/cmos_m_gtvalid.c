@@ -120,7 +120,7 @@ void *pt_cmos_m_gtvalid(void *args)
   uint16_t chan_max, chan_max_sec, chan_min;
   uint16_t ncrates;
   int done;
-  int slot_errors;
+  uint16_t slot_errors;
   int chan_errors[32];
 
   // setup crate
@@ -503,10 +503,8 @@ void *pt_cmos_m_gtvalid(void *args)
       pt_printsend(">>> Minimum TAC1 GTValid - Chan %d: %f\n",
           chan_min_set[1],gt_min_set[1]);
 
-      if (isetm_save[0] > 180 || isetm_save[0] < 160 ||
-          isetm_save[1] > 180 || isetm_save[1] < 160 ||
-          abs(isetm_save[1] - isetm_save[0]) > 10)
-        slot_errors = 1;
+      if (abs(isetm_save[1] - isetm_save[0]) > 10)
+        slot_errors |= 0x1;
       for (j=0;j<32;j++){
         if ((gtchan_set[0][j] < 0) || gtchan_set[1][j] < 0)
           chan_errors[j] = 1;
@@ -537,14 +535,15 @@ void *pt_cmos_m_gtvalid(void *args)
           json_append_member(one_chan,"tac_shift",json_mknumber((double) (tacbits_save[1][j]*16+tacbits_save[0][1])));
           json_append_member(one_chan,"gtvalid0",json_mknumber((double) (gtchan_set[0][j])));
           json_append_member(one_chan,"gtvalid1",json_mknumber((double) (gtchan_set[1][j])));
-          json_append_member(one_chan,"errors",json_mkbool(chan_errors[j]));//FIXME
+          json_append_member(one_chan,"errors",json_mkbool(chan_errors[j]));
           if (chan_errors[j])
-            slot_errors++;
+            slot_errors |= 0x2;
           json_append_element(channels,one_chan);
         }
         json_append_member(newdoc,"channels",channels);
 
         json_append_member(newdoc,"pass",json_mkbool(!(slot_errors)));
+        json_append_member(newdoc,"slot_errors",json_mknumber(slot_errors));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
         post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);

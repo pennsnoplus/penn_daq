@@ -1,5 +1,3 @@
-#include <pthread.h>
-#include <string.h>
 #include <stdlib.h>
 
 #include "packet_types.h"
@@ -23,7 +21,7 @@ int see_refl(char *buffer)
   see_refl_t *args;
   args = malloc(sizeof(see_refl_t));
 
-  args->dac_value = 0;
+  args->dac_value = 255;
   args->crate_num = 2;
   args->slot_mask = 0x0;
   args->pattern = 0xFFFFFFFF;
@@ -88,7 +86,7 @@ void *pt_see_refl(void *args)
   running_final_test = 1;
 
   char channel_results[32][100];
-  int i,j;
+  int i,j,k;
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
   FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
@@ -134,12 +132,17 @@ void *pt_see_refl(void *args)
           pt_printsend("Slot %d, channel %d. If good, hit enter. Otherwise type in a description of the problem (or just \"fail\") and hit enter.\n",i,j);
           read_from_tut(channel_results[j]);
 
+          for (k=0;k<strlen(channel_results[j]);k++)
+            if (channel_results[j][k] == '\n')
+              channel_results[j][k] = '\0';
+
           if (strncmp(channel_results[j],"quit",4) == 0){
             pt_printsend("Quitting.\n");
             running_final_test = 0;
             unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
             return;
           }
+
 
         } // end pattern mask
       } // end loop over channels
@@ -159,9 +162,11 @@ void *pt_see_refl(void *args)
         for (j=0;j<32;j++){
           JsonNode *one_chan = json_mkobject();
           json_append_member(one_chan,"id",json_mknumber(j));
-          json_append_member(one_chan,"error",json_mkstring(channel_results[j]));
-          if (strncmp(channel_results[j],"\n",1) != 0){
+          if (strlen(channel_results[j]) != 0){
             passflag = 0;
+            json_append_member(one_chan,"error",json_mkstring(channel_results[j]));
+          }else{
+            json_append_member(one_chan,"error",json_mkstring(""));
           }
           json_append_element(all_channels,one_chan);
         }
