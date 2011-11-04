@@ -303,9 +303,9 @@ void *pt_read_bundle(void *args)
     qhs = (double) UNPK_QHS(pmtword);
     qhl = (double) UNPK_QHL(pmtword);
     tac = (double) UNPK_TAC(pmtword);
-    pt_printsend("crate %08x, slot %08x, chan %08x, cell %d, gt8 %08x, gt16 %08x, cmos_es16 %08x,"
+    pt_printsend("crate %d, slot %d, chan %d, cell %d, gt8 %08x, gt16 %08x, cmos_es16 %08x,"
         " cgt_es16 %08x, cgt_es8 %08x, nc_cc %08x, qlx %6.1f, qhs %6.1f, qhl %6.1f, tac %6.1f\n",
-        crate,slot,chan,cell,gt8,
+        (int)crate,(int)slot,(int)chan,cell,gt8,
         gt16,cmos_es16,cgt_es16,cgt_es8,nc_cc,qlx,qhs,qhl,tac);
   }
   unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);

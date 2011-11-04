@@ -359,6 +359,11 @@ void *pt_chinj_scan(void *args)
                 ped[i].thiscell[j].qhsrms = sqrt(ped[i].thiscell[j].qhsrms);
                 ped[i].thiscell[j].qhlrms = sqrt(ped[i].thiscell[j].qhlrms);
                 ped[i].thiscell[j].tacrms = sqrt(ped[i].thiscell[j].tacrms);
+              }else{
+                ped[i].thiscell[j].qlxrms = 0;
+                ped[i].thiscell[j].qhsrms = 0;
+                ped[i].thiscell[j].qhlrms = 0;
+                ped[i].thiscell[j].tacrms = 0;
               }
             }
           }
