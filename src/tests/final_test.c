@@ -279,7 +279,7 @@ void *pt_final_test(void *args)
 
   pt_printsend("-------------------------------------------\n");
   do {
-    sprintf(command_buffer,"ped_run -c %d -s %04x -l 400 -u 800 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+    sprintf(command_buffer,"ped_run -c %d -s %04x -l 300 -u 1000 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
     result = ped_run(command_buffer);
     if (result == -2 || result == -3){
       return;
@@ -373,7 +373,7 @@ void *pt_final_test(void *args)
   pt_printsend("-------------------------------------------\n");
   if (arg.tub_tests == 1){
     do {
-      sprintf(command_buffer,"get_ttot -c %d -s %04x -t 400 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+      sprintf(command_buffer,"get_ttot -c %d -s %04x -t 390 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
       result = get_ttot(command_buffer);
       if (result == -2 || result == -3){
         return;

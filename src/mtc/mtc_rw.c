@@ -137,6 +137,7 @@ int mtc_reg_write(uint32_t address, uint32_t data)
   SBC_VmeWriteBlockStruct *writestruct;
   writestruct = (SBC_VmeWriteBlockStruct *) packet->payload;
   writestruct->address = address + MTCRegAddressBase;
+  //writestruct->address = address;
   writestruct->addressModifier = MTCRegAddressMod;
   writestruct->addressSpace = MTCRegAddressSpace;
   writestruct->unitSize = 4;
