@@ -37,6 +37,7 @@ int macro_cur_cmd;
 
 int reading_from_tut;
 int running_final_test;
+int running_ecal;
 pthread_mutex_t final_test_cmd_lock; 
 pthread_cond_t final_test_cmd_cv;
 char final_test_cmd[1000];

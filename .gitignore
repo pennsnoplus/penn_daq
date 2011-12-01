@@ -5,3 +5,5 @@ logs/*
 *.log
 ssh_key*
 data/config.cfg
+trig_scan*.txt
+*.png
