@@ -42,6 +42,7 @@
 #include "final_test.h"
 #include "trigger_scan.h"
 #include "see_refl.h"
+#include "ecal.h"
 #include "process_packet.h"
 
 int read_xl3_packet(int fd)
@@ -119,7 +120,7 @@ int read_control_command(int fd)
   }
   int error = 0;
   // if running a final test, pass the command there
-  if (running_final_test){
+  if (running_final_test || running_ecal){
     pthread_mutex_lock(&final_test_cmd_lock);
     sprintf(final_test_cmd+strlen(final_test_cmd),"%s",buffer);
     pthread_cond_signal(&final_test_cmd_cv);
@@ -325,6 +326,8 @@ int process_control_command(char *buffer)
     result = chinj_scan(buffer);
   }else if (strncmp(buffer,"final_test",10)==0){
     result = final_test(buffer);
+  }else if (strncmp(buffer,"ecal",4)==0){
+    result = ecal(buffer);
   }
   //_!_end_commands_!_
   else{

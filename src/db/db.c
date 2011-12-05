@@ -406,4 +406,55 @@ int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_f
   return ret;
 };
 
+int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id)
+{
+  JsonNode *doc = json_mkobject();
+  time_t the_time;
+  the_time = time(0); //
+  char datetime[100];
+  sprintf(datetime,"%s",(char *) ctime(&the_time));
+  datetime[strlen(datetime)-1] = '\0';
+
+  char masks[8];
+
+  JsonNode *crates = json_mkarray();
+  int i;
+  for (i=0;i<19;i++){
+    JsonNode *one_crate = json_mkobject();
+    if ((0x1<<i) & crate_mask){
+      sprintf(masks,"%04x",slot_mask[i]);
+    }else{
+      sprintf(masks,"0000");
+    }
+    json_append_member(one_crate,"slot_mask",json_mkstring(masks));
+    json_append_member(one_crate,"crate_id",json_mknumber(i));
+    json_append_element(crates,one_crate);
+  }
+  json_append_member(doc,"crate_slot_masks",crates);
+  json_append_member(doc,"logfile_name",json_mkstring(logfile));
+  json_append_member(doc,"type",json_mkstring("ecal"));
+  json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
+  json_append_member(doc,"created",json_mkstring(datetime));
+
+  char put_db_address[500];
+  sprintf(put_db_address,"%s/%s/%s",DB_SERVER,DB_BASE_NAME,id);
+  pouch_request *post_response = pr_init();
+  pr_set_method(post_response, PUT);
+  pr_set_url(post_response, put_db_address);
+  char *data = json_encode(doc);
+  pr_set_data(post_response, data);
+  pr_do(post_response);
+  int ret = 0;
+  if (post_response->httpresponse != 201){
+    pt_printsend("error code %d\n",(int)post_response->httpresponse);
+    ret = -1;
+  }
+  pr_free(post_response);
+  json_delete(doc);
+  if(*data){
+    free(data);
+  }
+  return 0;
+};
+
 

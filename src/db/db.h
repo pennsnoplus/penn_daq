@@ -24,6 +24,7 @@ int parse_mtc(JsonNode* value,mtc_t* mtc);
 int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset);
 int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc, fd_set *thread_fdset);
 int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_fdset);
+int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id);
 
 #endif
 
