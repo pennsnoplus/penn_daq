@@ -95,7 +95,7 @@ void *pt_final_test(void *args)
   pt_printsend("------------------------------------------\n");
 
   do {
-    sprintf(command_buffer,"crate_init -c %d -s %04x -x",arg.crate_num,arg.slot_mask);
+    sprintf(command_buffer,"crate_init -c %d -s %04x -x -v",arg.crate_num,arg.slot_mask);
     result = crate_init(command_buffer);
     if (result == -2 || result == -3){
       return;
@@ -310,7 +310,7 @@ void *pt_final_test(void *args)
 
   pt_printsend("-------------------------------------------\n");
   do {
-    sprintf(command_buffer,"crate_init -c %d -s %04x -b",arg.crate_num,arg.slot_mask);
+    sprintf(command_buffer,"crate_init -c %d -s %04x -B",arg.crate_num,arg.slot_mask);
     result = crate_init(command_buffer);
     if (result == -2 || result == -3){
       return;
@@ -361,7 +361,7 @@ void *pt_final_test(void *args)
 
   pt_printsend("-------------------------------------------\n");
   do {
-    sprintf(command_buffer,"crate_init -c %d -s %04x -t",arg.crate_num,arg.slot_mask);
+    sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",arg.crate_num,arg.slot_mask);
     result = crate_init(command_buffer);
     if (result == -2 || result == -3){
       return;

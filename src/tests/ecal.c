@@ -314,7 +314,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
@@ -364,7 +364,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
@@ -396,7 +396,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b -t",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
@@ -434,7 +434,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b -t",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
@@ -478,7 +478,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b -t",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
@@ -522,7 +522,7 @@ void *pt_ecal(void *args)
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       do {
-        sprintf(command_buffer,"crate_init -c %d -s %04x -b -t",i,arg.slot_mask[i]);
+        sprintf(command_buffer,"crate_init -c %d -s %04x -B -D -C",i,arg.slot_mask[i]);
         result = crate_init(command_buffer);
         if (result == -2 || result == -3){
           return;
