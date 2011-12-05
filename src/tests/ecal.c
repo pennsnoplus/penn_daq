@@ -200,8 +200,6 @@ void *pt_ecal(void *args)
   // post ecal doc
   post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id);
 
-  return;
-
 
   // ok we are set up, time to start
 
@@ -575,7 +573,7 @@ void *pt_ecal(void *args)
   pt_printsend("ECAL finished.\n");
 
   if (arg.update_hwdb){
-    pt_printsend("Now update FEC database with test results\n");
+    pt_printsend("Now updating FEC database with test results\n");
   }
 
   pt_printsend("-------------------------------------------\n");
