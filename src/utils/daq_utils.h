@@ -16,6 +16,7 @@ int temp_unlock(uint32_t crate_mask);
 int relock(uint32_t crate_mask);
 int set_location(char *buffer); //!< Changes the global location variable, which is used when posting to debug database
 int start_logging(); //!< Starts printing anything that would go to viewer terminal to a file
+int start_logging_to_file(char * filename);
 int stop_logging(); //!< Stops printing to log file
 int cleanup_threads(); //!< Any thread in the pool that has flagged that its done is deleted and the pool slot is cleared
 int kill_all_threads();

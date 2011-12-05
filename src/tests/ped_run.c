@@ -39,6 +39,7 @@ int ped_run(char *buffer)
   args->balanced = 0;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -73,6 +74,11 @@ int ped_run(char *buffer)
           args->ped_width = atoi(words2);
       }else if (words[1] == 'b'){args->balanced = 1;
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -415,9 +421,10 @@ void *pt_ped_run(void *args)
         json_append_member(newdoc,"pass",json_mkbool(pass_flag));
         json_append_member(newdoc,"balanced",json_mkbool(arg.balanced));
 
-        if (arg.final_test){
+        if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
-        }
+        if (arg.ecal)
+          json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
         post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
         json_delete(newdoc); // only need to delete the head node
       }

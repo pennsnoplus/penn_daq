@@ -22,6 +22,7 @@ int fec_test(char *buffer)
   args->slot_mask = 0x80;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -34,6 +35,11 @@ int fec_test(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL)
           args->slot_mask = strtoul(words2,(char**)NULL,16);
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -156,6 +162,8 @@ void *pt_fec_test(void *args)
               && (packet_results->cmos_test_reg_errors[slot] == 0x0)));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+        if (arg.ecal)
+          json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
         post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
         json_delete(newdoc); // Only have to delete the head node
       }

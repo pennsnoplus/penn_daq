@@ -7,8 +7,8 @@
 
 typedef struct{
   int thread_num;
-  int crate_num;
-  uint16_t slot_mask;
+  int crate_mask;
+  uint16_t slot_mask[16];
   int tub_tests;
   int skip;
 } ecal_t;

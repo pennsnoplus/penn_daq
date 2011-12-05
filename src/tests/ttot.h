@@ -13,6 +13,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } get_ttot_t;
 
 int get_ttot(char *buffer);
@@ -26,6 +28,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } set_ttot_t;
 
 int set_ttot(char *buffer);

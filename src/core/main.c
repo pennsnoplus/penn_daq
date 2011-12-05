@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
   reading_from_tut = 0;
   running_final_test = 0;
   running_ecal = 0;
+  printout_enabled = 1;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;

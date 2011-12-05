@@ -37,6 +37,7 @@ int get_ttot(char *buffer)
   args->target_time = 400;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -52,6 +53,11 @@ int get_ttot(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL)
           args->target_time = atoi(words2);
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -145,6 +151,8 @@ void *pt_get_ttot(void *args)
         json_append_member(newdoc,"pass",json_mkbool(passflag));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+        if (arg.ecal)
+          json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
         post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
         json_delete(newdoc); // delete the head ndoe
       }
@@ -164,6 +172,7 @@ int set_ttot(char *buffer)
   args->target_time = 400;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -179,6 +188,11 @@ int set_ttot(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL)
           args->target_time = atoi(words2);
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -425,6 +439,8 @@ void *pt_set_ttot(void *args)
             json_append_member(newdoc,"pass",json_mkbool(passflag));
             if (arg.final_test)
               json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+            if (arg.ecal)
+              json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
             post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
             json_delete(newdoc); // head node needs deleting
           }
