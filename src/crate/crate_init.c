@@ -99,7 +99,7 @@ void *pt_crate_init(void *args)
   JsonNode* debug_doc = NULL;
 
   if (arg.use_hw == 1){
-    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,15]",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,arg.crate_num,arg.crate_num);
+    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,15]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,arg.crate_num,arg.crate_num);
     pr_set_method(hw_response, GET);
     pr_set_url(hw_response, get_db_address);
     pr_do(hw_response);
@@ -184,9 +184,9 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_crate_cbal?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
             DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *cbal_response = pr_init();
@@ -225,9 +225,9 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_zdisc?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *zdisc_response = pr_init();
         pr_set_method(zdisc_response, GET);
@@ -262,9 +262,9 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_ttot?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
             DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *ttot_response = pr_init();
@@ -302,9 +302,9 @@ void *pt_crate_init(void *args)
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_cmos?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
             DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *cmos_response = pr_init();
@@ -392,7 +392,7 @@ void *pt_crate_init(void *args)
   for (i=0;i<16;i++){
     crate_config[arg.crate_num][i] = packet_results->hware_vals[i];
     SwapShortBlock(&(crate_config[arg.crate_num][i].mb_id),1);
-    SwapShortBlock(&(crate_config[arg.crate_num][i].dc_id),4);
+    SwapShortBlock(&(crate_config[arg.crate_num][i].db_id),4);
   }
 
   

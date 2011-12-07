@@ -17,9 +17,10 @@ int get_new_id(char* newid);
 
 int parse_fec_hw(JsonNode* value,mb_t* mb);
 int parse_fec_debug(JsonNode* value,mb_t* mb);
-int parse_test(JsonNode* test,mb_t* mb,int cbal,int zdisc,int all);
 int swap_fec_db(mb_t* mb);
 int parse_mtc(JsonNode* value,mtc_t* mtc);
+
+int create_fec_db_doc(int crate, int card, JsonNode* doc,fd_set *thread_fdset);
 
 int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset);
 int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc, fd_set *thread_fdset);

@@ -363,6 +363,18 @@ int read_configuration_file()
           strcpy(DB_BASE_NAME,var_value);
         }else if (strcmp(var_name,"DB_VIEWDOC")==0){
           strcpy(DB_VIEWDOC,var_value);
+        }else if (strcmp(var_name,"FECDB_ADDRESS")==0){
+          strcpy(FECDB_ADDRESS,var_value);
+        }else if (strcmp(var_name,"FECDB_PORT")==0){
+          strcpy(FECDB_PORT,var_value);
+        }else if (strcmp(var_name,"FECDB_USERNAME")==0){
+          strcpy(FECDB_USERNAME,var_value);
+        }else if (strcmp(var_name,"FECDB_PASSWORD")==0){
+          strcpy(FECDB_PASSWORD,var_value);
+        }else if (strcmp(var_name,"FECDB_BASE_NAME")==0){
+          strcpy(FECDB_BASE_NAME,var_value);
+        }else if (strcmp(var_name,"FECDB_VIEWDOC")==0){
+          strcpy(FECDB_VIEWDOC,var_value);
         }else if (strcmp(var_name,"MAX_PENDING_CONS")==0){
           MAX_PENDING_CONS = atoi(var_value);
         }else if (strcmp(var_name,"XL3_PORT")==0){

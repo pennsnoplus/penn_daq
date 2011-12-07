@@ -24,6 +24,7 @@ pthread_t *thread_pool[MAX_THREADS]; //!< Pool of threads to make new tests in
 int thread_done[MAX_THREADS+1]; //!< Flags that a thread has finished and can be cleared
 
 char DB_SERVER[100]; //<! holds the full database path
+char FECDB_SERVER[100]; //<! holds the full database path
 
 hware_vals_t crate_config[19][16]; //!< contains the most up to date crate configuration
 
@@ -58,6 +59,12 @@ char DB_USERNAME[100];
 char DB_PASSWORD[100];
 char DB_BASE_NAME[100];
 char DB_VIEWDOC[100];
+char FECDB_ADDRESS[100];
+char FECDB_PORT[100];
+char FECDB_USERNAME[100];
+char FECDB_PASSWORD[100];
+char FECDB_BASE_NAME[100];
+char FECDB_VIEWDOC[100];
 int MAX_PENDING_CONS;
 int XL3_PORT;
 int SBC_PORT;

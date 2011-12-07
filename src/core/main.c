@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
     return -1;
   }
     sprintf(DB_SERVER,"http://%s:%s@%s:%s",DB_USERNAME,DB_PASSWORD,DB_ADDRESS,DB_PORT);
+    sprintf(FECDB_SERVER,"http://%s:%s@%s:%s",FECDB_USERNAME,FECDB_PASSWORD,FECDB_ADDRESS,FECDB_PORT);
 
   // get command line options
   int c;

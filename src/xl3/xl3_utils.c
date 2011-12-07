@@ -34,7 +34,7 @@ int update_crate_config(int crate, uint16_t slot_mask, fd_set *thread_fdset)
     if ((0x1<<i) & slot_mask){
       crate_config[crate][i] = packet_results->hware_vals[i];
       SwapShortBlock(&(crate_config[crate][i].mb_id),1);
-      SwapShortBlock((crate_config[crate][i].dc_id),4);
+      SwapShortBlock((crate_config[crate][i].db_id),4);
     }
   }
   deselect_fecs(crate,thread_fdset);

@@ -81,7 +81,7 @@ void *pt_mem_test(void *args)
   FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
 
   pt_printsend("Getting crate configuration\n");
-  update_crate_config(arg.crate_num,arg.slot_num,&thread_fdset);
+  update_crate_config(arg.crate_num,(0x1<<arg.slot_num),&thread_fdset);
 
   pt_printsend("Starting mem_test\n");
 
