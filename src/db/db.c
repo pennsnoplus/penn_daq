@@ -206,7 +206,8 @@ int swap_fec_db(mb_t* mb)
     return 0;
 }
 
-int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset){
+int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
+{
   int i,j;
   doc = json_mkobject();
 
@@ -231,6 +232,8 @@ int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset){
   json_append_member(doc,"board_id",json_mkstring(mb_id));
   
   JsonNode *hw = json_mkobject();
+  json_append_member(hw,"vint",json_mknumber(205)); //FIXME
+  json_append_member(hw,"hvref",json_mknumber(0)); //FIXME
   JsonNode *id = json_mkobject();
   json_append_member(id,"db0",json_mkstring(db_id[0]));
   json_append_member(id,"db1",json_mkstring(db_id[1]));
@@ -257,125 +260,210 @@ int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset){
   return 0;
 }
 
+
+int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
+{
+  int i,j;
+  char type[50];
+  JsonNode *hw = json_find_member(fec_doc,"hw");
+  JsonNode *test = json_find_member(fec_doc,"test");
+  sprintf(type,"%s",json_get_string(json_find_member(test_doc,"type")));
+  JsonNode *test_entry = json_mkobject();
+  json_append_member(test_entry,"test_id",json_find_member(test_doc,"_id"));
+  json_append_member(test,type,test_entry);
+
+  if (strcmp(type,"crate_cbal") == 0){
+    JsonNode *vbal = json_mkarray();
+    JsonNode *high = json_mkarray();
+    JsonNode *low = json_mkarray();
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    for (i=0;i<32;i++){
+      JsonNode *one_chan = json_find_element(channels,i);
+      json_append_element(high,json_find_member(one_chan,"vbal_high"));
+      json_append_element(low,json_find_member(one_chan,"vbal_low"));
+    }
+    json_append_element(vbal,high);
+    json_append_element(vbal,low);
+    json_append_member(hw,"vbal",vbal);
+  }else if (strcmp(type,"noise_test") == 0){ //FIXME
+  }else if (strcmp(type,"zdisc") == 0){
+    json_append_member(hw,"vthr_zero",json_find_member(test_doc,"zero_dac"));
+  }else if (strcmp(type,"set_ttot") == 0){
+   JsonNode *tdisc = json_mkobject();
+   JsonNode *rmp = json_mkarray();
+   JsonNode *rmpup = json_mkarray();
+   JsonNode *vsi = json_mkarray();
+   JsonNode *vli = json_mkarray();
+   JsonNode *chips = json_find_member(test_doc,"chips");
+   for (i=0;i<8;i++){
+     JsonNode *one_chip = json_find_element(chips,i);
+     json_append_element(rmp,json_find_member(one_chip,"rmp"));
+     json_append_element(vsi,json_find_member(one_chip,"vsi"));
+     json_append_element(rmpup,json_mknumber(115)); //FIXME`
+     json_append_element(vli,json_mknumber(120)); //FIXME`
+   }
+   json_append_member(tdisc,"rmp",rmp);
+   json_append_member(tdisc,"rmpup",rmpup);
+   json_append_member(tdisc,"vsi",vsi);
+   json_append_member(tdisc,"vli",vli);
+   json_append_member(hw,"tdisc",tdisc);
+  }else if (strcmp(type,"cmos_m_gtvalid") == 0){
+    JsonNode *tcmos = json_mkobject();
+    json_append_member(tcmos,"vmax",json_find_member(test_doc,"vmax"));
+    json_append_member(tcmos,"vtacref",json_find_member(test_doc,"tacref"));
+    json_append_member(tcmos,"isetm",json_find_member(test_doc,"isetm"));
+    json_append_member(tcmos,"iseta",json_find_member(test_doc,"iseta"));
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    JsonNode *tac_trim = json_mkarray();
+    for (i=0;i<32;i++){
+      JsonNode *one_chan = json_find_element(channels,i);
+      json_append_element(tac_trim,json_find_member(one_chan,"tac_shift"));
+    }
+    json_append_member(tcmos,"tac_trim",tac_trim);
+  }
+  return 0;
+}
+
+int post_fec_db_doc(int crate, int slot, JsonNode *doc){
+  char put_db_address[500];
+  sprintf(put_db_address,"%s/%s",FECDB_SERVER,FECDB_BASE_NAME);
+  pouch_request *post_response = pr_init();
+  pr_set_method(post_response, POST);
+  pr_set_url(post_response, put_db_address);
+  char *data = json_encode(doc);
+  pr_set_data(post_response, data);
+  pr_do(post_response);
+  int ret = 0;
+  if (post_response->httpresponse != 201){
+    pt_printsend("error code %d\n",(int)post_response->httpresponse);
+    ret = -1;
+  }
+  pr_free(post_response);
+  if(*data){
+    free(data);
+  }
+  return ret;
+}
+
 int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
 {
-    char mb_id[8],db_id[4][8];
-    char put_db_address[500];
-    update_crate_config(crate,0x1<<card,thread_fdset);
-    time_t the_time;
-    the_time = time(0); //
-    char datetime[100];
-    sprintf(datetime,"%s",(char *) ctime(&the_time));
-    datetime[strlen(datetime)-1] = '\0';
+  char mb_id[8],db_id[4][8];
+  char put_db_address[500];
+  update_crate_config(crate,0x1<<card,thread_fdset);
+  time_t the_time;
+  the_time = time(0); //
+  char datetime[100];
+  sprintf(datetime,"%s",(char *) ctime(&the_time));
+  datetime[strlen(datetime)-1] = '\0';
 
-    sprintf(mb_id,"%04x",crate_config[crate][card].mb_id);
-    sprintf(db_id[0],"%04x",crate_config[crate][card].db_id[0]);
-    sprintf(db_id[1],"%04x",crate_config[crate][card].db_id[1]);
-    sprintf(db_id[2],"%04x",crate_config[crate][card].db_id[2]);
-    sprintf(db_id[3],"%04x",crate_config[crate][card].db_id[3]);
-    
-    JsonNode *config = json_mkobject();
-    JsonNode *db = json_mkarray();
-    int i;
-    for (i=0;i<4;i++){
-      JsonNode *db1 = json_mkobject();
-      json_append_member(db1,"db_id",json_mkstring(db_id[i]));
-      json_append_member(db1,"slot",json_mknumber((double)i));
-      json_append_element(db,db1);
-    }
-    json_append_member(config,"db",db);
-    json_append_member(config,"fec_id",json_mkstring(mb_id));
-    json_append_member(config,"crate_id",json_mknumber((double)crate));
-    json_append_member(config,"slot",json_mknumber((double)card));
-    if (CURRENT_LOCATION == PENN_TESTSTAND)
-      json_append_member(config,"loc",json_mkstring("penn"));
-    if (CURRENT_LOCATION == ABOVE_GROUND_TESTSTAND)
-      json_append_member(config,"loc",json_mkstring("surface"));
-    if (CURRENT_LOCATION == UNDERGROUND)
-      json_append_member(config,"loc",json_mkstring("underground"));
-    json_append_member(doc,"config",config);
+  sprintf(mb_id,"%04x",crate_config[crate][card].mb_id);
+  sprintf(db_id[0],"%04x",crate_config[crate][card].db_id[0]);
+  sprintf(db_id[1],"%04x",crate_config[crate][card].db_id[1]);
+  sprintf(db_id[2],"%04x",crate_config[crate][card].db_id[2]);
+  sprintf(db_id[3],"%04x",crate_config[crate][card].db_id[3]);
 
-    json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
-    json_append_member(doc,"created",json_mkstring(datetime));
+  JsonNode *config = json_mkobject();
+  JsonNode *db = json_mkarray();
+  int i;
+  for (i=0;i<4;i++){
+    JsonNode *db1 = json_mkobject();
+    json_append_member(db1,"db_id",json_mkstring(db_id[i]));
+    json_append_member(db1,"slot",json_mknumber((double)i));
+    json_append_element(db,db1);
+  }
+  json_append_member(config,"db",db);
+  json_append_member(config,"fec_id",json_mkstring(mb_id));
+  json_append_member(config,"crate_id",json_mknumber((double)crate));
+  json_append_member(config,"slot",json_mknumber((double)card));
+  if (CURRENT_LOCATION == PENN_TESTSTAND)
+    json_append_member(config,"loc",json_mkstring("penn"));
+  if (CURRENT_LOCATION == ABOVE_GROUND_TESTSTAND)
+    json_append_member(config,"loc",json_mkstring("surface"));
+  if (CURRENT_LOCATION == UNDERGROUND)
+    json_append_member(config,"loc",json_mkstring("underground"));
+  json_append_member(doc,"config",config);
 
-    // TODO: this might be leaking a lot...
-    sprintf(put_db_address,"%s/%s",DB_SERVER,DB_BASE_NAME);
-    pouch_request *post_response = pr_init();
-    pr_set_method(post_response, POST);
-    pr_set_url(post_response, put_db_address);
-    char *data = json_encode(doc);
-    pr_set_data(post_response, data);
-    pr_do(post_response);
-    int ret = 0;
-    if (post_response->httpresponse != 201){
-       pt_printsend("error code %d\n",(int)post_response->httpresponse);
-        ret = -1;
-    }
-    pr_free(post_response);
-    if(*data){
-        free(data);
-    }
-    return ret;
+  json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
+  json_append_member(doc,"created",json_mkstring(datetime));
+
+  // TODO: this might be leaking a lot...
+  sprintf(put_db_address,"%s/%s",DB_SERVER,DB_BASE_NAME);
+  pouch_request *post_response = pr_init();
+  pr_set_method(post_response, POST);
+  pr_set_url(post_response, put_db_address);
+  char *data = json_encode(doc);
+  pr_set_data(post_response, data);
+  pr_do(post_response);
+  int ret = 0;
+  if (post_response->httpresponse != 201){
+    pt_printsend("error code %d\n",(int)post_response->httpresponse);
+    ret = -1;
+  }
+  pr_free(post_response);
+  if(*data){
+    free(data);
+  }
+  return ret;
 };
 
 int post_debug_doc_with_id(int crate, int card, char *id, JsonNode* doc, fd_set *thread_fdset)
 {
-    char mb_id[8],db_id[4][8];
-    char put_db_address[500];
-    update_crate_config(crate,0x1<<card,thread_fdset);
-    time_t the_time;
-    the_time = time(0); //
-    char datetime[100];
-    sprintf(datetime,"%s",(char *) ctime(&the_time));
-    datetime[strlen(datetime)-1] = '\0';
+  char mb_id[8],db_id[4][8];
+  char put_db_address[500];
+  update_crate_config(crate,0x1<<card,thread_fdset);
+  time_t the_time;
+  the_time = time(0); //
+  char datetime[100];
+  sprintf(datetime,"%s",(char *) ctime(&the_time));
+  datetime[strlen(datetime)-1] = '\0';
 
-    sprintf(mb_id,"%04x",crate_config[crate][card].mb_id);
-    sprintf(db_id[0],"%04x",crate_config[crate][card].db_id[0]);
-    sprintf(db_id[1],"%04x",crate_config[crate][card].db_id[1]);
-    sprintf(db_id[2],"%04x",crate_config[crate][card].db_id[2]);
-    sprintf(db_id[3],"%04x",crate_config[crate][card].db_id[3]);
+  sprintf(mb_id,"%04x",crate_config[crate][card].mb_id);
+  sprintf(db_id[0],"%04x",crate_config[crate][card].db_id[0]);
+  sprintf(db_id[1],"%04x",crate_config[crate][card].db_id[1]);
+  sprintf(db_id[2],"%04x",crate_config[crate][card].db_id[2]);
+  sprintf(db_id[3],"%04x",crate_config[crate][card].db_id[3]);
 
-    JsonNode *config = json_mkobject();
-    JsonNode *db = json_mkarray();
-    int i;
-    for (i=0;i<4;i++){
-      JsonNode *db1 = json_mkobject();
-      json_append_member(db1,"db_id",json_mkstring(db_id[i]));
-      json_append_member(db1,"slot",json_mknumber((double)i));
-      json_append_element(db,db1);
-    }
-    json_append_member(config,"db",db);
-    json_append_member(config,"fec_id",json_mkstring(mb_id));
-    json_append_member(config,"crate_id",json_mknumber((double)crate));
-    json_append_member(config,"slot",json_mknumber((double)card));
-    if (CURRENT_LOCATION == PENN_TESTSTAND)
-      json_append_member(config,"loc",json_mkstring("penn"));
-    if (CURRENT_LOCATION == ABOVE_GROUND_TESTSTAND)
-      json_append_member(config,"loc",json_mkstring("surface"));
-    if (CURRENT_LOCATION == UNDERGROUND)
-      json_append_member(config,"loc",json_mkstring("underground"));
-    json_append_member(doc,"config",config);
+  JsonNode *config = json_mkobject();
+  JsonNode *db = json_mkarray();
+  int i;
+  for (i=0;i<4;i++){
+    JsonNode *db1 = json_mkobject();
+    json_append_member(db1,"db_id",json_mkstring(db_id[i]));
+    json_append_member(db1,"slot",json_mknumber((double)i));
+    json_append_element(db,db1);
+  }
+  json_append_member(config,"db",db);
+  json_append_member(config,"fec_id",json_mkstring(mb_id));
+  json_append_member(config,"crate_id",json_mknumber((double)crate));
+  json_append_member(config,"slot",json_mknumber((double)card));
+  if (CURRENT_LOCATION == PENN_TESTSTAND)
+    json_append_member(config,"loc",json_mkstring("penn"));
+  if (CURRENT_LOCATION == ABOVE_GROUND_TESTSTAND)
+    json_append_member(config,"loc",json_mkstring("surface"));
+  if (CURRENT_LOCATION == UNDERGROUND)
+    json_append_member(config,"loc",json_mkstring("underground"));
+  json_append_member(doc,"config",config);
 
-    json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
-    json_append_member(doc,"created",json_mkstring(datetime));
+  json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
+  json_append_member(doc,"created",json_mkstring(datetime));
 
-    sprintf(put_db_address,"%s/%s/%s",DB_SERVER,DB_BASE_NAME,id);
-    pouch_request *post_response = pr_init();
-    pr_set_method(post_response, PUT);
-    pr_set_url(post_response, put_db_address);
-    char *data = json_encode(doc);
-    pr_set_data(post_response, data);
-    pr_do(post_response);
-    int ret = 0;
-    if (post_response->httpresponse != 201){
-      pt_printsend("error code %d\n",(int)post_response->httpresponse);
-      ret = -1;
-    }
-    pr_free(post_response);
-    if(*data){
-      free(data);
-    }
-    return 0;
+  sprintf(put_db_address,"%s/%s/%s",DB_SERVER,DB_BASE_NAME,id);
+  pouch_request *post_response = pr_init();
+  pr_set_method(post_response, PUT);
+  pr_set_url(post_response, put_db_address);
+  char *data = json_encode(doc);
+  pr_set_data(post_response, data);
+  pr_do(post_response);
+  int ret = 0;
+  if (post_response->httpresponse != 201){
+    pt_printsend("error code %d\n",(int)post_response->httpresponse);
+    ret = -1;
+  }
+  pr_free(post_response);
+  if(*data){
+    free(data);
+  }
+  return 0;
 };
 
 int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
@@ -490,12 +578,4 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
   return 0;
 };
 
-int parse_test(JsonNode *test){
-  json_delete(json_find_member(test,"_id"));
-  json_delete(json_find_member(test,"_rev"));
-  json_delete(json_find_member(test,"type"));
-  json_delete(json_find_member(test,"timestamp"));
-  json_delete(json_find_member(test,"created"));
-  json_delete(json_find_member(test,"config"));
-  return 0;
-}
+

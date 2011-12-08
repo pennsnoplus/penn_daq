@@ -649,9 +649,10 @@ void *pt_ecal(void *args)
               JsonNode *ecalone_row = json_find_element(ecal_rows,j);
               JsonNode *test_doc = json_find_member(ecalone_row,"value");
               printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
-
+              add_ecal_test_results(doc,test_doc);
             }
 
+            post_fec_db_doc(i,j,doc);
 
             json_delete(doc); // only delete the head node
             json_delete(ecalfull_doc);
