@@ -532,7 +532,7 @@ int start_logging_to_file(char * filename){
   if (ps_log_file == NULL){
     printsend("Problem enabling logging: Could not open log file!\n");
     write_log = 0;
-    sprintf(filename,"\0");
+    sprintf(filename,"x");
   }else{
     printsend( "Enabled logging\n");
     printsend( "Opened log file: %s\n", log_name);

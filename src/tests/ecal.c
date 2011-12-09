@@ -20,10 +20,12 @@ int ecal(char *buffer)
   ecal_t *args;
   args = malloc(sizeof(ecal_t));
 
-  args->crate_mask = 2;
+  args->crate_mask = 0x4;
   int i;
   for (i=0;i<19;i++)
     args->slot_mask[i] = 0xFFFF;
+  args->update_hwdb = 0;
+  args->old_ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -141,12 +143,7 @@ void *pt_ecal(void *args)
 
   char ecal_id[250];
   // now we can unlock our things, since nothing else should use them
-  sbc_lock = 0;
-  for (i=0;i<19;i++){
-    if ((0x1<<i) & arg.crate_mask)
-      xl3_lock[i] = 0;
-  }
-
+  
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
   for (i=0;i<19;i++){
@@ -154,11 +151,22 @@ void *pt_ecal(void *args)
       FD_SET(rw_xl3_fd[i],&thread_fdset);
   }
 
+    system("clear");
+    pt_printsend("------------------------------------------\n");
+    pt_printsend("Welcome to ECAL+!\n");
+    pt_printsend("------------------------------------------\n");
+
 
 
   if (!arg.old_ecal){
     // once this is set we can no longer send other commands
     running_ecal = 1;
+    sbc_lock = 0;
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 0;
+    }
+
 
 
     get_new_id(ecal_id);
@@ -168,10 +176,6 @@ void *pt_ecal(void *args)
     char command_buffer[100];
     memset(command_buffer,'\0',100);
 
-    system("clear");
-    pt_printsend("------------------------------------------\n");
-    pt_printsend("Welcome to ECAL+!\n");
-    pt_printsend("------------------------------------------\n");
     pt_printsend("ECAL id: %s\n\n",ecal_id);
     pt_printsend("\nYou have selected the following slots:\n\n");
     for (i=0;i<19;i++){
@@ -434,7 +438,7 @@ void *pt_ecal(void *args)
       if ((0x1<<i) & arg.crate_mask){
         do {
           sprintf(command_buffer,"get_ttot -c %d -s %04x -t 400 -d -E %s",i,arg.slot_mask[i],ecal_id);
-          result = set_ttot(command_buffer);
+          result = get_ttot(command_buffer);
           if (result == -2 || result == -3){
             return;
           }
@@ -577,6 +581,13 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
     pt_printsend("ECAL finished.\n");
 
+    sbc_lock = 1;
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 1;
+    }
+
+
 
   }else{
     sprintf(ecal_id,"%s",arg.ecal_id);
@@ -593,6 +604,7 @@ void *pt_ecal(void *args)
       if ((0x1<<i) & arg.crate_mask){
         for (j=0;j<16;j++){
           if ((0x1<<j) & arg.slot_mask[i]){
+            printf("crate %d slot %d\n",i,j);
             /*
                sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
                pouch_request *hw_response = pr_init();
@@ -625,8 +637,7 @@ void *pt_ecal(void *args)
 
             // lets generate the ecal document
             JsonNode *doc;
-            create_fec_db_doc(i,j,doc,&thread_fdset);
-
+            create_fec_db_doc(i,j,&doc,&thread_fdset);
 
             sprintf(get_db_address,"%s/%s/%s/get_ecal?startkey=\"%s\"&endkey=\"%s\"",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,ecal_id,ecal_id);
             pouch_request *ecal_response = pr_init();
@@ -638,15 +649,17 @@ void *pt_ecal(void *args)
               return;
             }
             JsonNode *ecalfull_doc = json_decode(ecal_response->resp.data);
-            JsonNode *ecaltotalrows = json_find_member(ecalfull_doc,"total_rows");
-            if ((int)json_get_number(ecaltotalrows) == 0){
+            JsonNode *ecal_rows = json_find_member(ecalfull_doc,"rows");
+            int total_rows = json_get_num_mems(ecal_rows); 
+            if (total_rows == 0){
               pt_printsend("No documents for this ECAL yet! (id %s)\n",ecal_id);
               return;
             }
-            JsonNode *ecal_rows = json_find_member(ecalfull_doc,"rows");
+
+
             int k;
-            for (k=0;k<(int)json_get_number(ecaltotalrows);k++){
-              JsonNode *ecalone_row = json_find_element(ecal_rows,j);
+            for (k=0;k<total_rows;k++){
+              JsonNode *ecalone_row = json_find_element(ecal_rows,k);
               JsonNode *test_doc = json_find_member(ecalone_row,"value");
               printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
               add_ecal_test_results(doc,test_doc);

@@ -79,6 +79,7 @@ typedef struct {
 #define ZDISC_ID                  (0x64) //!< zeroes discriminators
 #define CALD_TEST_ID              (0x65) //!< checks adcs with calibration dac
 #define SLOT_NOISE_RATE_ID        (0x66) //!< check the noise rate in a slot      
+#define NOISE_TEST_ID             (0x67)
 //@}
 
 /*! \name xl3_recv_packet_types
@@ -301,6 +302,17 @@ typedef struct{
   uint32_t error_flags;
   uint32_t count[32];
 } check_total_count_results_t;
+
+typedef struct{
+  uint32_t slot_num;
+  uint32_t chan_num;
+  uint32_t chan_zero;
+} noise_test_args_t;
+
+typedef struct{
+  uint32_t basenoise;
+  uint32_t readoutnoise;
+} noise_test_results_t;
 
 typedef struct{
   uint32_t cmd_in_rejected;

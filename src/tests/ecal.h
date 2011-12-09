@@ -8,7 +8,7 @@
 typedef struct{
   int thread_num;
   uint32_t crate_mask;
-  uint16_t slot_mask[16];
+  uint16_t slot_mask[19];
   int update_hwdb;
   int old_ecal;
   char ecal_id[50];

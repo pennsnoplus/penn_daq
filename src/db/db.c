@@ -206,14 +206,15 @@ int swap_fec_db(mb_t* mb)
     return 0;
 }
 
-int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
+int create_fec_db_doc(int crate, int card, JsonNode** doc_p, fd_set *thread_fdset)
 {
   int i,j;
-  doc = json_mkobject();
+  JsonNode *doc = json_mkobject();
 
   json_append_member(doc,"name",json_mkstring("FEC"));
   json_append_member(doc,"crate",json_mknumber(crate));
   json_append_member(doc,"card",json_mknumber(card));
+
 
   time_t curtime = time(NULL);
   struct tm *loctime = localtime(&curtime);
@@ -234,6 +235,7 @@ int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
   JsonNode *hw = json_mkobject();
   json_append_member(hw,"vint",json_mknumber(205)); //FIXME
   json_append_member(hw,"hvref",json_mknumber(0)); //FIXME
+  json_append_member(doc,"hw",hw);
   JsonNode *id = json_mkobject();
   json_append_member(id,"db0",json_mkstring(db_id[0]));
   json_append_member(id,"db1",json_mkstring(db_id[1]));
@@ -257,6 +259,8 @@ int create_fec_db_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
   JsonNode *comment = json_mkarray();
   json_append_member(doc,"comment",comment);
 
+  *doc_p = doc;
+
   return 0;
 }
 
@@ -269,7 +273,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
   JsonNode *test = json_find_member(fec_doc,"test");
   sprintf(type,"%s",json_get_string(json_find_member(test_doc,"type")));
   JsonNode *test_entry = json_mkobject();
-  json_append_member(test_entry,"test_id",json_find_member(test_doc,"_id"));
+  json_append_member(test_entry,"test_id",json_mkstring(json_get_string(json_find_member(test_doc,"_id"))));
   json_append_member(test,type,test_entry);
 
   if (strcmp(type,"crate_cbal") == 0){
@@ -279,15 +283,20 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
     JsonNode *channels = json_find_member(test_doc,"channels");
     for (i=0;i<32;i++){
       JsonNode *one_chan = json_find_element(channels,i);
-      json_append_element(high,json_find_member(one_chan,"vbal_high"));
-      json_append_element(low,json_find_member(one_chan,"vbal_low"));
+      json_append_element(high,json_mknumber(json_get_number(json_find_member(one_chan,"vbal_high"))));
+      json_append_element(low,json_mknumber(json_get_number(json_find_member(one_chan,"vbal_low"))));
     }
     json_append_element(vbal,high);
     json_append_element(vbal,low);
     json_append_member(hw,"vbal",vbal);
   }else if (strcmp(type,"noise_test") == 0){ //FIXME
   }else if (strcmp(type,"zdisc") == 0){
-    json_append_member(hw,"vthr_zero",json_find_member(test_doc,"zero_dac"));
+    JsonNode *vthr_zero = json_mkarray();
+    JsonNode *vals = json_find_member(test_doc,"zero_dac");
+    for (i=0;i<32;i++){
+      json_append_element(vthr_zero,json_mknumber(json_get_number(json_find_element(vals,i))));
+    }
+    json_append_member(hw,"vthr_zero",vthr_zero);
   }else if (strcmp(type,"set_ttot") == 0){
    JsonNode *tdisc = json_mkobject();
    JsonNode *rmp = json_mkarray();
@@ -297,8 +306,8 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
    JsonNode *chips = json_find_member(test_doc,"chips");
    for (i=0;i<8;i++){
      JsonNode *one_chip = json_find_element(chips,i);
-     json_append_element(rmp,json_find_member(one_chip,"rmp"));
-     json_append_element(vsi,json_find_member(one_chip,"vsi"));
+     json_append_element(rmp,json_mknumber(json_get_number(json_find_member(one_chip,"rmp"))));
+     json_append_element(vsi,json_mknumber(json_get_number(json_find_member(one_chip,"vsi"))));
      json_append_element(rmpup,json_mknumber(115)); //FIXME`
      json_append_element(vli,json_mknumber(120)); //FIXME`
    }
@@ -309,17 +318,27 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
    json_append_member(hw,"tdisc",tdisc);
   }else if (strcmp(type,"cmos_m_gtvalid") == 0){
     JsonNode *tcmos = json_mkobject();
-    json_append_member(tcmos,"vmax",json_find_member(test_doc,"vmax"));
-    json_append_member(tcmos,"vtacref",json_find_member(test_doc,"tacref"));
-    json_append_member(tcmos,"isetm",json_find_member(test_doc,"isetm"));
-    json_append_member(tcmos,"iseta",json_find_member(test_doc,"iseta"));
+    json_append_member(tcmos,"vmax",json_mknumber(json_get_number(json_find_member(test_doc,"vmax"))));
+    json_append_member(tcmos,"vtacref",json_mknumber(json_get_number(json_find_member(test_doc,"tacref"))));
+    JsonNode *isetm_vals = json_find_member(test_doc,"isetm");
+    JsonNode *iseta_vals = json_find_member(test_doc,"iseta");
+    JsonNode *isetm = json_mkarray();
+    JsonNode *iseta = json_mkarray();
+    for (i=0;i<2;i++){
+      json_append_element(isetm,json_mknumber(json_get_number(json_find_element(isetm_vals,i))));
+      json_append_element(iseta,json_mknumber(json_get_number(json_find_element(iseta_vals,i))));
+    }
+
+    json_append_member(tcmos,"isetm",isetm);
+    json_append_member(tcmos,"iseta",iseta);
     JsonNode *channels = json_find_member(test_doc,"channels");
     JsonNode *tac_trim = json_mkarray();
     for (i=0;i<32;i++){
       JsonNode *one_chan = json_find_element(channels,i);
-      json_append_element(tac_trim,json_find_member(one_chan,"tac_shift"));
+      json_append_element(tac_trim,json_mknumber(json_get_number(json_find_member(one_chan,"tac_shift"))));
     }
     json_append_member(tcmos,"tac_trim",tac_trim);
+    json_append_member(hw,"tcmos",tcmos);
   }
   return 0;
 }

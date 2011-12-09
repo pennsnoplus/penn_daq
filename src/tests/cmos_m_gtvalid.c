@@ -66,7 +66,7 @@ int cmos_m_gtvalid(char *buffer)
       }else if (words[1] == 'd'){args->update_db = 1;
       }else if (words[1] == 'E'){
         if ((words2 = strtok(NULL, " ")) != NULL){
-          args->ecal = 0;
+          args->ecal = 1;
           strcpy(args->ecal_id,words2);
         }
       }else if (words[1] == '#'){
@@ -485,7 +485,11 @@ void *pt_cmos_m_gtvalid(void *args)
       pt_printsend("--------------------------------------------------------\n");
       if (!arg.do_twiddle)
         pt_printsend(" >>> ISETA0/1 = 0, no TAC twiddle bits set\n");
-      pt_printsend("set up: VMAX: %hu, TACREF: %hu, ISETA: %hu\n",VMAX,TACREF,ISETA);
+      pt_printsend("set up: VMAX: %hu, TACREF: %hu, ",VMAX,TACREF);
+      if (arg.do_twiddle)
+        pt_printsend("ISETA: %hu\n",ISETA);
+      else
+        pt_printsend("ISETA: %hu\n",ISETA_NO_TWIDDLE);
       pt_printsend("Found ISETM0: %d, ISETM1: %d\n",isetm_save[0],isetm_save[1]);
       pt_printsend("Chan Tacbits GTValid 0/1:\n");
       for (j=0;j<32;j++){
@@ -529,8 +533,13 @@ void *pt_cmos_m_gtvalid(void *args)
         JsonNode* iseta_new = json_mkarray();
         json_append_element(isetm_new,json_mknumber((double)isetm_save[0]));
         json_append_element(isetm_new,json_mknumber((double)isetm_save[1]));
-        json_append_element(iseta_new,json_mknumber((double)ISETA));
-        json_append_element(iseta_new,json_mknumber((double)ISETA));
+        if (arg.do_twiddle){
+          json_append_element(iseta_new,json_mknumber((double)ISETA));
+          json_append_element(iseta_new,json_mknumber((double)ISETA));
+        }else{
+          json_append_element(iseta_new,json_mknumber((double)ISETA_NO_TWIDDLE));
+          json_append_element(iseta_new,json_mknumber((double)ISETA_NO_TWIDDLE));
+        }
         json_append_member(newdoc,"isetm",isetm_new);
         json_append_member(newdoc,"iseta",iseta_new);
 
