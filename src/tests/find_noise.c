@@ -164,11 +164,21 @@ void *pt_find_noise(void *args)
     dac_values[i] = 255;
   }
 
+  uint32_t *base_noise;
+  uint32_t *readout_noise;
+  uint32_t *threshold;
+
+  base_noise = malloc(sizeof(uint32_t) * 500000);
+  readout_noise = malloc(sizeof(uint32_t) * 500000);
+  threshold = malloc(sizeof(uint32_t) * 500000);
+
   // set up mtcd for pulsing continuously
   if (setup_pedestals(0,DEFAULT_PED_WIDTH,DEFAULT_GT_DELAY,DEFAULT_GT_FINE_DELAY,
       arg.crate_mask,arg.crate_mask)){
     pt_printsend("Error setting up mtc. Exiting\n");
     unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+    free(base_noise);
+    free(readout_noise);
     return;
   }
 
@@ -180,6 +190,8 @@ void *pt_find_noise(void *args)
           if (multi_loadsDac(32,dac_nums,dac_values,i,j,&thread_fdset) != 0){
             pt_printsend("Error loading dacs. Exiting\n");
             unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+            free(base_noise);
+            free(readout_noise);
             return;
           }
         }
@@ -199,18 +211,88 @@ void *pt_find_noise(void *args)
           xl3_rw(GENERAL_CSR_R + FEC_SEL*j + WRITE_REG,(i << FEC_CSR_CRATE_OFFSET),&result,i,&thread_fdset);
     }
 
-  struct timeval start,end;
+  // going to do all crates simultaneously
+  // first clear all pedestal masks
+  for (i=0;i<19;i++)
+    if ((0x1<<i) & arg.crate_mask)
+      for (j=0;j<16;j++)
+        if ((0x1<<j) & arg.slot_mask[j])
+          xl3_rw(PED_ENABLE_R + FEC_SEL*j + WRITE_REG,0x0,&result,i,&thread_fdset);
+
+
+  XL3_Packet packet;
+  packet.cmdHeader.packet_type = NOISE_TEST_ID;
+  noise_test_args_t *packet_args = (noise_test_args_t *) packet.payload;
+  noise_test_results_t *packet_results = (noise_test_results_t *) packet.payload;
+
+  // loop over slots
+  for (j=0;j<16;j++){
+    // loop over channels
+    for (k=0;k<32;k++){
+      int chanzero = 115; //FIXME
+      int threshabovezero = -2;
+      uint32_t found_noise = 0x0;
+      uint32_t done_mask = 0x0;
+
+      // set pedestal masks
+      for (i=0;i<19;i++)
+        if ((0x1<<i) & arg.crate_mask)
+          if ((0x1<<j) & arg.slot_mask[i])
+            xl3_rw(PED_ENABLE_R + FEC_SEL*j + WRITE_REG,(0x1<<k),&result,i,&thread_fdset);
+
+      do{
+        // send some peds
+        multi_softgt(5000);
+
+        for (i=0;i<19;i++){
+          if (((0x1<<i) & arg.crate_mask) & ((0x1<<i) & !(done_mask))){
+            // do the rest on XL3
+            packet_args->slot_num = j;
+            packet_args->chan_num = k;
+            packet_args->chan_zero = chanzero;
+            SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
+            do_xl3_cmd(&packet,i,&thread_fdset);
+            SwapLongBlock(packet_results,sizeof(noise_test_results_t)/sizeof(uint32_t));
+
+            base_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->basenoise;
+            readout_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->readoutnoise;
+
+            if (packet_results->readoutnoise == 0){
+              if ((0x1<<i) & found_noise)
+                done_mask |= 0x1<<i;
+              else
+                found_noise |= 0x1<<i;
+            }
+          }
+        }
+        
+        if (done_mask == arg.crate_mask)
+          break;
+
+      }while((++threshabovezero) <= 30);
+
+      for (i=0;i<19;i++)
+        if ((0x1<<i) & arg.crate_mask)
+          loadsDac(d_vthr[k],255,i,j,&thread_fdset);
+
+    } // end loop over channels
+  } // end loop over slots
+
+
+  /*
 
   // begin loop over all crates, all slots
   for (i=0;i<19;i++){
     if ((0x1<<i) & arg.crate_mask){
       for (j=0;j<16;j++){
         if ((0x1<<j) & arg.slot_mask[i]){
-         
+
           // make sure threshold set to 255
           if (multi_loadsDac(32,dac_nums,dac_values,i,j,&thread_fdset) != 0){
             pt_printsend("Error loading dacs. Exiting\n");
             unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+            free(base_noise);
+            free(readout_noise);
             return;
           }
 
@@ -222,19 +304,7 @@ void *pt_find_noise(void *args)
             //FIXME if no known zero, skip it 
             int chanzero = 115; //FIXME
 
-            
-            /*
-            // do noise test on XL3
-            XL3_Packet packet;
-            packet.cmdHeader.packet_type = NOISE_TEST_ID;
-            noise_test_args_t *packet_args = (noise_test_args_t *) packet.payload;
-            packet_args->slot_num = j;
-            packet_args->chan_num = k;
-            packet_args->chan_zero = chanzero;
-            SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
-            do_xl3_cmd(&packet,i,&thread_fdset);
-            */
-            
+
             int threshabovezero = -2;
             int found_noise = 0;
 
@@ -245,7 +315,7 @@ void *pt_find_noise(void *args)
 
             // enable pedestal for just that channel
             xl3_rw(PED_ENABLE_R + FEC_SEL*j + WRITE_REG,(0x1<<k),&result,i,&thread_fdset);
-            
+
             // find top of noise, loop until 30 counts above zero
             do{
               // send some peds
@@ -279,8 +349,11 @@ void *pt_find_noise(void *args)
     } // if crate mask
   } // end loop over crates
 
+  */
 
   //  disable_pulser();
+  free(base_noise);
+  free(readout_noise);
   unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
 }
 
