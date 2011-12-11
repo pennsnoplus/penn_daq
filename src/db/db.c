@@ -339,6 +339,19 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
     }
     json_append_member(tcmos,"tac_trim",tac_trim);
     json_append_member(hw,"tcmos",tcmos);
+  }else if (strcmp(type,"find_noise") == 0){
+    JsonNode *vthr = json_mkarray();
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    for (i=0;i<32;i++){
+      JsonNode *one_chan = json_find_element(channels,i);
+      uint32_t zero_used = json_get_number(json_find_member(one_chan,"zero_used"));
+      JsonNode *points = json_find_member(one_chan,"points");
+      int total_rows = json_get_num_mems(points); 
+      JsonNode *final_point = json_find_element(points,total_rows-1);
+      uint32_t readout_dac = json_get_number(json_find_member(final_point,"thresh_above_zero"));
+      json_append_element(vthr,json_mknumber(zero_used+readout_dac));
+    }
+    json_append_member(hw,"vthr",vthr);
   }
   return 0;
 }
