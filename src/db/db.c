@@ -364,6 +364,28 @@ int post_fec_db_doc(int crate, int slot, JsonNode *doc){
   return ret;
 }
 
+int update_fec_db_doc(JsonNode *doc)
+{
+  char put_db_address[500];
+  sprintf(put_db_address,"%s/%s/%s",FECDB_SERVER,FECDB_BASE_NAME,json_get_string(json_find_member(doc,"_id")));
+  pouch_request *post_response = pr_init();
+  pr_set_method(post_response, PUT);
+  pr_set_url(post_response, put_db_address);
+  char *data = json_encode(doc);
+  pr_set_data(post_response, data);
+  pr_do(post_response);
+  int ret = 0;
+  if (post_response->httpresponse != 201){
+    pt_printsend("error code %d\n",(int)post_response->httpresponse);
+    ret = -1;
+  }
+  pr_free(post_response);
+  if(*data){
+    free(data);
+  }
+  return 0;
+}
+
 int post_debug_doc(int crate, int card, JsonNode* doc, fd_set *thread_fdset)
 {
   char mb_id[8],db_id[4][8];

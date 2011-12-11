@@ -224,6 +224,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -x -v",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -240,6 +242,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"fec_test -c %d -s %04x -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = fec_test(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
 
@@ -257,6 +261,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"board_id -c %d -s %04x",i,arg.slot_mask[i]);
           result = board_id(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
 
@@ -272,6 +278,8 @@ void *pt_ecal(void *args)
       sprintf(command_buffer,"mtc_init -x");
       result = mtc_init(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -286,6 +294,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"cgt_test_1 -c %d -s %04x -p FFFFFFFF -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = cgt_test(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
 
@@ -301,6 +311,8 @@ void *pt_ecal(void *args)
       sprintf(command_buffer,"mtc_init -x");
       result = mtc_init(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -315,6 +327,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -331,6 +345,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_cbal -c %d -s %04x -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = crate_cbal(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -347,6 +363,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -363,6 +381,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"ped_run -c %d -s %04x -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = ped_run(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -383,6 +403,8 @@ void *pt_ecal(void *args)
       sprintf(command_buffer,"mtc_init -x");
       result = mtc_init(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -397,6 +419,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -413,6 +437,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"set_ttot -c %d -s %04x -t 420 -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = set_ttot(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -429,6 +455,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -445,6 +473,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"get_ttot -c %d -s %04x -t 400 -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = get_ttot(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -467,6 +497,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -483,6 +515,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"disc_check -c %d -s %04x -n 500000 -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = disc_check(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -497,6 +531,8 @@ void *pt_ecal(void *args)
       sprintf(command_buffer,"mtc_init -x");
       result = mtc_init(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -511,6 +547,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B -D",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -527,6 +565,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"cmos_m_gtvalid -c %d -s %04x -g 410 -n -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = cmos_m_gtvalid(command_buffer); 
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -541,6 +581,8 @@ void *pt_ecal(void *args)
       sprintf(command_buffer,"mtc_init -x");
       result = mtc_init(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -555,6 +597,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"crate_init -c %d -s %04x -B -D -C",i,arg.slot_mask[i]);
           result = crate_init(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -571,6 +615,8 @@ void *pt_ecal(void *args)
           sprintf(command_buffer,"zdisc -c %d -s %04x -o 0 -r 100 -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = zdisc(command_buffer);
           if (result == -2 || result == -3){
+            running_ecal = 0;
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
             return;
           }
         } while (result != 0);
@@ -598,9 +644,30 @@ void *pt_ecal(void *args)
   if (arg.update_hwdb){
     pt_printsend("Now updating FEC database with test results\n");
 
-
-
+    // get all the ecal test results for all crates/slots
     char get_db_address[500];
+    sprintf(get_db_address,"%s/%s/%s/get_ecal?startkey=\"%s\"&endkey=\"%s\"",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,ecal_id,ecal_id);
+    pouch_request *ecal_response = pr_init();
+    pr_set_method(ecal_response, GET);
+    pr_set_url(ecal_response, get_db_address);
+    pr_do(ecal_response);
+    if (ecal_response->httpresponse != 200){
+      pt_printsend("Unable to connect to database. error code %d\n",(int)ecal_response->httpresponse);
+      running_ecal = 0;
+      unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
+      return;
+    }
+    JsonNode *ecalfull_doc = json_decode(ecal_response->resp.data);
+    JsonNode *ecal_rows = json_find_member(ecalfull_doc,"rows");
+    int total_rows = json_get_num_mems(ecal_rows); 
+    if (total_rows == 0){
+      pt_printsend("No documents for this ECAL yet! (id %s)\n",ecal_id);
+      running_ecal = 0;
+      unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
+      return;
+    }
+
+    // loop over crates/slots, create a fec document for each
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         for (j=0;j<16;j++){
@@ -611,30 +678,17 @@ void *pt_ecal(void *args)
             JsonNode *doc;
             create_fec_db_doc(i,j,&doc,&thread_fdset);
 
-            sprintf(get_db_address,"%s/%s/%s/get_ecal?startkey=\"%s\"&endkey=\"%s\"",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,ecal_id,ecal_id);
-            pouch_request *ecal_response = pr_init();
-            pr_set_method(ecal_response, GET);
-            pr_set_url(ecal_response, get_db_address);
-            pr_do(ecal_response);
-            if (ecal_response->httpresponse != 200){
-              pt_printsend("Unable to connect to database. error code %d\n",(int)ecal_response->httpresponse);
-              return;
-            }
-            JsonNode *ecalfull_doc = json_decode(ecal_response->resp.data);
-            JsonNode *ecal_rows = json_find_member(ecalfull_doc,"rows");
-            int total_rows = json_get_num_mems(ecal_rows); 
-            if (total_rows == 0){
-              pt_printsend("No documents for this ECAL yet! (id %s)\n",ecal_id);
-              return;
-            }
-
-
             int k;
             for (k=0;k<total_rows;k++){
               JsonNode *ecalone_row = json_find_element(ecal_rows,k);
               JsonNode *test_doc = json_find_member(ecalone_row,"value");
-              printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
-              add_ecal_test_results(doc,test_doc);
+              JsonNode *config = json_find_member(test_doc,"config");
+              if ((json_get_number(json_find_member(config,"crate_id")) == i) && (json_get_number(json_find_member(config,"slot")) == j)){
+                if (strcmp(json_get_string(json_find_member(test_doc,"type")),"find_noise") != 0){
+                  printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
+                  add_ecal_test_results(doc,test_doc);
+                }
+              }
             }
 
             post_fec_db_doc(i,j,doc);
@@ -662,6 +716,8 @@ void *pt_ecal(void *args)
         sprintf(command_buffer+strlen(command_buffer),"-%02d %04x ",i,arg.slot_mask[i]);
       result = zdisc(command_buffer);
       if (result == -2 || result == -3){
+        running_ecal = 0;
+        unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
       }
     } while (result != 0);
@@ -673,6 +729,86 @@ void *pt_ecal(void *args)
 
   // now update again with noise run stuff
   if (arg.update_hwdb){
+    pt_printsend("Updating hw db with find_noise results\n");
+
+    // get the find noise test results
+    char get_db_address[500];
+    sprintf(get_db_address,"%s/%s/%s/get_ecal?startkey=\"%s\"&endkey=\"%s\"",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,ecal_id,ecal_id);
+    pouch_request *ecal_response = pr_init();
+    pr_set_method(ecal_response, GET);
+    pr_set_url(ecal_response, get_db_address);
+    pr_do(ecal_response);
+    if (ecal_response->httpresponse != 200){
+      pt_printsend("Unable to connect to database. error code %d\n",(int)ecal_response->httpresponse);
+      running_ecal = 0;
+      unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
+      return;
+    }
+    JsonNode *ecalfull_doc = json_decode(ecal_response->resp.data);
+    JsonNode *ecal_rows = json_find_member(ecalfull_doc,"rows");
+    int total_rows = json_get_num_mems(ecal_rows); 
+    if (total_rows == 0){
+      pt_printsend("No documents for this ECAL yet! (id %s)\n",ecal_id);
+      running_ecal = 0;
+      unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
+      return;
+    }
+
+    // loop over crates/slots
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask){
+        for (j=0;j<16;j++){
+          if ((0x1<<j) & arg.slot_mask[i]){
+            // get the current fec document
+            sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
+            pouch_request *fec_response = pr_init();
+            pr_set_method(fec_response, GET);
+            pr_set_url(fec_response, get_db_address);
+            pr_do(fec_response);
+            if (fec_response->httpresponse != 200){
+              pt_printsend("Unable to connect to database. error code %d\n",(int)fec_response->httpresponse);
+              unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+              return;
+            }
+            JsonNode *fecfull_doc = json_decode(fec_response->resp.data);
+            JsonNode *fec_rows = json_find_member(fecfull_doc,"rows");
+            int total_rows = json_get_num_mems(fec_rows); 
+            if (total_rows == 0){
+              pt_printsend("No FEC documents for this crate/card yet! (crate %d card %d)\n",i,j);
+              unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+              return;
+            }
+            JsonNode *fecone_row = json_find_element(fec_rows,j);
+            JsonNode *fec_doc = json_find_member(fecone_row,"value");
+
+            // now find the noise run document for this crate/slot and add it to the fec document
+            int found_it = 0;
+            int k;
+            for (k=0;k<total_rows;k++){
+              JsonNode *ecalone_row = json_find_element(ecal_rows,k);
+              JsonNode *test_doc = json_find_member(ecalone_row,"value");
+              if (strcmp(json_get_string(json_find_member(test_doc,"type")),"find_noise") == 0){
+                found_it = 1;
+                printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
+                add_ecal_test_results(fec_doc,test_doc);
+                break;
+              }
+            }
+            if (found_it == 0){
+              pt_printsend("Couldn't find noise run results!\n");
+            }else{
+              // push the updated fec document
+              update_fec_db_doc(fec_doc);
+            }
+            json_delete(fecfull_doc);
+            pr_free(fec_response);
+          }
+        }
+      }
+    }
+
+    json_delete(ecalfull_doc);
+    pr_free(ecal_response);
   }
 
 
