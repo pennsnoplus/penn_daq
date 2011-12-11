@@ -10,6 +10,7 @@ typedef struct{
   uint32_t crate_mask;
   uint16_t slot_mask[16];
   int update_db;
+  int use_debug;
   int ecal;
   char ecal_id[50];
 } find_noise_t;

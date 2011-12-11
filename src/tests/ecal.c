@@ -26,7 +26,8 @@ int ecal(char *buffer)
     args->slot_mask[i] = 0xFFFF;
   args->update_hwdb = 0;
   args->old_ecal = 0;
-
+  args->noise_run = 0;
+ 
   char *words,*words2;
   words = strtok(buffer," ");
   while (words != NULL){
@@ -102,6 +103,8 @@ int ecal(char *buffer)
 
       }else if (words[1] == 'd'){
         args->update_hwdb = 1;
+      }else if (words[1] == 'n'){
+        args->noise_run = 1;
       }else if (words[1] == '#'){
         if ((words2 = strtok(NULL," ")) != NULL){
           args->old_ecal = 1;
@@ -112,6 +115,7 @@ int ecal(char *buffer)
             "-s [slot mask for all crates (hex)] "
             "-00...-18 [slot mask for that crate (hex)] "
             "-d (update FEC database) "
+            "-n (do noise run) "
             "-# [previously run ecal id (hex) to update db with those values]\n");
         free(args);
         return 0;
@@ -143,7 +147,7 @@ void *pt_ecal(void *args)
 
   char ecal_id[250];
   // now we can unlock our things, since nothing else should use them
-  
+
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
   for (i=0;i<19;i++){
@@ -151,10 +155,15 @@ void *pt_ecal(void *args)
       FD_SET(rw_xl3_fd[i],&thread_fdset);
   }
 
-    system("clear");
-    pt_printsend("------------------------------------------\n");
-    pt_printsend("Welcome to ECAL+!\n");
-    pt_printsend("------------------------------------------\n");
+  char comments[1000];
+  memset(comments,'\0',1000);
+  char command_buffer[500];
+  memset(command_buffer,'\0',500);
+
+  system("clear");
+  pt_printsend("------------------------------------------\n");
+  pt_printsend("Welcome to ECAL+!\n");
+  pt_printsend("------------------------------------------\n");
 
 
 
@@ -171,10 +180,6 @@ void *pt_ecal(void *args)
 
     get_new_id(ecal_id);
 
-    char comments[1000];
-    memset(comments,'\0',1000);
-    char command_buffer[100];
-    memset(command_buffer,'\0',100);
 
     pt_printsend("ECAL id: %s\n\n",ecal_id);
     pt_printsend("\nYou have selected the following slots:\n\n");
@@ -574,10 +579,6 @@ void *pt_ecal(void *args)
       }
     }
 
-
-    // DO NOISE RUN
-
-
     pt_printsend("-------------------------------------------\n");
     pt_printsend("ECAL finished.\n");
 
@@ -605,35 +606,6 @@ void *pt_ecal(void *args)
         for (j=0;j<16;j++){
           if ((0x1<<j) & arg.slot_mask[i]){
             printf("crate %d slot %d\n",i,j);
-            /*
-               sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
-               pouch_request *hw_response = pr_init();
-               pr_set_method(hw_response, GET);
-               pr_set_url(hw_response, get_db_address);
-               pr_do(hw_response);
-               if (hw_response->httpresponse != 200){
-               pt_printsend("Unable to connect to database. error code %d\n",(int)hw_response->httpresponse);
-               return;
-               }
-               JsonNode *full_doc = json_decode(hw_response->resp.data);
-               JsonNode* totalrows = json_find_member(full_doc,"total_rows");
-               JsonNode* doc;
-               if ((int)json_get_number(totalrows) == 0){
-            // no entry for this slot exists yet, create it
-            create_fec_db_doc(i,j,doc);
-            }else{
-            JsonNode* hw_rows = json_find_member(full_doc,"rows");
-            JsonNode* one_row = json_find_element(hw_rows,0);
-            doc = json_find_member(one_row,"value");
-            }
-
-            int crate = (int)json_get_number(json_find_member(doc,"crate"));
-            int card = (int)json_get_number(json_find_member(doc,"card"));
-            if (crate != i || card != j){
-            pt_printsend("Database error : incorrect crate or card num (found %d,%d instead of %d,%d)\n",crate,card,i,j);
-            return;
-            }
-             */
 
             // lets generate the ecal document
             JsonNode *doc;
@@ -674,12 +646,34 @@ void *pt_ecal(void *args)
         }
       }
     }
-
-
   }
 
-  pt_printsend("-------------------------------------------\n");
+  if (arg.noise_run){
+    // re lock everything down
+    sbc_lock = 1;
+    for (i=0;i<19;i++)
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 1;
 
+    // FIND_NOISE
+    do{
+      sprintf(command_buffer,"find_noise -c %05x -d -e %s ",arg.crate_mask,ecal_id);
+      for (i=0;i<19;i++)
+        sprintf(command_buffer+strlen(command_buffer),"-%02d %04x ",i,arg.slot_mask[i]);
+      result = zdisc(command_buffer);
+      if (result == -2 || result == -3){
+        return;
+      }
+    } while (result != 0);
+    while (xl3_lock[0] != 0){}
+    pt_printsend("------------------------------------------\n");
+  }
+
+
+
+  // now update again with noise run stuff
+  if (arg.update_hwdb){
+  }
 
 
   running_ecal = 0;

@@ -12,6 +12,7 @@ typedef struct{
   int update_hwdb;
   int old_ecal;
   char ecal_id[50];
+  int noise_run;
 } ecal_t;
 
 int ecal(char *buffer);
