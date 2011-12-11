@@ -306,7 +306,7 @@ typedef struct{
 typedef struct{
   uint32_t slot_num;
   uint32_t chan_num;
-  uint32_t chan_zero;
+  uint32_t thresh;
 } noise_test_args_t;
 
 typedef struct{

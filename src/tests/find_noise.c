@@ -249,13 +249,14 @@ void *pt_find_noise(void *args)
             // do the rest on XL3
             packet_args->slot_num = j;
             packet_args->chan_num = k;
-            packet_args->chan_zero = chanzero;
+            packet_args->thresh = chanzero+threshabovezero;
             SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
             do_xl3_cmd(&packet,i,&thread_fdset);
             SwapLongBlock(packet_results,sizeof(noise_test_results_t)/sizeof(uint32_t));
 
             base_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->basenoise;
             readout_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->readoutnoise;
+            threshold[i*(16*32*33) + j*(32*33) + k*(33)+threshabovezero+2] = chanzero+threshabovezero;
 
             if (packet_results->readoutnoise == 0){
               if ((0x1<<i) & found_noise)
@@ -350,6 +351,53 @@ void *pt_find_noise(void *args)
   } // end loop over crates
 
   */
+
+  if (arg.update_db){
+    pt_printsend("updating the database\n");
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask){
+        for (j=0;j<16;j++){
+          if ((0x1<<j) & arg.slot_mask[i]){
+            JsonNode *newdoc = json_mkobject();
+            json_append_member(newdoc,"type",json_mkstring("find_noise"));
+            JsonNode *channels = json_mkarray();
+            for (k=0;k<32;k++){
+              JsonNode *one_chan = json_mkobject();
+              json_append_member(one_chan,"id",json_mknumber(k));
+              json_append_member(one_chan,"zero_used",json_mknumber(115)); //FIXME
+
+              JsonNode *points = json_mkarray();
+              int l;
+              for (l=0;l<33;l++){
+                int finished = 0;
+                JsonNode *one_point = json_mkobject();
+                json_append_member(one_point,"thresh_above_zero",json_mknumber(l-2));
+                json_append_member(one_point,"base_noise",json_mknumber(base_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
+                json_append_member(one_point,"readout_noise",json_mknumber(readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
+                json_append_element(points,one_point);
+                if (readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l] == 0){
+                  if (finished){
+                    break;
+                  }else{
+                    finished = 1;
+                  }
+                }
+              }
+              json_append_member(one_chan,"points",points);
+
+              json_append_element(channels,one_chan);
+            }
+            json_append_member(newdoc,"channels",channels);
+            if (arg.ecal)
+              json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
+            post_debug_doc(i,j,newdoc,&thread_fdset);
+            json_delete(newdoc); // Only have to delete the head node
+          }
+        }
+      }
+    }
+  }
+
 
   //  disable_pulser();
   free(base_noise);
