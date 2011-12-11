@@ -209,6 +209,24 @@ int swap_fec_db(mb_t* mb)
 int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc, fd_set *thread_fdset)
 {
   int i,j;
+  // lets pull out what we need from the configuration document
+  JsonNode *time_stamp = json_find_member(ecal_doc,"formatted_timestamp");
+  JsonNode *config;
+  JsonNode *crates = json_find_member(ecal_doc,"crates");
+  for (i=0;i<json_get_num_mems(crates);i++){
+    JsonNode *one_crate = json_find_element(crates,i);
+    if (json_get_number(json_find_member(one_crate,"crate_id")) == crate){
+      JsonNode *slots = json_find_member(one_crate,"slots");
+      for (j=0;j<json_get_num_mems(slots);j++){
+        JsonNode *one_slot = json_find_element(slots,j);
+        if (json_get_number(json_find_member(one_slot,"slot_id")) == card){
+          config = one_slot;
+          break;
+        }
+      }
+    }
+  }
+
   JsonNode *doc = json_mkobject();
 
   json_append_member(doc,"name",json_mkstring("FEC"));
@@ -216,31 +234,20 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
   json_append_member(doc,"card",json_mknumber(card));
 
 
-  time_t curtime = time(NULL);
-  struct tm *loctime = localtime(&curtime);
-  char time_stamp[500];
-  strftime(time_stamp,256,"%Y-%m-%dT%H:%M:%S",loctime);
-  json_append_member(doc,"time_stamp",json_mkstring(time_stamp)); //FIXME should be from ecal doc
+  json_append_member(doc,"time_stamp",json_mkstring(json_get_string(time_stamp)));
   json_append_member(doc,"approved",json_mkbool(0));
 
-  update_crate_config(crate,0x1<<card,thread_fdset); //FIXME should be from ecal doc
-  char mb_id[8],db_id[4][8];
-  sprintf(mb_id,"%04x",crate_config[crate][card].mb_id);
-  sprintf(db_id[0],"%04x",crate_config[crate][card].db_id[0]);
-  sprintf(db_id[1],"%04x",crate_config[crate][card].db_id[1]);
-  sprintf(db_id[2],"%04x",crate_config[crate][card].db_id[2]);
-  sprintf(db_id[3],"%04x",crate_config[crate][card].db_id[3]);
-  json_append_member(doc,"board_id",json_mkstring(mb_id));
+  json_append_member(doc,"board_id",json_mkstring(json_get_string(json_find_member(config,"mb_id"))));
   
   JsonNode *hw = json_mkobject();
   json_append_member(hw,"vint",json_mknumber(205)); //FIXME
   json_append_member(hw,"hvref",json_mknumber(0)); //FIXME
   json_append_member(doc,"hw",hw);
   JsonNode *id = json_mkobject();
-  json_append_member(id,"db0",json_mkstring(db_id[0]));
-  json_append_member(id,"db1",json_mkstring(db_id[1]));
-  json_append_member(id,"db2",json_mkstring(db_id[2]));
-  json_append_member(id,"db3",json_mkstring(db_id[3]));
+  json_append_member(id,"db0",json_mkstring(json_get_string(json_find_member(config,"db0_id"))));
+  json_append_member(id,"db1",json_mkstring(json_get_string(json_find_member(config,"db1_id"))));
+  json_append_member(id,"db2",json_mkstring(json_get_string(json_find_member(config,"db2_id"))));
+  json_append_member(id,"db3",json_mkstring(json_get_string(json_find_member(config,"db3_id"))));
   json_append_member(id,"hv",json_mkstring("0x0000")); //FIXME
   json_append_member(doc,"id",id);
 
