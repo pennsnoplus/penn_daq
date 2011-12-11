@@ -206,7 +206,7 @@ int swap_fec_db(mb_t* mb)
     return 0;
 }
 
-int create_fec_db_doc(int crate, int card, JsonNode** doc_p, fd_set *thread_fdset)
+int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc, fd_set *thread_fdset)
 {
   int i,j;
   JsonNode *doc = json_mkobject();
@@ -289,7 +289,6 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
     json_append_element(vbal,high);
     json_append_element(vbal,low);
     json_append_member(hw,"vbal",vbal);
-  }else if (strcmp(type,"noise_test") == 0){ //FIXME
   }else if (strcmp(type,"zdisc") == 0){
     JsonNode *vthr_zero = json_mkarray();
     JsonNode *vals = json_find_member(test_doc,"zero_dac");
@@ -581,7 +580,7 @@ int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_f
   return ret;
 };
 
-int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id)
+int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id, fd_set *thread_fdset)
 {
   JsonNode *doc = json_mkobject();
   time_t the_time;
@@ -592,24 +591,56 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
 
   char masks[8];
 
+  int i,j;
   JsonNode *crates = json_mkarray();
-  int i;
   for (i=0;i<19;i++){
-    JsonNode *one_crate = json_mkobject();
     if ((0x1<<i) & crate_mask){
+      JsonNode *one_crate = json_mkobject();
+      json_append_member(one_crate,"crate_id",json_mknumber(i));
       sprintf(masks,"%04x",slot_mask[i]);
-    }else{
-      sprintf(masks,"0000");
+      json_append_member(one_crate,"slot_mask",json_mkstring(masks));
+
+      JsonNode *slots = json_mkarray();
+      for (j=0;j<16;j++){
+        if ((0x1<<j) & slot_mask[i]){
+          char mb_id[8],db_id[4][8];
+          char put_db_address[500];
+          update_crate_config(i,0x1<<j,thread_fdset);
+
+          sprintf(mb_id,"%04x",crate_config[i][j].mb_id);
+          sprintf(db_id[0],"%04x",crate_config[i][j].db_id[0]);
+          sprintf(db_id[1],"%04x",crate_config[i][j].db_id[1]);
+          sprintf(db_id[2],"%04x",crate_config[i][j].db_id[2]);
+          sprintf(db_id[3],"%04x",crate_config[i][j].db_id[3]);
+          
+          JsonNode *one_slot = json_mkobject();
+          json_append_member(one_slot,"slot_id",json_mknumber(j));
+          json_append_member(one_slot,"mb_id",json_mkstring(mb_id));
+          json_append_member(one_slot,"db0_id",json_mkstring(db_id[0]));
+          json_append_member(one_slot,"db1_id",json_mkstring(db_id[1]));
+          json_append_member(one_slot,"db2_id",json_mkstring(db_id[2]));
+          json_append_member(one_slot,"db3_id",json_mkstring(db_id[3]));
+          json_append_element(slots,one_slot);
+        }
+      }
+      json_append_member(one_crate,"slots",slots);
+
+      json_append_element(crates,one_crate);
     }
-    json_append_member(one_crate,"slot_mask",json_mkstring(masks));
-    json_append_member(one_crate,"crate_id",json_mknumber(i));
-    json_append_element(crates,one_crate);
   }
-  json_append_member(doc,"crate_slot_masks",crates);
+
+  json_append_member(doc,"config",crates);
   json_append_member(doc,"logfile_name",json_mkstring(logfile));
   json_append_member(doc,"type",json_mkstring("ecal"));
   json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));
   json_append_member(doc,"created",json_mkstring(datetime));
+
+
+  time_t curtime = time(NULL);
+  struct tm *loctime = localtime(&curtime);
+  char time_stamp[500];
+  strftime(time_stamp,256,"%Y-%m-%dT%H:%M:%S",loctime);
+  json_append_member(doc,"formatted_timestamp",json_mkstring(time_stamp));
 
   char put_db_address[500];
   sprintf(put_db_address,"%s/%s/%s",DB_SERVER,DB_BASE_NAME,id);

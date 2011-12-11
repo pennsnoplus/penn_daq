@@ -212,7 +212,7 @@ void *pt_ecal(void *args)
 
 
     // post ecal doc
-    post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id);
+    post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id,&thread_fdset);
 
 
     // ok we are set up, time to start
@@ -320,7 +320,7 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
 
 
-    // CRATE_INIT with default values //FIXME
+    // CRATE_INIT with default values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -412,7 +412,7 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
 
 
-    // CRATE_INIT with default + vbal values //FIXME
+    // CRATE_INIT with default + vbal values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -448,7 +448,7 @@ void *pt_ecal(void *args)
     }
 
 
-    // CRATE_INIT with default + vbal + tdisc values //FIXME
+    // CRATE_INIT with default + vbal + tdisc values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -490,7 +490,7 @@ void *pt_ecal(void *args)
     read_from_tut(comments);
 
 
-    // CRATE_INIT with default + vbal + tdisc values //FIXME
+    // CRATE_INIT with default + vbal + tdisc values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -540,7 +540,7 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
 
 
-    // CRATE_INIT with default + vbal + tdisc values //FIXME
+    // CRATE_INIT with default + vbal + tdisc values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -590,7 +590,7 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
 
 
-    // CRATE_INIT with default + vbal + tdisc + tcmos values //FIXME
+    // CRATE_INIT with default + vbal + tdisc + tcmos values
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -644,8 +644,22 @@ void *pt_ecal(void *args)
   if (arg.update_hwdb){
     pt_printsend("Now updating FEC database with test results\n");
 
-    // get all the ecal test results for all crates/slots
+    // get the ecal document with the configuration
     char get_db_address[500];
+    sprintf(get_db_address,"%s/%s/%s",DB_SERVER,DB_BASE_NAME,ecal_id);
+    pouch_request *ecaldoc_response = pr_init();
+    pr_set_method(ecaldoc_response, GET);
+    pr_set_url(ecaldoc_response, get_db_address);
+    pr_do(ecaldoc_response);
+    if (ecaldoc_response->httpresponse != 200){
+      pt_printsend("Unable to connect to database. error code %d\n",(int)ecaldoc_response->httpresponse);
+      running_ecal = 0;
+      unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
+      return;
+    }
+    JsonNode *ecalconfig_doc = json_decode(ecaldoc_response->resp.data);
+
+    // get all the ecal test results for all crates/slots
     sprintf(get_db_address,"%s/%s/%s/get_ecal?startkey=\"%s\"&endkey=\"%s\"",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,ecal_id,ecal_id);
     pouch_request *ecal_response = pr_init();
     pr_set_method(ecal_response, GET);
@@ -674,9 +688,9 @@ void *pt_ecal(void *args)
           if ((0x1<<j) & arg.slot_mask[i]){
             printf("crate %d slot %d\n",i,j);
 
-            // lets generate the ecal document
+            // lets generate the fec document
             JsonNode *doc;
-            create_fec_db_doc(i,j,&doc,&thread_fdset);
+            create_fec_db_doc(i,j,&doc,ecalconfig_doc,&thread_fdset);
 
             int k;
             for (k=0;k<total_rows;k++){
@@ -700,6 +714,8 @@ void *pt_ecal(void *args)
         }
       }
     }
+    json_delete(ecalconfig_doc);
+    pr_free(ecaldoc_response);
   }
 
   if (arg.noise_run){
