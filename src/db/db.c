@@ -212,7 +212,7 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
   // lets pull out what we need from the configuration document
   JsonNode *time_stamp = json_find_member(ecal_doc,"formatted_timestamp");
   JsonNode *config;
-  JsonNode *crates = json_find_member(ecal_doc,"crates");
+  JsonNode *crates = json_find_member(ecal_doc,"config");
   for (i=0;i<json_get_num_mems(crates);i++){
     JsonNode *one_crate = json_find_element(crates,i);
     if (json_get_number(json_find_member(one_crate,"crate_id")) == crate){

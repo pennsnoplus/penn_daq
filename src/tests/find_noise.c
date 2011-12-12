@@ -210,7 +210,7 @@ void *pt_find_noise(void *args)
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         for (j=0;j<16;j++){
-          if ((0x1<<j) & arg.slot_mask[j]){
+          if ((0x1<<j) & arg.slot_mask[i]){
             sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
             pouch_request *fec_response = pr_init();
             pr_set_method(fec_response, GET);
@@ -234,7 +234,7 @@ void *pt_find_noise(void *args)
             JsonNode *fecone_row = json_find_element(fec_rows,k);
             JsonNode *test_doc = json_find_member(fecone_row,"value");
             JsonNode *hw = json_find_member(test_doc,"hw");
-            JsonNode *zero_dac = json_find_member(hw,"zero_dac");
+            JsonNode *zero_dac = json_find_member(hw,"vthr_zero");
             for (k=0;k<32;k++){
               vthr_zeros[i*32*16+j*32+k] = json_get_number(json_find_element(zero_dac,k));
             }
@@ -319,11 +319,24 @@ void *pt_find_noise(void *args)
 
   // loop over slots
   for (j=0;j<16;j++){
+    printf("slot %d\n",j);
+    int any_crates = 0;
+    for (i=0;i<19;i++){
+      if ((0x1<<j) & arg.slot_mask[i])
+        any_crates = 1;
+    }
+    if (any_crates == 0)
+      continue;
     // loop over channels
-    for (k=0;k<32;k++){
+    for (k=0;k<2;k++){
+      printf("chan %d\n",k);
       int threshabovezero = -2;
       uint32_t found_noise = 0x0;
       uint32_t done_mask = 0x0;
+      for (i=0;i<19;i++){
+        if (!((0x1<<j) & arg.slot_mask[i]))
+          done_mask |= 0x1<<i;
+      }
 
       // set pedestal masks
       for (i=0;i<19;i++)
@@ -336,11 +349,11 @@ void *pt_find_noise(void *args)
         multi_softgt(5000);
 
         for (i=0;i<19;i++){
-          if (((0x1<<i) & arg.crate_mask) & ((0x1<<i) & !(done_mask))){
+          if (((0x1<<i) & arg.crate_mask) && ((0x1<<j) & arg.slot_mask[i]) && ((0x1<<i) & ~(done_mask))){
             // do the rest on XL3
             packet_args->slot_num = j;
             packet_args->chan_num = k;
-            packet_args->thresh = vthr_zeros[i*32*16+j*32+k]+threshabovezero;
+            packet_args->thresh = (uint32_t) ((int)vthr_zeros[i*32*16+j*32+k]+threshabovezero);
             SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
             do_xl3_cmd(&packet,i,&thread_fdset);
             SwapLongBlock(packet_results,sizeof(noise_test_results_t)/sizeof(uint32_t));
@@ -452,26 +465,25 @@ void *pt_find_noise(void *args)
             JsonNode *newdoc = json_mkobject();
             json_append_member(newdoc,"type",json_mkstring("find_noise"));
             JsonNode *channels = json_mkarray();
-            for (k=0;k<32;k++){
+            for (k=0;k<2;k++){
               JsonNode *one_chan = json_mkobject();
               json_append_member(one_chan,"id",json_mknumber(k));
               json_append_member(one_chan,"zero_used",json_mknumber(vthr_zeros[i*32*16+j*32+k]));
 
               JsonNode *points = json_mkarray();
               int l;
+              int finished = 0;
               for (l=0;l<33;l++){
-                int finished = 0;
                 JsonNode *one_point = json_mkobject();
                 json_append_member(one_point,"thresh_above_zero",json_mknumber(l-2));
                 json_append_member(one_point,"base_noise",json_mknumber(base_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
                 json_append_member(one_point,"readout_noise",json_mknumber(readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
                 json_append_element(points,one_point);
                 if (readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l] == 0){
-                  if (finished){
+                  if (finished)
                     break;
-                  }else{
-                    finished = 1;
-                  }
+                  else
+                    finished ++;
                 }
               }
               json_append_member(one_chan,"points",points);

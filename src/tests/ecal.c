@@ -209,11 +209,23 @@ void *pt_ecal(void *args)
     sprintf(log_name+strlen(log_name), "%d.log", (int)moretime.tv_usec);
     start_logging_to_file(log_name);
 
+    sbc_lock = 1;
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 1;
+    }
+
 
 
     // post ecal doc
     post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id,&thread_fdset);
 
+    
+    sbc_lock = 0;
+    for (i=0;i<19;i++){
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 0;
+    }
 
     // ok we are set up, time to start
 
@@ -720,18 +732,19 @@ void *pt_ecal(void *args)
 
   if (arg.noise_run){
     // re lock everything down
-    sbc_lock = 1;
+    sbc_lock = 0;
     for (i=0;i<19;i++)
       if ((0x1<<i) & arg.crate_mask)
-        xl3_lock[i] = 1;
+        xl3_lock[i] = 0;
 
     // FIND_NOISE
     do{
       sprintf(command_buffer,"find_noise -c %05x -d -e %s ",arg.crate_mask,ecal_id);
       for (i=0;i<19;i++)
         sprintf(command_buffer+strlen(command_buffer),"-%02d %04x ",i,arg.slot_mask[i]);
-      result = zdisc(command_buffer);
+      result = find_noise(command_buffer);
       if (result == -2 || result == -3){
+        printf("result was %d\n",result);
         running_ecal = 0;
         unthread_and_unlock(1,arg.crate_mask,arg.thread_num); 
         return;
@@ -745,6 +758,13 @@ void *pt_ecal(void *args)
 
   // now update again with noise run stuff
   if (arg.update_hwdb){
+
+    // re lock everything down
+    sbc_lock = 0;
+    for (i=0;i<19;i++)
+      if ((0x1<<i) & arg.crate_mask)
+        xl3_lock[i] = 0;
+
     pt_printsend("Updating hw db with find_noise results\n");
 
     // get the find noise test results
