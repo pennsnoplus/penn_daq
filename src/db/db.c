@@ -226,6 +226,7 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
       }
     }
   }
+  JsonNode *settings = json_find_member(ecal_doc,"settings");
 
   JsonNode *doc = json_mkobject();
 
@@ -240,8 +241,11 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
   json_append_member(doc,"board_id",json_mkstring(json_get_string(json_find_member(config,"mb_id"))));
   
   JsonNode *hw = json_mkobject();
-  json_append_member(hw,"vint",json_mknumber(205)); //FIXME
-  json_append_member(hw,"hvref",json_mknumber(0)); //FIXME
+  json_append_member(hw,"vint",json_mknumber(json_get_number(json_find_member(settings,"vint"))));
+  json_append_member(hw,"hvref",json_mknumber(json_get_number(json_find_member(settings,"hvref"))));
+  json_append_member(hw,"tr100",json_mkcopy(json_find_member(settings,"tr100")));
+  json_append_member(hw,"tr20",json_mkcopy(json_find_member(settings,"tr20")));
+  json_append_member(hw,"scmos",json_mkcopy(json_find_member(settings,"scmos")));
   json_append_member(doc,"hw",hw);
   JsonNode *id = json_mkobject();
   json_append_member(id,"db0",json_mkstring(json_get_string(json_find_member(config,"db0_id"))));
@@ -590,6 +594,27 @@ int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_f
 int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id, fd_set *thread_fdset)
 {
   JsonNode *doc = json_mkobject();
+
+  // lets get what we need from the current crate init doc
+  char get_db_address[500];
+  sprintf(get_db_address,"%s/%s/CRATE_INIT_DOC",DB_SERVER,DB_BASE_NAME);
+  pouch_request *init_response = pr_init();
+  pr_set_method(init_response, GET);
+  pr_set_url(init_response, get_db_address);
+  pr_do(init_response);
+  if (init_response->httpresponse != 200){
+    pt_printsend("Unable to connect to database. error code %d\n",(int)init_response->httpresponse);
+    return;
+  }
+  JsonNode *init_doc = json_decode(init_response->resp.data);
+  JsonNode *settings = json_mkobject();
+  json_append_member(settings,"vint",json_mknumber(json_get_number(json_find_member(init_doc,"vint"))));
+  json_append_member(settings,"hvref",json_mknumber(json_get_number(json_find_member(init_doc,"hvref"))));
+  json_append_member(settings,"tr100",json_mkcopy(json_find_member(init_doc,"tr100")));
+  json_append_member(settings,"tr20",json_mkcopy(json_find_member(init_doc,"tr20")));
+  json_append_member(settings,"scmos",json_mkcopy(json_find_member(init_doc,"scmos")));
+  json_append_member(doc,"settings",settings);
+
   time_t the_time;
   the_time = time(0); //
   char datetime[100];
@@ -619,7 +644,7 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
           sprintf(db_id[1],"%04x",crate_config[i][j].db_id[1]);
           sprintf(db_id[2],"%04x",crate_config[i][j].db_id[2]);
           sprintf(db_id[3],"%04x",crate_config[i][j].db_id[3]);
-          
+
           JsonNode *one_slot = json_mkobject();
           json_append_member(one_slot,"slot_id",json_mknumber(j));
           json_append_member(one_slot,"mb_id",json_mkstring(mb_id));
