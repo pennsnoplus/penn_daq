@@ -4,6 +4,7 @@
 #define __DAQ_UTILS_H
 
 #define CONFIG_FILE_LOC "data/config.cfg"
+#define DEFAULT_CONFIG_FILE_LOC "data/default.cfg"
 
 int read_from_tut(char *result);
 int run_macro_from_tut(char *buffer);

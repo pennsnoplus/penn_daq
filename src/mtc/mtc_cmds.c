@@ -198,7 +198,9 @@ void *pt_sbc_control(void *args)
       return;
     }
 
-    usleep(50000);
+    int i;
+    for (i=0;i<10;i++)
+      usleep(50000);
 
     // we can connect, set up the address
     struct sockaddr_in sbc_addr;

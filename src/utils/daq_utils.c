@@ -328,8 +328,13 @@ int read_configuration_file()
   sprintf(filename,"%s/%s",PENN_DAQ_ROOT,CONFIG_FILE_LOC);
   config_file = fopen(filename,"r");
   if (config_file == NULL){
-    printf("Could not open configuration file! Looking for %s\n",filename);
-    return -1;
+    printf("WARNING! Could not open configuration file! Using default.\n");
+    sprintf(filename,"%s/%s",PENN_DAQ_ROOT,DEFAULT_CONFIG_FILE_LOC);
+    config_file = fopen(filename,"r");
+    if (config_file == NULL){
+      printf("Problem opening default configuration document! Looking for %s. Exiting\n",filename);
+      return -1;
+    }
   }
   int i,n = 0;
   char line_in[100][100];

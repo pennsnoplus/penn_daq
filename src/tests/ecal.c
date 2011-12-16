@@ -216,10 +216,11 @@ void *pt_ecal(void *args)
 
 
 
+    pt_printsend("Creating ECAL document...\n");
     // post ecal doc
     post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id,&thread_fdset);
 
-    pt_printsend("ECAL id: %s\n\n",ecal_id);
+    pt_printsend("Created! ECAL id: %s\n\n",ecal_id);
     pt_printsend("------------------------------------------\n");
     
     sbc_lock = 0;
@@ -299,9 +300,11 @@ void *pt_ecal(void *args)
     while (sbc_lock != 0){}
     pt_printsend("-------------------------------------------\n");
 
+    
+    /*
 
     // CGT_TEST
-/*
+
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -318,8 +321,6 @@ void *pt_ecal(void *args)
         pt_printsend("-------------------------------------------\n");
       }
     }
-*/
-
 
     // MTC_INIT
     do {
@@ -622,6 +623,7 @@ void *pt_ecal(void *args)
       }
     }
 
+    */
 
     // ZDISC
     for (i=0;i<19;i++){

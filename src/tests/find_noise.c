@@ -175,6 +175,7 @@ void *pt_find_noise(void *args)
                 crate_config[i][j].db_id[1],crate_config[i][j].db_id[2],
                 crate_config[i][j].db_id[3]);
             sprintf(get_db_address,"%s/%s/%s/get_zdisc?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
+            printf("1- .%s.\n",get_db_address);
             pouch_request *zdisc_response = pr_init();
             pr_set_method(zdisc_response, GET);
             pr_set_url(zdisc_response, get_db_address);
@@ -212,6 +213,7 @@ void *pt_find_noise(void *args)
         for (j=0;j<16;j++){
           if ((0x1<<j) & arg.slot_mask[i]){
             sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
+            printf("2- .%s.\n",get_db_address);
             pouch_request *fec_response = pr_init();
             pr_set_method(fec_response, GET);
             pr_set_url(fec_response, get_db_address);

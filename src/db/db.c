@@ -594,6 +594,7 @@ int post_debug_doc_mem_test(int crate, int card, JsonNode* doc, fd_set *thread_f
 int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char *id, fd_set *thread_fdset)
 {
   JsonNode *doc = json_mkobject();
+  printf("in post ecal\n");
 
   // lets get what we need from the current crate init doc
   char get_db_address[500];
@@ -601,7 +602,9 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
   pouch_request *init_response = pr_init();
   pr_set_method(init_response, GET);
   pr_set_url(init_response, get_db_address);
+  printf("do\n");
   pr_do(init_response);
+  printf("did\n");
   if (init_response->httpresponse != 200){
     pt_printsend("Unable to connect to database. error code %d\n",(int)init_response->httpresponse);
     return;
@@ -637,7 +640,9 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
         if ((0x1<<j) & slot_mask[i]){
           char mb_id[8],db_id[4][8];
           char put_db_address[500];
+          printf("updating crate config for %d, %d\n",i,j);
           update_crate_config(i,0x1<<j,thread_fdset);
+          printf("updated\n");
 
           sprintf(mb_id,"%04x",crate_config[i][j].mb_id);
           sprintf(db_id[0],"%04x",crate_config[i][j].db_id[0]);
@@ -681,7 +686,9 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
   pr_set_url(post_response, put_db_address);
   char *data = json_encode(doc);
   pr_set_data(post_response, data);
+  printf("about to post\n");
   pr_do(post_response);
+  printf("posted\n");
   int ret = 0;
   if (post_response->httpresponse != 201){
     pt_printsend("error code %d\n",(int)post_response->httpresponse);
