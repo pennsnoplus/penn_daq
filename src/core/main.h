@@ -20,6 +20,8 @@
 
 #define DEF_MTC_XILINX_LOCATION "data/mtcxilinx.rbt" 
 
+uint32_t current_gtid;
+
 pthread_t *thread_pool[MAX_THREADS]; //!< Pool of threads to make new tests in
 int thread_done[MAX_THREADS+1]; //!< Flags that a thread has finished and can be cleared
 

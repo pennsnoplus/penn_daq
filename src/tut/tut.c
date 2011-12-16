@@ -28,7 +28,7 @@
 #include <time.h>
 
 
-#define MAXDATASIZE 100 // max number of bytes we can get at once 
+#define MAXDATASIZE 1440 // max number of bytes we can get at once 
 #define CONFIG_FILE_LOC "data/config.cfg"
 
 extern char *getwd ();
@@ -135,6 +135,10 @@ int read_configuration_file()
   FILE *config_file;
   char filename[500];
   char *PENN_DAQ_ROOT = getenv("PENN_DAQ_ROOT");
+  if (PENN_DAQ_ROOT == NULL){
+    printf("You need to set the environment variable PENN_DAQ_ROOT to the penn_daq directory\n");
+    exit(-1);
+  }
   sprintf(filename,"%s/%s",PENN_DAQ_ROOT,CONFIG_FILE_LOC);
   config_file = fopen(filename,"r");
   int i,n = 0;
@@ -380,6 +384,7 @@ void leave(int sig){
 int main(int argc, char *argv[])
 {
   (void) signal(SIGINT,leave);
+
   using_history();
   read_configuration_file();
   struct addrinfo hints, *servinfo, *p;

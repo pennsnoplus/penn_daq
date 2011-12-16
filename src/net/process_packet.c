@@ -12,6 +12,7 @@
 #include <signal.h>
 
 #include "packet_types.h"
+#include "unpack_bundles.h"
 
 #include "main.h"
 #include "xl3_utils.h"
@@ -97,8 +98,10 @@ int read_control_command(int fd)
     // this socket is locked and we aren't supposed to be reading it
     return 0;
   }
-  memset(buffer,'\0',MAX_PACKET_SIZE);
-  int numbytes = recv(fd, buffer, MAX_PACKET_SIZE, 0);
+//  memset(buffer,'\0',MAX_PACKET_SIZE);
+//  int numbytes = recv(fd, buffer, MAX_PACKET_SIZE, 0);
+    memset(buffer,'\0',3000);
+    int numbytes = recv(fd, buffer, 3000, 0);
   // check if theres any errors or an EOF packet
   if (numbytes < 0){
     printsend("Error receiving command from controller\n");
@@ -387,10 +390,10 @@ int store_mega_bundle(XL3_Packet *packet)
   if (megabundle_count%BUNDLE_PRINT == 0){
     long int inst_dt = end_time - last_print_time;
     last_print_time = end_time;
-    pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
+    pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake) (gtid: %6x)\n",
         (float) (recv_bytes*8/(float)avg_dt),
         (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
-        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
+        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0,current_gtid);
 //    pt_printsend("recv %i \t %i \t %i \t %i \t average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
 //        megabundle_count,num_bundles,(int) recv_bytes, (int) avg_dt,
 //        (float) (recv_bytes*8/(float)avg_dt),
@@ -432,5 +435,36 @@ int handle_screwed_packet(XL3_Packet *packet, int xl3num)
     if (errors->screwed[i])
       pt_printsend("\tFEC %d\n",i);
 
+  return 0;
+}
+
+int inspect_bundles(XL3_Packet *packet)
+{
+  int num_bundles = packet->cmdHeader.num_bundles;
+  PMTBundle *one_bundle = (PMTBundle *) packet->payload;
+  int i;
+  for (i=0;i<num_bundles;i++){
+    SwapLongBlock(one_bundle,3);
+    uint32_t gtid = UNPK_FEC_GT24_ID(&one_bundle->word1); 
+    uint16_t qhs = UNPK_QHS(&one_bundle->word1);
+    uint16_t qhl = UNPK_QHL(&one_bundle->word1);
+    uint16_t qlx = UNPK_QLX(&one_bundle->word1);
+    uint16_t tac = UNPK_TAC(&one_bundle->word1);
+    uint16_t crate = UNPK_CRATE_ID(&one_bundle->word1);
+    uint16_t board = UNPK_BOARD_ID(&one_bundle->word1);
+    uint16_t channel = UNPK_CHANNEL_ID(&one_bundle->word1);
+    if (((gtid > current_gtid) && ((gtid-current_gtid) > 0x10000)) || ((gtid < current_gtid) && (current_gtid-gtid) > 0x10000) || ((gtid & 0xFFF) == 0x0)){
+     printf("CCC - %u %u %u - Bad gtid! Expecting ~%06x, got %06x\n",crate,board,channel,current_gtid,gtid);
+    }else{
+      current_gtid = gtid;
+    }
+    //if (qhs == 0x7FF || qhs == 0xFFF || qhl == 0x7FF || qhl == 0xFFF || qlx == 0x7FF || qlx == 0xFFF || tac == 0x7FF || tac == 0xFFF){
+    //  printf("CCC - %u %u %u - Bad charge! %03x %03x %03x %03x\n",crate,board,channel,qhs,qhl,qlx,tac);
+    //}
+    if (crate > 18 || board > 15 || channel > 31){
+      printf("CCC - %u %u %u - bad ccc!\n",crate,board,channel);
+    }
+    one_bundle++;
+  }
   return 0;
 }

@@ -78,31 +78,31 @@ int find_noise(char *buffer)
       }else if (words[1] == '1'){   
         if (words[2] == '0'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[0] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[10] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '1'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[1] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[11] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '2'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[2] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[12] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '3'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[3] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[13] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '4'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[4] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[14] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '5'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[5] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[15] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '6'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[6] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[16] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '7'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[7] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[17] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '8'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[8] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[18] = strtoul(words2,(char**)NULL,16);
         }
 
 
@@ -322,13 +322,14 @@ void *pt_find_noise(void *args)
     printf("slot %d\n",j);
     int any_crates = 0;
     for (i=0;i<19;i++){
-      if ((0x1<<j) & arg.slot_mask[i])
-        any_crates = 1;
+      if ((0x1<<i) & arg.crate_mask)
+        if ((0x1<<j) & arg.slot_mask[i])
+	  any_crates = 1;
     }
     if (any_crates == 0)
       continue;
     // loop over channels
-    for (k=0;k<2;k++){
+    for (k=0;k<32;k++){
       printf("chan %d\n",k);
       int threshabovezero = -2;
       uint32_t found_noise = 0x0;
@@ -465,7 +466,7 @@ void *pt_find_noise(void *args)
             JsonNode *newdoc = json_mkobject();
             json_append_member(newdoc,"type",json_mkstring("find_noise"));
             JsonNode *channels = json_mkarray();
-            for (k=0;k<2;k++){
+            for (k=0;k<32;k++){
               JsonNode *one_chan = json_mkobject();
               json_append_member(one_chan,"id",json_mknumber(k));
               json_append_member(one_chan,"zero_used",json_mknumber(vthr_zeros[i*32*16+j*32+k]));

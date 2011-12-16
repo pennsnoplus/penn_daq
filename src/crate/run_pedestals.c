@@ -91,31 +91,31 @@ int run_pedestals(char *buffer, int mtc, int crate)
       }else if (words[1] == '1'){   
         if (words[2] == '0'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[0] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[10] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '1'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[1] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[11] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '2'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[2] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[12] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '3'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[3] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[13] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '4'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[4] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[14] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '5'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[5] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[15] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '6'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[6] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[16] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '7'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[7] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[17] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '8'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[8] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[18] = strtoul(words2,(char**)NULL,16);
         }
       }else if (words[1] == 'h'){
         if (crate && mtc)

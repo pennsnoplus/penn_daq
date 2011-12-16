@@ -201,7 +201,7 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
   fd_set readable_fdset = *(thread_fdset);
 
   struct timeval delay_value;
-  delay_value.tv_sec = 4;
+  delay_value.tv_sec = 30;
   delay_value.tv_usec = 0;
   // lets read more from the xl3
   while (1){

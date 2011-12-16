@@ -52,6 +52,8 @@ void *pt_mtc_init(void *args)
   int xilinx_load = ((uint32_t *) args)[1];
   free(args);
 
+  current_gtid = 0;
+
   pt_printsend("Initializing MTC/A/D\n");
 
   int errors;

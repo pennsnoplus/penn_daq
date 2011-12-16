@@ -17,7 +17,7 @@
 #include "ttot.h"
 
 #define MAX_TIME 1100
-#define NUM_PEDS 20
+#define NUM_PEDS 500
 #define TUB_DELAY 60
 
 #define RMP_DEFAULT 120
@@ -473,6 +473,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
       while (chan_done_mask != 0xFFFFFFFF){
         // set up gt delay
         real_delay = set_gt_delay((float) time);
+	while ((real_delay > (float) time) || ((real_delay + (float) increment) < (float) time)){
+	  printf("got %f instead of %f, trying again\n",real_delay,(float) time);
+	  real_delay = set_gt_delay((float) time);
+}
         // get the cmos count before sending pulses
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         // send some pulses
@@ -485,7 +489,7 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
           // check if we got all the pedestals from the TUB too
           if ((fin[j] >= 2*NUM_PEDS) && ((0x1<<j) & ~chan_done_mask)){
             chan_done_mask |= (0x1<<j); 
-            disc_times[i*32+j] = time+TUB_DELAY;
+            disc_times[i*32+j] = (int)real_delay+TUB_DELAY;
           }
         }
         if (chan_done_mask == 0xFFFFFFFF)
@@ -497,7 +501,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
             chan_done_mask = 0xFFFFFFFF;
           }
         }else{
-          time += increment;
+	  if (((int) (real_delay + 0.5) + increment) > time)
+	    time = (int) (real_delay + 0.5) + increment;
+	  if (time > MAX_TIME)
+	    time = MAX_TIME;
         }
       } // for time<=MAX_TIME
 
@@ -507,6 +514,12 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
         result = set_crate_pedestals(crate,0x1<<i,0x1<<j,thread_fdset);
         // if it worked before at time-tub_delay, it should work for time-tub_delay+50
         real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
+	while (real_delay < ((float) disc_times[i*32+j] - TUB_DELAY + 50 - 5))
+{
+	printf("2 - got %f instead of %f, trying again\n",real_delay,(float) disc_times[i*32+j] - TUB_DELAY + 50);
+          real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
+}
+	  
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         multi_softgt(NUM_PEDS);
         result = get_cmos_total_count(crate,i,fin,thread_fdset);
@@ -538,6 +551,12 @@ int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, 
   // measure it twice to make sure we are good
   for (i=0;i<2;i++){
     real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+    while (real_delay < ((float) goal_time - TUB_DELAY - 5))
+{
+printf("3 - got %f instead of %f, trying again\n",real_delay,(float)goal_time - TUB_DELAY);
+      real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+}
+ 
     // get the cmos count before sending pulses
     result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
     // send some pulses

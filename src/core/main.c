@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     return -1;
   }
   CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
+  current_gtid = 0;
   write_log = 0;
   start_time = 0;
   end_time = 0;

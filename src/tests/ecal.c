@@ -74,31 +74,31 @@ int ecal(char *buffer)
       }else if (words[1] == '1'){   
         if (words[2] == '0'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[0] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[10] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '1'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[1] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[11] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '2'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[2] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[12] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '3'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[3] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[13] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '4'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[4] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[14] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '5'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[5] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[15] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '6'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[6] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[16] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '7'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[7] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[17] = strtoul(words2,(char**)NULL,16);
         }else if (words[2] == '8'){
           if ((words2 = strtok(NULL," ")) != NULL)
-            args->slot_mask[8] = strtoul(words2,(char**)NULL,16);
+            args->slot_mask[18] = strtoul(words2,(char**)NULL,16);
         }
 
       }else if (words[1] == 'd'){
@@ -157,8 +157,8 @@ void *pt_ecal(void *args)
 
   char comments[1000];
   memset(comments,'\0',1000);
-  char command_buffer[500];
-  memset(command_buffer,'\0',500);
+  char command_buffer[1000];
+  memset(command_buffer,'\0',1000);
 
   system("clear");
   pt_printsend("------------------------------------------\n");
@@ -181,7 +181,6 @@ void *pt_ecal(void *args)
     get_new_id(ecal_id);
 
 
-    pt_printsend("ECAL id: %s\n\n",ecal_id);
     pt_printsend("\nYou have selected the following slots:\n\n");
     for (i=0;i<19;i++){
       if ((0x1<<(i)) & arg.crate_mask){
@@ -220,6 +219,8 @@ void *pt_ecal(void *args)
     // post ecal doc
     post_ecal_doc(arg.crate_mask,arg.slot_mask,log_name,ecal_id,&thread_fdset);
 
+    pt_printsend("ECAL id: %s\n\n",ecal_id);
+    pt_printsend("------------------------------------------\n");
     
     sbc_lock = 0;
     for (i=0;i<19;i++){
@@ -300,6 +301,7 @@ void *pt_ecal(void *args)
 
 
     // CGT_TEST
+/*
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
@@ -316,6 +318,7 @@ void *pt_ecal(void *args)
         pt_printsend("-------------------------------------------\n");
       }
     }
+*/
 
 
     // MTC_INIT
@@ -403,12 +406,12 @@ void *pt_ecal(void *args)
       }
     }
 
-    pt_printsend("Time to do the cable business\n");
-    pt_printsend("ECL output --> EXT PED (long cable)\n");
-    pt_printsend("TTL input --> Global trigger)\n");
-    pt_printsend("Hit enter when ready\n");
+//    pt_printsend("Time to do the cable business\n");
+//    pt_printsend("ECL output --> EXT PED (long cable)\n");
+//    pt_printsend("TTL input --> Global trigger)\n");
+//    pt_printsend("Hit enter when ready\n");
 
-    read_from_tut(comments);
+//    read_from_tut(comments);
 
     // MTC_INIT
     do {
@@ -496,10 +499,10 @@ void *pt_ecal(void *args)
     }
 
 
-    pt_printsend("Time to remove cables\n");
-    pt_printsend("Hit enter when ready\n");
+//    pt_printsend("Time to remove cables\n");
+//    pt_printsend("Hit enter when ready\n");
 
-    read_from_tut(comments);
+//    read_from_tut(comments);
 
 
     // CRATE_INIT with default + vbal + tdisc values
@@ -720,12 +723,13 @@ void *pt_ecal(void *args)
             post_fec_db_doc(i,j,doc);
 
             json_delete(doc); // only delete the head node
-            json_delete(ecalfull_doc);
-            pr_free(ecal_response);
           }
         }
       }
     }
+
+    json_delete(ecalfull_doc);
+    pr_free(ecal_response);
     json_delete(ecalconfig_doc);
     pr_free(ecaldoc_response);
   }
@@ -738,10 +742,15 @@ void *pt_ecal(void *args)
         xl3_lock[i] = 0;
 
     // FIND_NOISE
+    int some_crate = 0;
     do{
-      sprintf(command_buffer,"find_noise -c %05x -d -e %s ",arg.crate_mask,ecal_id);
-      for (i=0;i<19;i++)
+      sprintf(command_buffer,"find_noise -c %05x -d -E %s ",arg.crate_mask,ecal_id);
+      for (i=0;i<19;i++){
+        if ((0x1<<i) & arg.crate_mask){
+          some_crate = i;
+        }
         sprintf(command_buffer+strlen(command_buffer),"-%02d %04x ",i,arg.slot_mask[i]);
+      }
       result = find_noise(command_buffer);
       if (result == -2 || result == -3){
         printf("result was %d\n",result);
@@ -750,7 +759,7 @@ void *pt_ecal(void *args)
         return;
       }
     } while (result != 0);
-    while (xl3_lock[0] != 0){}
+    while (xl3_lock[some_crate] != 0){}
     pt_printsend("------------------------------------------\n");
   }
 
@@ -795,6 +804,7 @@ void *pt_ecal(void *args)
       if ((0x1<<i) & arg.crate_mask){
         for (j=0;j<16;j++){
           if ((0x1<<j) & arg.slot_mask[i]){
+printf("crate %d slot %d\n",i,j);
             // get the current fec document
             sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
             pouch_request *fec_response = pr_init();
@@ -808,8 +818,8 @@ void *pt_ecal(void *args)
             }
             JsonNode *fecfull_doc = json_decode(fec_response->resp.data);
             JsonNode *fec_rows = json_find_member(fecfull_doc,"rows");
-            int total_rows = json_get_num_mems(fec_rows); 
-            if (total_rows == 0){
+            int total_rows2 = json_get_num_mems(fec_rows); 
+            if (total_rows2 == 0){
               pt_printsend("No FEC documents for this crate/card yet! (crate %d card %d)\n",i,j);
               unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
               return;
@@ -823,11 +833,14 @@ void *pt_ecal(void *args)
             for (k=0;k<total_rows;k++){
               JsonNode *ecalone_row = json_find_element(ecal_rows,k);
               JsonNode *test_doc = json_find_member(ecalone_row,"value");
-              if (strcmp(json_get_string(json_find_member(test_doc,"type")),"find_noise") == 0){
-                found_it = 1;
-                printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
-                add_ecal_test_results(fec_doc,test_doc);
-                break;
+              JsonNode *config = json_find_member(test_doc,"config");
+              if ((json_get_number(json_find_member(config,"crate_id")) == i) && (json_get_number(json_find_member(config,"slot")) == j)){
+                if (strcmp(json_get_string(json_find_member(test_doc,"type")),"find_noise") == 0){
+                  found_it = 1;
+                  printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
+                  add_ecal_test_results(fec_doc,test_doc);
+                  break;
+                }
               }
             }
             if (found_it == 0){

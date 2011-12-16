@@ -42,6 +42,8 @@ float set_gt_delay(float gtdel)
   result = set_coarse_delay(coarse_delay);
   fdelay_set = set_fine_delay(fine_delay);
   total_delay = ((float) coarse_delay + fdelay_set + (float)(18.35));
+ if (((total_delay - gtdel) > 2) || ((total_delay - gtdel) < -2))
+   printf("wanted %f, cdticks is %u, finedelay is %f, set to coarse_delay %u + fdelay_set %f + 18.35 = %f\n",gtdel,cdticks,fine_delay,coarse_delay,fdelay_set,total_delay);
   return total_delay;
 }
 
