@@ -301,7 +301,6 @@ void *pt_ecal(void *args)
     pt_printsend("-------------------------------------------\n");
 
     
-    /*
 
     // CGT_TEST
 
@@ -394,7 +393,7 @@ void *pt_ecal(void *args)
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
-          sprintf(command_buffer,"ped_run -c %d -s %04x -d -E %s",i,arg.slot_mask[i],ecal_id);
+          sprintf(command_buffer,"ped_run -c %d -s %04x -b -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = ped_run(command_buffer);
           if (result == -2 || result == -3){
             running_ecal = 0;
@@ -623,7 +622,6 @@ void *pt_ecal(void *args)
       }
     }
 
-    */
 
     // ZDISC
     for (i=0;i<19;i++){
@@ -826,7 +824,7 @@ printf("crate %d slot %d\n",i,j);
               unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
               return;
             }
-            JsonNode *fecone_row = json_find_element(fec_rows,j);
+            JsonNode *fecone_row = json_find_element(fec_rows,0);
             JsonNode *fec_doc = json_find_member(fecone_row,"value");
 
             // now find the noise run document for this crate/slot and add it to the fec document
