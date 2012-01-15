@@ -111,9 +111,10 @@ void *pt_get_ttot(void *args)
           if (arg.target_time < 9999){
             pt_printsend(">>> Warning: Time less than %d nsec",arg.target_time);
             tot_errors[i][j] = 1;
-          }else{
-            tot_errors[i][j] = 2;
           }
+	}else{
+	  pt_printsend(">>> Problem measuring time for this channel\n");
+          tot_errors[i][j] = 2;
         }
         pt_printsend("\n");
       }
