@@ -328,8 +328,13 @@ int read_configuration_file()
   sprintf(filename,"%s/%s",PENN_DAQ_ROOT,CONFIG_FILE_LOC);
   config_file = fopen(filename,"r");
   if (config_file == NULL){
-    printf("Could not open configuration file! Looking for %s\n",filename);
-    return -1;
+    printf("WARNING! Could not open configuration file! Using default.\n");
+    sprintf(filename,"%s/%s",PENN_DAQ_ROOT,DEFAULT_CONFIG_FILE_LOC);
+    config_file = fopen(filename,"r");
+    if (config_file == NULL){
+      printf("Problem opening default configuration document! Looking for %s. Exiting\n",filename);
+      return -1;
+    }
   }
   int i,n = 0;
   char line_in[100][100];
@@ -363,6 +368,18 @@ int read_configuration_file()
           strcpy(DB_BASE_NAME,var_value);
         }else if (strcmp(var_name,"DB_VIEWDOC")==0){
           strcpy(DB_VIEWDOC,var_value);
+        }else if (strcmp(var_name,"FECDB_ADDRESS")==0){
+          strcpy(FECDB_ADDRESS,var_value);
+        }else if (strcmp(var_name,"FECDB_PORT")==0){
+          strcpy(FECDB_PORT,var_value);
+        }else if (strcmp(var_name,"FECDB_USERNAME")==0){
+          strcpy(FECDB_USERNAME,var_value);
+        }else if (strcmp(var_name,"FECDB_PASSWORD")==0){
+          strcpy(FECDB_PASSWORD,var_value);
+        }else if (strcmp(var_name,"FECDB_BASE_NAME")==0){
+          strcpy(FECDB_BASE_NAME,var_value);
+        }else if (strcmp(var_name,"FECDB_VIEWDOC")==0){
+          strcpy(FECDB_VIEWDOC,var_value);
         }else if (strcmp(var_name,"MAX_PENDING_CONS")==0){
           MAX_PENDING_CONS = atoi(var_value);
         }else if (strcmp(var_name,"XL3_PORT")==0){
@@ -507,6 +524,28 @@ int start_logging(){
   }
   return 0;
 }
+
+int start_logging_to_file(char * filename){
+  if (write_log){
+    stop_logging();
+  }
+  write_log = 1;
+  char log_name[500] = {'\0'};  // random size, it's a pretty nice number though.
+
+  sprintf(log_name,"%s/log/%s",PENN_DAQ_ROOT,filename);
+  ps_log_file = fopen(filename, "a+");
+  if (ps_log_file == NULL){
+    printsend("Problem enabling logging: Could not open log file!\n");
+    write_log = 0;
+    sprintf(filename,"x");
+  }else{
+    printsend( "Enabled logging\n");
+    printsend( "Opened log file: %s\n", log_name);
+    sprintf(filename,"%s",log_name);
+  }
+  return 0;
+}
+
 
 int stop_logging(){
   if(write_log){

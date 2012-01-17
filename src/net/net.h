@@ -62,7 +62,8 @@ pthread_mutex_t socket_lock;
 // connection flag
 int views_connected;
 
-char buffer[MAX_PACKET_SIZE];
+//char buffer[MAX_PACKET_SIZE];
+char buffer[3000];
 
 
 // function prototypes

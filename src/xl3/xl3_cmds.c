@@ -537,7 +537,7 @@ void *pt_hv_readback(void* args)
 
   float voltage_a = 0, voltage_b = 0;
   float current_a = 0, current_b = 0;
-  int i,nt = 10;
+  int i,nt = 1;
 
   XL3_Packet packet;
   hv_readback_results_t *packet_results = (hv_readback_results_t *) packet.payload;

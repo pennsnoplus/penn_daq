@@ -15,6 +15,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } cmos_m_gtvalid_t;
 
 int cmos_m_gtvalid(char *buffer);

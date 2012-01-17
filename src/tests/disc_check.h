@@ -13,6 +13,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } disc_check_t;
 
 int disc_check(char *buffer);

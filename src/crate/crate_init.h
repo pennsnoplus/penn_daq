@@ -12,9 +12,11 @@ typedef struct{
   int hv_reset;
   int shift_reg_only;
   uint16_t slot_mask;
-  int use_cbal;
-  int use_zdisc;
-  int use_ttot;
+  int use_vbal;
+  int use_vthr;
+  int use_tdisc;
+  int use_tcmos;
+
   int use_all;
   int use_hw;
 } crate_init_t;

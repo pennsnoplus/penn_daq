@@ -15,6 +15,7 @@ int process_xl3_packet(char *buffer, int xl3num);
 int handle_error_packet(XL3_Packet *packet, int xl3num);
 int handle_screwed_packet(XL3_Packet *packet, int xl3num);
 
+int inspect_bundles(XL3_Packet *packet);
 
 #endif
 

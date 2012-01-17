@@ -7,7 +7,7 @@
 
 typedef struct {
   uint16_t mb_id;
-  uint16_t dc_id[4];
+  uint16_t db_id[4];
 } hware_vals_t;
 
 typedef struct {
@@ -48,7 +48,7 @@ typedef struct {
 
 typedef struct {
     uint16_t mb_id;
-    uint16_t dc_id[4];
+    uint16_t db_id[4];
     unsigned char vbal[2][32];
     unsigned char vthr[32];
     tdisc_t tdisc;

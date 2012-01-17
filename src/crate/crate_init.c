@@ -23,9 +23,10 @@ int crate_init(char *buffer)
   args->hv_reset = 0;
   args->shift_reg_only = 0;
   args->slot_mask = 0x80;
-  args->use_cbal = 0;
-  args->use_zdisc = 0;
-  args->use_ttot = 0;
+  args->use_vbal = 0;
+  args->use_vthr = 0;
+  args->use_tdisc = 0;
+  args->use_tcmos = 0;
   args->use_all = 0;
   args->use_hw = 0;
 
@@ -42,17 +43,18 @@ int crate_init(char *buffer)
       }else if (words[1] == 'x'){args->xilinx_load = 1;
       }else if (words[1] == 'X'){args->xilinx_load = 2;
       }else if (words[1] == 'v'){args->hv_reset = 1;
-      }else if (words[1] == 'b'){args->use_cbal = 1;
-      }else if (words[1] == 'd'){args->use_zdisc = 1;
-      }else if (words[1] == 't'){args->use_ttot = 1;
-      }else if (words[1] == 'a'){args->use_all = 1;
-      }else if (words[1] == 'w'){args->use_hw = 1;
+      }else if (words[1] == 'B'){args->use_vbal = 1;
+      }else if (words[1] == 'T'){args->use_vthr = 1;
+      }else if (words[1] == 'D'){args->use_tdisc = 1;
+      }else if (words[1] == 'C'){args->use_tcmos = 1;
+      }else if (words[1] == 'A'){args->use_all = 1;
+      }else if (words[1] == 'H'){args->use_hw = 1;
       }else if (words[1] == 'h'){
         printsend("Usage: crate_init -c [crate num (int)]"
             "-s [slot mask (hex)] -x (load xilinx) -X (load cald xilinx)"
-            "-v (reset HV dac) -b (load cbal from db) -d (load zdisc from db)"
-            "-t (load ttot from db) -a (load all from db)"
-            "-w (use crate/card specific values from db)\n");
+            "-v (reset HV dac) -B (load vbal from db) -T (load vthr from db)"
+            "-D (load tdisc from db) -C (load tcmos values from db) -A (load all from db)"
+            "-H (use crate/card specific values from db)\n");
         free(args);
         return 0;
       }
@@ -97,7 +99,7 @@ void *pt_crate_init(void *args)
   JsonNode* debug_doc = NULL;
 
   if (arg.use_hw == 1){
-    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,15]",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,arg.crate_num,arg.crate_num);
+    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,15]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,arg.crate_num,arg.crate_num);
     pr_set_method(hw_response, GET);
     pr_set_url(hw_response, get_db_address);
     pr_do(hw_response);
@@ -131,8 +133,17 @@ void *pt_crate_init(void *args)
   }
 
   // make sure crate_config is up to date
-  if (arg.use_cbal || arg.use_zdisc || arg.use_ttot || arg.use_all)
+  if (arg.use_vbal || arg.use_vthr || arg.use_tdisc || arg.use_tcmos || arg.use_all)
     update_crate_config(arg.crate_num,arg.slot_mask,&thread_fdset);
+
+  if (arg.use_vbal || arg.use_all)
+    pt_printsend("Using VBAL values from database\n");
+  if (arg.use_vthr || arg.use_all)
+    pt_printsend("Using VTHR values from database\n");
+  if (arg.use_tdisc || arg.use_all)
+    pt_printsend("Using TDISC values from database\n");
+  if (arg.use_tcmos || arg.use_all)
+    pt_printsend("Using TCMOS values from database\n");
 
   // GET ALL FEC DATA FROM DB
   int i,j,crate,card;
@@ -153,7 +164,7 @@ void *pt_crate_init(void *args)
       crate = (int)json_get_number(json_find_element(key,0));
       card = (int)json_get_number(json_find_element(key,1));
       if (crate != arg.crate_num || card != i){
-        printsend("Database error : incorrect crate or card num (%d,%d)\n",crate,card);
+        pt_printsend("Database error : incorrect crate or card num (%d,%d)\n",crate,card);
         unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
         return;
       }
@@ -165,16 +176,17 @@ void *pt_crate_init(void *args)
     //////////////////////////////
     // GET VALUES FROM DEBUG DB //
     //////////////////////////////
-
-    if ((arg.use_cbal || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
+    
+    // VBAL
+    if ((arg.use_vbal || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
       if (crate_config[arg.crate_num][i].mb_id == 0x0000){
-        printsend("Warning: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n");
+        pt_printsend("Warning: Slot %d: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n",i);
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_crate_cbal?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
             DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *cbal_response = pr_init();
@@ -190,7 +202,7 @@ void *pt_crate_init(void *args)
         JsonNode* viewrows = json_find_member(viewdoc,"rows");
         int n = json_get_num_mems(viewrows);
         if (n == 0){
-          pt_printsend("No crate_cbal documents for this configuration (%s). Continuing with default values.\n",config_string);
+          pt_printsend("Warning: Slot %d: No crate_cbal documents for this configuration (%s). Continuing with default values.\n",i,config_string);
         }else{
           // these next three JSON nodes are pointers to the structure of viewrows; no need to delete
           JsonNode* cbal_doc = json_find_member(json_find_element(viewrows,0),"value");
@@ -206,14 +218,16 @@ void *pt_crate_init(void *args)
       }
     }
 
-    if ((arg.use_zdisc || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
+    // VTHR
+    if ((arg.use_vthr || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
       if (crate_config[arg.crate_num][i].mb_id == 0x0000){
+        pt_printsend("Warning: Slot %d: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n",i);
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_zdisc?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *zdisc_response = pr_init();
         pr_set_method(zdisc_response, GET);
@@ -228,7 +242,7 @@ void *pt_crate_init(void *args)
         JsonNode* viewrows = json_find_member(viewdoc,"rows");
         int n = json_get_num_mems(viewrows);
         if (n == 0){
-          pt_printsend("No zdisc documents for this configuration (%s). Continuing with default values.\n",config_string);
+          pt_printsend("Warning: Slot %d: No zdisc documents for this configuration (%s). Continuing with default values.\n",i,config_string);
         }else{
           JsonNode* zdisc_doc = json_find_member(json_find_element(viewrows,0),"value");
           JsonNode* vthr = json_find_member(zdisc_doc,"zero_dac");
@@ -241,16 +255,16 @@ void *pt_crate_init(void *args)
       }
     }
 
-
-    if ((arg.use_ttot || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
+    // TDISC
+    if ((arg.use_tdisc || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
       if (crate_config[arg.crate_num][i].mb_id == 0x0000){
-        pt_printsend("Warning: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n");
+        pt_printsend("Warning: Slot %d: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n",i);
       }else{
         char config_string[500];
         sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
-            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].dc_id[0],
-            crate_config[arg.crate_num][i].dc_id[1],crate_config[arg.crate_num][i].dc_id[2],
-            crate_config[arg.crate_num][i].dc_id[3]);
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
         sprintf(get_db_address,"%s/%s/%s/get_ttot?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
             DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
         pouch_request *ttot_response = pr_init();
@@ -266,7 +280,7 @@ void *pt_crate_init(void *args)
         JsonNode* viewrows = json_find_member(viewdoc,"rows");
         int n = json_get_num_mems(viewrows);
         if (n == 0){
-          pt_printsend("No set_ttot documents for this configuration (%s). Continuing with default values.\n",config_string);
+          pt_printsend("Warning: Slot %d: No set_ttot documents for this configuration (%s). Continuing with default values.\n",i,config_string);
         }else{
           JsonNode* ttot_doc = json_find_member(json_find_element(viewrows,0),"value");
           JsonNode* chips = json_find_member(ttot_doc,"chips");
@@ -278,6 +292,53 @@ void *pt_crate_init(void *args)
         }
         json_delete(viewdoc);
         pr_free(ttot_response);
+      }
+    }
+
+    // TCMOS
+    if ((arg.use_tcmos || arg.use_all) && ((0x1<<i) & arg.slot_mask)){
+      if (crate_config[arg.crate_num][i].mb_id == 0x0000){
+        pt_printsend("Warning: Slot %d: mb_id unknown. Using default values. Make sure to load xilinx before attempting to use debug db values.\n",i);
+      }else{
+        char config_string[500];
+        sprintf(config_string,"\"%04x\",\"%04x\",\"%04x\",\"%04x\",\"%04x\"",
+            crate_config[arg.crate_num][i].mb_id,crate_config[arg.crate_num][i].db_id[0],
+            crate_config[arg.crate_num][i].db_id[1],crate_config[arg.crate_num][i].db_id[2],
+            crate_config[arg.crate_num][i].db_id[3]);
+        sprintf(get_db_address,"%s/%s/%s/get_cmos?startkey=[%s,9999999999]&endkey=[%s,0]&descending=true",
+            DB_SERVER,DB_BASE_NAME,DB_VIEWDOC,config_string,config_string);
+        pouch_request *cmos_response = pr_init();
+        pr_set_method(cmos_response, GET);
+        pr_set_url(cmos_response, get_db_address);
+        pr_do(cmos_response);
+        if (cmos_response->httpresponse != 200){
+          pt_printsend("Unable to connect to database. error code %d\n",(int)cmos_response->httpresponse);
+          unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
+          return;
+        }
+        JsonNode *viewdoc = json_decode(cmos_response->resp.data);
+        JsonNode* viewrows = json_find_member(viewdoc,"rows");
+        int n = json_get_num_mems(viewrows);
+        if (n == 0){
+          pt_printsend("Warning: Slot %d: No cmos_m_gtvalid documents for this configuration (%s). Continuing with default values.\n",i,config_string);
+        }else{
+          JsonNode* cmos_doc = json_find_member(json_find_element(viewrows,0),"value");
+          JsonNode* channels = json_find_member(cmos_doc,"channels");
+          for (j=0;j<32;j++){
+            JsonNode* one_chan = json_find_element(channels,j);
+            mb_consts->tcmos.tac_shift[j] = (int)json_get_number(json_find_member(one_chan,"tac_shift"));
+          }
+          mb_consts->tcmos.vmax = (int)json_get_number(json_find_member(cmos_doc,"vmax"));
+          mb_consts->tcmos.tacref = (int)json_get_number(json_find_member(cmos_doc,"tacref"));
+          JsonNode *isetm = json_find_member(cmos_doc,"isetm");
+          JsonNode *iseta = json_find_member(cmos_doc,"iseta");
+          for (j=0;j<2;j++){
+            mb_consts->tcmos.isetm[j] = (int)json_get_number(json_find_element(isetm,j));
+            mb_consts->tcmos.iseta[j] = (int)json_get_number(json_find_element(iseta,j));
+          }
+        }
+        json_delete(viewdoc);
+        pr_free(cmos_response);
       }
     }
 
@@ -331,7 +392,7 @@ void *pt_crate_init(void *args)
   for (i=0;i<16;i++){
     crate_config[arg.crate_num][i] = packet_results->hware_vals[i];
     SwapShortBlock(&(crate_config[arg.crate_num][i].mb_id),1);
-    SwapShortBlock(&(crate_config[arg.crate_num][i].dc_id),4);
+    SwapShortBlock(&(crate_config[arg.crate_num][i].db_id),4);
   }
 
   

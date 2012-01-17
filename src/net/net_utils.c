@@ -65,7 +65,12 @@ int pt_printsend(char *fmt, ...)
   char psb[5000];
   va_start(arg, fmt);
   ret = vsprintf(psb,fmt, arg);
-  printf("%s",psb);
+  if (printout_enabled)
+    printf("%s",psb);
+
+  if (write_log && ps_log_file){
+    fprintf(ps_log_file, "%s", psb);
+  }
   //pthread_mutex_lock(&printsend_buffer_lock);
   //sprintf(printsend_buffer+strlen(printsend_buffer),"%s",psb);
   //pthread_mutex_unlock(&printsend_buffer_lock);

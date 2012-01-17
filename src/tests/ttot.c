@@ -17,7 +17,7 @@
 #include "ttot.h"
 
 #define MAX_TIME 1100
-#define NUM_PEDS 20
+#define NUM_PEDS 500
 #define TUB_DELAY 60
 
 #define RMP_DEFAULT 120
@@ -37,6 +37,7 @@ int get_ttot(char *buffer)
   args->target_time = 400;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -52,6 +53,11 @@ int get_ttot(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL)
           args->target_time = atoi(words2);
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -146,6 +152,8 @@ void *pt_get_ttot(void *args)
         json_append_member(newdoc,"pass",json_mkbool(passflag));
         if (arg.final_test)
           json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+        if (arg.ecal)
+          json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
         post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
         json_delete(newdoc); // delete the head ndoe
       }
@@ -165,6 +173,7 @@ int set_ttot(char *buffer)
   args->target_time = 400;
   args->update_db = 0;
   args->final_test = 0;
+  args->ecal = 0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -180,6 +189,11 @@ int set_ttot(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL)
           args->target_time = atoi(words2);
       }else if (words[1] == 'd'){args->update_db = 1;
+      }else if (words[1] == 'E'){
+        if ((words2 = strtok(NULL, " ")) != NULL){
+          args->ecal = 1;
+          strcpy(args->ecal_id,words2);
+        }
       }else if (words[1] == '#'){
         args->final_test = 1;
         int i;
@@ -426,6 +440,8 @@ void *pt_set_ttot(void *args)
             json_append_member(newdoc,"pass",json_mkbool(passflag));
             if (arg.final_test)
               json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
+            if (arg.ecal)
+              json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
             post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
             json_delete(newdoc); // head node needs deleting
           }
@@ -458,6 +474,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
       while (chan_done_mask != 0xFFFFFFFF){
         // set up gt delay
         real_delay = set_gt_delay((float) time);
+	while ((real_delay > (float) time) || ((real_delay + (float) increment) < (float) time)){
+	  printf("got %f instead of %f, trying again\n",real_delay,(float) time);
+	  real_delay = set_gt_delay((float) time);
+}
         // get the cmos count before sending pulses
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         // send some pulses
@@ -470,7 +490,7 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
           // check if we got all the pedestals from the TUB too
           if ((fin[j] >= 2*NUM_PEDS) && ((0x1<<j) & ~chan_done_mask)){
             chan_done_mask |= (0x1<<j); 
-            disc_times[i*32+j] = time+TUB_DELAY;
+            disc_times[i*32+j] = (int)real_delay+TUB_DELAY;
           }
         }
         if (chan_done_mask == 0xFFFFFFFF)
@@ -482,7 +502,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
             chan_done_mask = 0xFFFFFFFF;
           }
         }else{
-          time += increment;
+	  if (((int) (real_delay + 0.5) + increment) > time)
+	    time = (int) (real_delay + 0.5) + increment;
+	  if (time > MAX_TIME)
+	    time = MAX_TIME;
         }
       } // for time<=MAX_TIME
 
@@ -492,6 +515,12 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
         result = set_crate_pedestals(crate,0x1<<i,0x1<<j,thread_fdset);
         // if it worked before at time-tub_delay, it should work for time-tub_delay+50
         real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
+	while (real_delay < ((float) disc_times[i*32+j] - TUB_DELAY + 50 - 5))
+{
+	printf("2 - got %f instead of %f, trying again\n",real_delay,(float) disc_times[i*32+j] - TUB_DELAY + 50);
+          real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
+}
+	  
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         multi_softgt(NUM_PEDS);
         result = get_cmos_total_count(crate,i,fin,thread_fdset);
@@ -523,6 +552,12 @@ int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, 
   // measure it twice to make sure we are good
   for (i=0;i<2;i++){
     real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+    while (real_delay < ((float) goal_time - TUB_DELAY - 5))
+{
+printf("3 - got %f instead of %f, trying again\n",real_delay,(float)goal_time - TUB_DELAY);
+      real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
+}
+ 
     // get the cmos count before sending pulses
     result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
     // send some pulses

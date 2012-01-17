@@ -100,7 +100,13 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
               }
             }else{
               // got the wrong type of ack packet
-              pt_printsend("Got wrong packet type back do_xl3_cmd(): Expected %08x, got %08x\n",sent_packet_type,packet->cmdHeader.packet_type);
+              pt_printsend("Got wrong packet type back do_xl3_cmd(): Expected %08x, got %08x (packet num %d)\n",sent_packet_type,packet->cmdHeader.packet_type,packet->cmdHeader.packet_num);
+              int q;
+              uint32_t *point = (uint32_t *) packet->payload;
+              for (q=0;q<10;q++){
+                pt_printsend("%d %08x\n",q,*(point));
+                point++;
+              }
             } // end if this was xl3num
           }else{
             pt_printsend("do_xl3_cmd: Wasn't expecting anything from xl3 %d, got a %d type packet. Was waiting for a %d type packet from xl3 %d.\n",i,packet->cmdHeader.packet_type,sent_packet_type,xl3num);
@@ -195,7 +201,7 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
   fd_set readable_fdset = *(thread_fdset);
 
   struct timeval delay_value;
-  delay_value.tv_sec = 4;
+  delay_value.tv_sec = 30;
   delay_value.tv_usec = 0;
   // lets read more from the xl3
   while (1){
@@ -294,7 +300,13 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
               }
             }else{
               // got the wrong type of ack packet
-              pt_printsend("wait_for_multifc_results: Got wrong packet type back, got %08x\n",packet.cmdHeader.packet_type);
+              pt_printsend("wait_for_multifc_results: Got wrong packet type back, Expected %08x, got %08x (packet num %d)\n",CMD_ACK_ID,packet.cmdHeader.packet_type,packet.cmdHeader.packet_num);
+              int q;
+              uint32_t *point = (uint32_t *) packet.payload;
+              for (q=0;q<10;q++){
+                pt_printsend("%d %08x\n",q,*(point));
+                point++;
+              }
             } // end if i = xl3num
           }else{
             pt_printsend("wait_for_multifc_results: Wasn't expecting a packet from xl3 %d, got type %d\n",i,packet.cmdHeader.packet_type);

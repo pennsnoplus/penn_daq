@@ -20,10 +20,13 @@
 
 #define DEF_MTC_XILINX_LOCATION "data/mtcxilinx.rbt" 
 
+uint32_t current_gtid;
+
 pthread_t *thread_pool[MAX_THREADS]; //!< Pool of threads to make new tests in
 int thread_done[MAX_THREADS+1]; //!< Flags that a thread has finished and can be cleared
 
 char DB_SERVER[100]; //<! holds the full database path
+char FECDB_SERVER[100]; //<! holds the full database path
 
 hware_vals_t crate_config[19][16]; //!< contains the most up to date crate configuration
 
@@ -35,8 +38,10 @@ char macro_cmds[1000][250];
 int macro_tot_cmds;
 int macro_cur_cmd;
 
+int printout_enabled;
 int reading_from_tut;
 int running_final_test;
+int running_ecal;
 pthread_mutex_t final_test_cmd_lock; 
 pthread_cond_t final_test_cmd_cv;
 char final_test_cmd[1000];
@@ -56,6 +61,12 @@ char DB_USERNAME[100];
 char DB_PASSWORD[100];
 char DB_BASE_NAME[100];
 char DB_VIEWDOC[100];
+char FECDB_ADDRESS[100];
+char FECDB_PORT[100];
+char FECDB_USERNAME[100];
+char FECDB_PASSWORD[100];
+char FECDB_BASE_NAME[100];
+char FECDB_VIEWDOC[100];
 int MAX_PENDING_CONS;
 int XL3_PORT;
 int SBC_PORT;

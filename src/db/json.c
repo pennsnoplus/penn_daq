@@ -1415,26 +1415,26 @@ JsonNode *json_mkcopy(JsonNode *head){
     JsonNode *cpy = mknode(head->tag);
     if(head->key){
         cpy->key = json_strdup(head->key);
-       printsend("copied key.\n");
+//       printsend("copied key.\n");
     }
     switch (head->tag){
         case JSON_BOOL:
             {
                 cpy->bool_ = head->bool_;
-               printsend("copied bool value.\n");
+//               printsend("copied bool value.\n");
                 break;
             }
         case JSON_STRING:
             {
                 cpy->string_ = (char *)malloc(strlen(head->string_)+1);
                 strcpy(cpy->string_, head->string_);
-               printsend("copied string value.\n");
+//               printsend("copied string value.\n");
                 break;
             }
         case JSON_NUMBER:
             {
                 cpy->number_ = head->number_;
-               printsend("copied number value.\n");
+//               printsend("copied number value.\n");
                 break;
             }
         case JSON_ARRAY:
@@ -1443,13 +1443,13 @@ JsonNode *json_mkcopy(JsonNode *head){
                 JsonNode *child;
                 json_foreach(child, head){
                     append_node(cpy, json_mkcopy(child));
-                   printsend("appended node.\n");
+//                   printsend("appended node.\n");
                 }
-               printsend("copied array/object value.\n");
+//               printsend("copied array/object value.\n");
                 break;
             }
         default:
-           printsend("copied nothing.\n");
+//           printsend("copied nothing.\n");
             break;
     }
     return cpy;

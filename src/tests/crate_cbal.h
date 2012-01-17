@@ -15,6 +15,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } crate_cbal_t;
 
 int crate_cbal(char *buffer);

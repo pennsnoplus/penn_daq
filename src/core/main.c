@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     return -1;
   }
   CURRENT_LOCATION = ABOVE_GROUND_TESTSTAND;
+  current_gtid = 0;
   write_log = 0;
   start_time = 0;
   end_time = 0;
@@ -34,6 +35,8 @@ int main(int argc, char *argv[])
   running_macro = 0;
   reading_from_tut = 0;
   running_final_test = 0;
+  running_ecal = 0;
+  printout_enabled = 1;
   int i,j;
   for (i=0;i<MAX_THREADS;i++)
     thread_done[i] = 0;
@@ -57,6 +60,7 @@ int main(int argc, char *argv[])
     return -1;
   }
     sprintf(DB_SERVER,"http://%s:%s@%s:%s",DB_USERNAME,DB_PASSWORD,DB_ADDRESS,DB_PORT);
+    sprintf(FECDB_SERVER,"http://%s:%s@%s:%s",FECDB_USERNAME,FECDB_PASSWORD,FECDB_ADDRESS,FECDB_PORT);
 
   // get command line options
   int c;

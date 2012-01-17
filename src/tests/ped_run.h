@@ -20,6 +20,8 @@ typedef struct{
   int update_db;
   int final_test;
   char ft_ids[16][50];
+  int ecal;
+  char ecal_id[50];
 } ped_run_t;
 
 int ped_run(char *buffer);
