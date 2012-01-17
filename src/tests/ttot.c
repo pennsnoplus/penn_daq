@@ -406,46 +406,41 @@ void *pt_set_ttot(void *args)
 
       if (arg.update_db){
         pt_printsend("updating the database\n");
-        int slot;
-        for (slot=0;slot<16;slot++){
-          if ((0x1<<slot) & arg.slot_mask){
-            JsonNode *newdoc = json_mkobject();
-            json_append_member(newdoc,"type",json_mkstring("set_ttot"));
-            json_append_member(newdoc,"targettime",json_mknumber((double)arg.target_time));
+        JsonNode *newdoc = json_mkobject();
+        json_append_member(newdoc,"type",json_mkstring("set_ttot"));
+        json_append_member(newdoc,"targettime",json_mknumber((double)arg.target_time));
 
-            JsonNode *all_chips = json_mkarray();
-            int passflag = 1;
-            int k;
-            for (k=0;k<8;k++){
-              JsonNode *one_chip = json_mkobject();
-              json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[slot][k]));
-              json_append_member(one_chip,"vsi",json_mknumber((double) allvsis[slot][k]));
+        JsonNode *all_chips = json_mkarray();
+        int passflag = 1;
+        int k;
+        for (k=0;k<8;k++){
+          JsonNode *one_chip = json_mkobject();
+          json_append_member(one_chip,"rmp",json_mknumber((double) allrmps[i][k]));
+          json_append_member(one_chip,"vsi",json_mknumber((double) allvsis[i][k]));
 
-              JsonNode *all_chans = json_mkarray();
-              for (j=0;j<4;j++){
-                JsonNode *one_chan = json_mkobject();
-                if (tot_errors[slot][j]> 0)
-                  passflag = 0;
-                json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
-                json_append_member(one_chan,"time",json_mknumber((double) alltimes[slot*32+k*4+j]));
-                json_append_member(one_chan,"errors",json_mknumber(tot_errors[slot][j]));
-                json_append_element(all_chans,one_chan);
-              }
-              json_append_member(one_chip,"channels",all_chans);
-
-              json_append_element(all_chips,one_chip);
-            }
-            json_append_member(newdoc,"chips",all_chips);
-
-            json_append_member(newdoc,"pass",json_mkbool(passflag));
-            if (arg.final_test)
-              json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[slot]));	
-            if (arg.ecal)
-              json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
-            post_debug_doc(arg.crate_num,slot,newdoc,&thread_fdset);
-            json_delete(newdoc); // head node needs deleting
+          JsonNode *all_chans = json_mkarray();
+          for (j=0;j<4;j++){
+            JsonNode *one_chan = json_mkobject();
+            if (tot_errors[i][j]> 0)
+              passflag = 0;
+            json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
+            json_append_member(one_chan,"time",json_mknumber((double) alltimes[i*32+k*4+j]));
+            json_append_member(one_chan,"errors",json_mknumber(tot_errors[i][j]));
+            json_append_element(all_chans,one_chan);
           }
+          json_append_member(one_chip,"channels",all_chans);
+
+          json_append_element(all_chips,one_chip);
         }
+        json_append_member(newdoc,"chips",all_chips);
+
+        json_append_member(newdoc,"pass",json_mkbool(passflag));
+        if (arg.final_test)
+          json_append_member(newdoc,"final_test_id",json_mkstring(arg.ft_ids[i]));	
+        if (arg.ecal)
+          json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
+        post_debug_doc(arg.crate_num,i,newdoc,&thread_fdset);
+        json_delete(newdoc); // head node needs deleting
       }
     } // if in slot mask
   } // end loop over slots
