@@ -443,6 +443,7 @@ void *pt_ecal(void *args)
         pt_printsend("------------------------------------------\n");
       }
     }
+    /*
 
 
     // SET_TTOT
@@ -521,6 +522,7 @@ void *pt_ecal(void *args)
         pt_printsend("------------------------------------------\n");
       }
     }
+    */
 
 
     // DISC_CHECK

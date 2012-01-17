@@ -666,7 +666,7 @@ int post_ecal_doc(uint32_t crate_mask, uint16_t *slot_mask, char *logfile, char 
     }
   }
 
-  json_append_member(doc,"config",crates);
+  json_append_member(doc,"crates",crates);
   json_append_member(doc,"logfile_name",json_mkstring(logfile));
   json_append_member(doc,"type",json_mkstring("ecal"));
   json_append_member(doc,"timestamp",json_mknumber((double)(long int) the_time));

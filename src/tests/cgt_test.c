@@ -168,8 +168,7 @@ void *pt_cgt_test(void *args)
     // now loop over slots and make sure we got all the gts
     for (i=0;i<16;i++){
       if (((0x1<<i) & arg.slot_mask) && (max_errors[i] == 0)){
-        uint32_t select_reg = FEC_SEL*i;
-        xl3_rw(FIFO_DIFF_PTR_R + select_reg + READ_REG,0x0,
+        xl3_rw(FIFO_DIFF_PTR_R + FEC_SEL*i + READ_REG,0x0,
             &result,arg.crate_num,&thread_fdset);
         if ((result & 0x000FFFFF) != numgt*3*num_chans){
           sprintf(cur_msg,"Not enough bundles slot %d: expected %d, found %u\n",
@@ -179,16 +178,21 @@ void *pt_cgt_test(void *args)
           missing_bundles[i] = 1;
         }
 
-        // reset the fifo
-        packet.cmdHeader.packet_type = RESET_FIFOS_ID;
-        reset_fifos_args_t *packet_args = (reset_fifos_args_t *) packet.payload;
-        packet_args->slot_mask = arg.slot_mask;
-        SwapLongBlock(packet_args,sizeof(reset_fifos_args_t)/sizeof(uint32_t));
-        do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
-        xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,
-            (arg.crate_num << FEC_CSR_CRATE_OFFSET),&result,arg.crate_num,&thread_fdset);
       } // end if in slot mask and not max errors
     } // end loop over slots
+
+    // reset the fifo
+    packet.cmdHeader.packet_type = RESET_FIFOS_ID;
+    reset_fifos_args_t *packet_args = (reset_fifos_args_t *) packet.payload;
+    packet_args->slot_mask = arg.slot_mask;
+    SwapLongBlock(packet_args,sizeof(reset_fifos_args_t)/sizeof(uint32_t));
+    do_xl3_cmd(&packet,arg.crate_num,&thread_fdset);
+    for (i=0;i<16;i++)
+      if ((0x1<<i) & arg.slot_mask && (max_errors[i] == 0))
+        xl3_rw(GENERAL_CSR_R + FEC_SEL*i + WRITE_REG,
+            (arg.crate_num << FEC_CSR_CRATE_OFFSET),&result,arg.crate_num,&thread_fdset);
+
+
 
     // now send a single soft gt and make sure it looks good
     send_softgt();

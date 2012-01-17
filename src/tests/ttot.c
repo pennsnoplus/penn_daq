@@ -352,7 +352,7 @@ void *pt_set_ttot(void *args)
                   tot_errors[i][j*4+3] = 1;
                   for (l=0;l<8;l++)
                     if (chips_not_finished & (0x1<<l)){
-                      pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,j,rmp[l],vsi[l]);
+                      pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,l,rmp[l],vsi[l]);
                       allrmps[i][l] = rmp[l];
                       allvsis[i][l] = vsi[l];
                     }
