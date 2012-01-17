@@ -118,8 +118,8 @@ void *pt_get_ttot(void *args)
             pt_printsend(">>> Warning: Time less than %d nsec",arg.target_time);
             tot_errors[i][j] = 1;
           }
-	}else{
-	  pt_printsend(">>> Problem measuring time for this channel\n");
+        }else if(arg.target_time == 9999){
+          pt_printsend(">>> Problem measuring time for this channel\n");
           tot_errors[i][j] = 2;
         }
         pt_printsend("\n");
@@ -303,8 +303,8 @@ void *pt_set_ttot(void *args)
       // loop until all ttot measurements are larger than target ttime
       while(chips_not_finished){
         //for (j=0;j<8;j++)
-          //if ((0x1<<j) & chips_not_finished)
-            //pt_printsend("hello");
+        //if ((0x1<<j) & chips_not_finished)
+        //pt_printsend("hello");
 
         // measure ttot for all chips
         result = disc_check_ttot(arg.crate_num,i,0xFFFFFFFF,arg.target_time,diff,&thread_fdset);
@@ -396,7 +396,7 @@ void *pt_set_ttot(void *args)
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
 
       result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
-      
+
       pt_printsend("Final timing measurements:\n");
       for (j=0;j<8;j++){
         pt_printsend("Chip %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
@@ -474,10 +474,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
       while (chan_done_mask != 0xFFFFFFFF){
         // set up gt delay
         real_delay = set_gt_delay((float) time);
-	while ((real_delay > (float) time) || ((real_delay + (float) increment) < (float) time)){
-	  printf("got %f instead of %f, trying again\n",real_delay,(float) time);
-	  real_delay = set_gt_delay((float) time);
-}
+        while ((real_delay > (float) time) || ((real_delay + (float) increment) < (float) time)){
+          printf("got %f instead of %f, trying again\n",real_delay,(float) time);
+          real_delay = set_gt_delay((float) time);
+        }
         // get the cmos count before sending pulses
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         // send some pulses
@@ -502,10 +502,10 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
             chan_done_mask = 0xFFFFFFFF;
           }
         }else{
-	  if (((int) (real_delay + 0.5) + increment) > time)
-	    time = (int) (real_delay + 0.5) + increment;
-	  if (time > MAX_TIME)
-	    time = MAX_TIME;
+          if (((int) (real_delay + 0.5) + increment) > time)
+            time = (int) (real_delay + 0.5) + increment;
+          if (time > MAX_TIME)
+            time = MAX_TIME;
         }
       } // for time<=MAX_TIME
 
@@ -515,12 +515,12 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
         result = set_crate_pedestals(crate,0x1<<i,0x1<<j,thread_fdset);
         // if it worked before at time-tub_delay, it should work for time-tub_delay+50
         real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
-	while (real_delay < ((float) disc_times[i*32+j] - TUB_DELAY + 50 - 5))
-{
-	printf("2 - got %f instead of %f, trying again\n",real_delay,(float) disc_times[i*32+j] - TUB_DELAY + 50);
+        while (real_delay < ((float) disc_times[i*32+j] - TUB_DELAY + 50 - 5))
+        {
+          printf("2 - got %f instead of %f, trying again\n",real_delay,(float) disc_times[i*32+j] - TUB_DELAY + 50);
           real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
-}
-	  
+        }
+
         result = get_cmos_total_count(crate,i,init,thread_fdset);
         multi_softgt(NUM_PEDS);
         result = get_cmos_total_count(crate,i,fin,thread_fdset);
@@ -553,11 +553,11 @@ int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, 
   for (i=0;i<2;i++){
     real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
     while (real_delay < ((float) goal_time - TUB_DELAY - 5))
-{
-printf("3 - got %f instead of %f, trying again\n",real_delay,(float)goal_time - TUB_DELAY);
+    {
+      printf("3 - got %f instead of %f, trying again\n",real_delay,(float)goal_time - TUB_DELAY);
       real_delay = set_gt_delay((float) goal_time - TUB_DELAY);
-}
- 
+    }
+
     // get the cmos count before sending pulses
     result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
     // send some pulses
