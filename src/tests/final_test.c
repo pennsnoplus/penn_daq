@@ -332,7 +332,7 @@ void *pt_final_test(void *args)
 
   pt_printsend("-------------------------------------------\n");
   do {
-    sprintf(command_buffer,"chinj_scan -c %d -s %04x -l 0 -u 5000 -w 100 -n 10 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
+    sprintf(command_buffer,"chinj_scan -c %d -s %04x -l 400 -u 5000 -w 100 -n 10 -d -# %s",arg.crate_num,arg.slot_mask,id_string);
     result = chinj_scan(command_buffer);
     if (result == -2 || result == -3){
       return;
