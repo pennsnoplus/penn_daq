@@ -47,19 +47,30 @@ void dump_pmt_verbose(int n, uint32_t *pmt_buf, char* msg_buf)
   return;
 }
 
-int get_cmos_total_count(int crate, int slot, uint32_t *total_count, fd_set *thread_fdset)
+int get_cmos_total_count(int crate,uint16_t slot_mask, uint32_t total_count[][32], fd_set *thread_fdset)
 {
-  XL3_Packet packet;
-  check_total_count_args_t *packet_args = (check_total_count_args_t *) packet.payload;
-  check_total_count_results_t *packet_results = (check_total_count_results_t *) packet.payload;
-  packet.cmdHeader.packet_type = CHECK_TOTAL_COUNT_ID;
-  packet_args->slot_num = slot;
-  SwapLongBlock(packet_args,sizeof(check_total_count_args_t)/sizeof(uint32_t));
-  do_xl3_cmd(&packet,crate,thread_fdset);
-  SwapLongBlock(packet_results,sizeof(check_total_count_results_t)/sizeof(uint32_t));
-  int i;
-  for (i=0;i<32;i++)
-    total_count[i] = packet_results->count[i];
+  int i,j;
+  if (slot_mask != 0x0){
+    XL3_Packet packet;
+    check_total_count_args_t *packet_args = (check_total_count_args_t *) packet.payload;
+    check_total_count_results_t *packet_results = (check_total_count_results_t *) packet.payload;
+    packet.cmdHeader.packet_type = CHECK_TOTAL_COUNT_ID;
+    packet_args->slot_mask = slot_mask;
+    for (i=0;i<16;i++)
+      packet_args->channel_masks[i] = 0xFFFFFFFF;
+    SwapLongBlock(packet_args,sizeof(check_total_count_args_t)/sizeof(uint32_t));
+    do_xl3_cmd(&packet,crate,thread_fdset);
+    SwapLongBlock(packet_results,sizeof(check_total_count_results_t)/sizeof(uint32_t));
+    for (i=0;i<8;i++)
+      for (j=0;j<32;j++){
+        total_count[i][j] = packet_results->count[i*32+j];
+      }
+  }else{
+    for (i=0;i<8;i++)
+      for (j=0;j<32;j++)
+        total_count[i][j] = 0;
+
+  }
   return 0;
 }
 

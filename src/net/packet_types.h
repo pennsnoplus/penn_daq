@@ -295,12 +295,13 @@ typedef struct{
 } cald_response_results_t;
 
 typedef struct{
-  uint32_t slot_num;
+  uint32_t slot_mask;
+  uint32_t channel_masks[32];
 } check_total_count_args_t;
 
 typedef struct{
   uint32_t error_flags;
-  uint32_t count[32];
+  uint32_t count[8*32];
 } check_total_count_results_t;
 
 typedef struct{

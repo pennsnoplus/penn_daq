@@ -92,7 +92,7 @@ void *pt_disc_check(void *args)
 
   int i,j;
   int errors, slot;
-  uint32_t ctemp, count_i[16][32],count_f[16][32],cdiff;
+  uint32_t ctemp, count_temp[8][32],count_i[16][32],count_f[16][32],cdiff;
   int chan_errors[16][32];
   int chan_diff[16][32];
   errors = 0;
@@ -126,9 +126,26 @@ void *pt_disc_check(void *args)
   deselect_fecs(arg.crate_num,&thread_fdset);
 
   // get initial data
-  for (i=0;i<16;i++)
-    if ((0x1<<i) & arg.slot_mask)
-      result = get_cmos_total_count(arg.crate_num,i,count_i[i],&thread_fdset);
+  uint16_t mask1 = arg.slot_mask & 0xFF;
+  uint16_t mask2 = arg.slot_mask & 0xFF00;
+  result = get_cmos_total_count(arg.crate_num,mask1,count_temp,&thread_fdset);
+  int slot_count = 0;
+  for (i=0;i<8;i++)
+    if ((0x1<<i) & arg.slot_mask){
+      for (j=0;j<32;j++){
+        count_i[i][j] = count_temp[slot_count][j];
+      }
+      slot_count++;
+    }
+  result = get_cmos_total_count(arg.crate_num,mask2,count_temp,&thread_fdset);
+  slot_count = 0;
+  for (i=8;i<16;i++)
+    if ((0x1<<i) & arg.slot_mask){
+      for (j=0;j<32;j++)
+        count_i[i][j] = count_temp[slot_count][j];
+      slot_count++;
+    }
+
 
   // let the main loop send pongs back until we need xl3 again
   temp_unlock(0x1<<arg.crate_num);
@@ -151,9 +168,22 @@ void *pt_disc_check(void *args)
   relock(0x1<<arg.crate_num);
 
   // get final data
-  for (i=0;i<16;i++)
-    if ((0x1<<i) & arg.slot_mask)
-      result = get_cmos_total_count(arg.crate_num,i,count_f[i],&thread_fdset);
+  result = get_cmos_total_count(arg.crate_num,mask1,count_temp,&thread_fdset);
+  slot_count = 0;
+  for (i=0;i<8;i++)
+    if ((0x1<<i) & arg.slot_mask){
+      for (j=0;j<32;j++)
+        count_f[i][j] = count_temp[slot_count][j];
+      slot_count++;
+    }
+  result = get_cmos_total_count(arg.crate_num,mask2,count_temp,&thread_fdset);
+  slot_count = 0;
+  for (i=8;i<16;i++)
+    if ((0x1<<i) & arg.slot_mask){
+      for (j=0;j<32;j++)
+        count_f[i][j] = count_temp[slot_count][j];
+      slot_count++;
+    }
 
   // flag bad channels
   for (i=0;i<16;i++){
@@ -163,8 +193,8 @@ void *pt_disc_check(void *args)
         chan_diff[i][j] = 0;
         cdiff = count_f[i][j] - count_i[i][j];
         if (cdiff != arg.num_pedestals){
-          pt_printsend("cmos_count != nped for slot %d chan %d. Nped: %d, cdiff: %d\n",
-              i,j,arg.num_pedestals,cdiff);
+          pt_printsend("cmos_count != nped for slot %d chan %d. Nped: %d, cdiff: (%d - %d) %d\n",
+              i,j,arg.num_pedestals,count_f[i][j],count_i[i][j],cdiff);
           chan_errors[i][j] = 1;
           chan_diff[i][j] = cdiff-arg.num_pedestals;
           errors++;
