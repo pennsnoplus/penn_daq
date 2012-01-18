@@ -99,7 +99,7 @@ void *pt_crate_init(void *args)
   JsonNode* debug_doc = NULL;
 
   if (arg.use_hw == 1){
-    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,15]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,arg.crate_num,arg.crate_num);
+    sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,0]&endkey=[%d,16]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,arg.crate_num,arg.crate_num);
     pr_set_method(hw_response, GET);
     pr_set_url(hw_response, get_db_address);
     pr_do(hw_response);
@@ -147,6 +147,7 @@ void *pt_crate_init(void *args)
 
   // GET ALL FEC DATA FROM DB
   int i,j,crate,card;
+  int irow = 0;
   for (i=0;i<16;i++){
 
     mb_t* mb_consts = (mb_t *) (packet.payload+4);
@@ -157,17 +158,30 @@ void *pt_crate_init(void *args)
     ///////////////////////////
 
     if (arg.use_hw == 1){
-      JsonNode* next_row = json_find_element(hw_rows,i);
+      JsonNode* next_row = json_find_element(hw_rows,irow);
       JsonNode* key = json_find_member(next_row,"key");
       JsonNode* value = json_find_member(next_row,"value");
       JsonNode* hw = json_find_member(value,"hw");
       crate = (int)json_get_number(json_find_element(key,0));
       card = (int)json_get_number(json_find_element(key,1));
+
       if (crate != arg.crate_num || card != i){
         pt_printsend("Database error : incorrect crate or card num (%d,%d)\n",crate,card);
         unthread_and_unlock(0,(0x1<<arg.crate_num),arg.thread_num);
         return;
       }
+
+      do{
+        irow++;
+        JsonNode *next_row_temp = json_find_element(hw_rows,irow);
+        JsonNode *key_temp = json_find_member(next_row_temp,"key");
+        JsonNode *value_temp = json_find_member(next_row_temp,"value");
+        JsonNode *hw_temp = json_find_member(value_temp,"hw");
+        card = (int)json_get_number(json_find_element(key_temp,1));
+        if (card == i){
+          value = value_temp;
+        }
+      }while(card == i);
       parse_fec_hw(value,mb_consts);
     }else{
       parse_fec_debug(debug_doc,mb_consts);

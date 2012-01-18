@@ -443,7 +443,6 @@ void *pt_ecal(void *args)
         pt_printsend("------------------------------------------\n");
       }
     }
-    /*
 
 
     // SET_TTOT
@@ -522,7 +521,6 @@ void *pt_ecal(void *args)
         pt_printsend("------------------------------------------\n");
       }
     }
-    */
 
 
     // DISC_CHECK
@@ -808,7 +806,7 @@ void *pt_ecal(void *args)
           if ((0x1<<j) & arg.slot_mask[i]){
 printf("crate %d slot %d\n",i,j);
             // get the current fec document
-            sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
+            sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d,\"\"]&endkey=[%d,%d]&descending=true",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j+1,i,j);
             pouch_request *fec_response = pr_init();
             pr_set_method(fec_response, GET);
             pr_set_url(fec_response, get_db_address);

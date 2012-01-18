@@ -532,7 +532,7 @@ int start_logging_to_file(char * filename){
   write_log = 1;
   char log_name[500] = {'\0'};  // random size, it's a pretty nice number though.
 
-  sprintf(log_name,"%s/log/%s",PENN_DAQ_ROOT,filename);
+  sprintf(log_name,"%s/logs/%s",PENN_DAQ_ROOT,filename);
   ps_log_file = fopen(filename, "a+");
   if (ps_log_file == NULL){
     printsend("Problem enabling logging: Could not open log file!\n");

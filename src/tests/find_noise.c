@@ -212,7 +212,7 @@ void *pt_find_noise(void *args)
       if ((0x1<<i) & arg.crate_mask){
         for (j=0;j<16;j++){
           if ((0x1<<j) & arg.slot_mask[i]){
-            sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d]&endkey=[%d,%d]",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j,i,j);
+            sprintf(get_db_address,"%s/%s/%s/get_fec?startkey=[%d,%d,\"\"]&endkey=[%d,%d]&descending=true",FECDB_SERVER,FECDB_BASE_NAME,FECDB_VIEWDOC,i,j+1,i,j);
             printf("2- .%s.\n",get_db_address);
             pouch_request *fec_response = pr_init();
             pr_set_method(fec_response, GET);
@@ -233,8 +233,9 @@ void *pt_find_noise(void *args)
               free(vthr_zeros);
               return;
             }
-            JsonNode *fecone_row = json_find_element(fec_rows,k);
+            JsonNode *fecone_row = json_find_element(fec_rows,0);
             JsonNode *test_doc = json_find_member(fecone_row,"value");
+            printf("doc is '%s'\n",json_encode(test_doc));
             JsonNode *hw = json_find_member(test_doc,"hw");
             JsonNode *zero_dac = json_find_member(hw,"vthr_zero");
             for (k=0;k<32;k++){
@@ -496,6 +497,7 @@ void *pt_find_noise(void *args)
             json_append_member(newdoc,"channels",channels);
             if (arg.ecal)
               json_append_member(newdoc,"ecal_id",json_mkstring(arg.ecal_id));	
+            json_append_member(newdoc,"pass",json_mkbool(1)); //FIXME
             post_debug_doc(i,j,newdoc,&thread_fdset);
             json_delete(newdoc); // Only have to delete the head node
           }

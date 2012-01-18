@@ -93,6 +93,9 @@ void *pt_get_ttot(void *args)
   get_ttot_t arg = *(get_ttot_t *) args; 
   free(args);
 
+  printf("**********************************\n");
+  printf("Starting get_ttot\n");
+
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
   FD_SET(rw_xl3_fd[arg.crate_num],&thread_fdset);
@@ -276,6 +279,7 @@ void *pt_set_ttot(void *args)
         num_dacs++;
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
+
       for (k=0;k<32;k++){
         result = disc_check_ttot(arg.crate_num,i,(0x1<<k),MAX_TIME,diff,&thread_fdset);
         tot_errors[i][k] = 0;
@@ -302,19 +306,9 @@ void *pt_set_ttot(void *args)
 
       // loop until all ttot measurements are larger than target ttime
       while(chips_not_finished){
-        //for (j=0;j<8;j++)
-        //if ((0x1<<j) & chips_not_finished)
-        //pt_printsend("hello");
 
         // measure ttot for all chips
         result = disc_check_ttot(arg.crate_num,i,0xFFFFFFFF,arg.target_time,diff,&thread_fdset);
-        //result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
-        //for (j=0;j<8;j++){
-        //  diff[4*j+0] = alltimes[i*32+j*4+0] - arg.target_time;
-        //  diff[4*j+1] = alltimes[i*32+j*4+1] - arg.target_time;
-        //  diff[4*j+2] = alltimes[i*32+j*4+2] - arg.target_time;
-        //  diff[4*j+3] = alltimes[i*32+j*4+3] - arg.target_time;
-        //}
 
         // loop over disc chips
         for (j=0;j<8;j++){
@@ -421,11 +415,11 @@ void *pt_set_ttot(void *args)
           JsonNode *all_chans = json_mkarray();
           for (j=0;j<4;j++){
             JsonNode *one_chan = json_mkobject();
-            if (tot_errors[i][j]> 0)
+            if (tot_errors[i][k*4+j]> 0)
               passflag = 0;
             json_append_member(one_chan,"id",json_mknumber((double) k*4+j));
             json_append_member(one_chan,"time",json_mknumber((double) alltimes[i*32+k*4+j]));
-            json_append_member(one_chan,"errors",json_mknumber(tot_errors[i][j]));
+            json_append_member(one_chan,"errors",json_mknumber(tot_errors[i][k*4+j]));
             json_append_element(all_chans,one_chan);
           }
           json_append_member(one_chip,"channels",all_chans);
@@ -459,6 +453,7 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
   uint32_t chan_done_mask;
   float real_delay;
   uint32_t init[32],fin[32];
+  uint32_t temp[8][32];
   int i,j,k;
 
   for (i=0;i<16;i++){
@@ -474,11 +469,15 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
           real_delay = set_gt_delay((float) time);
         }
         // get the cmos count before sending pulses
-        result = get_cmos_total_count(crate,i,init,thread_fdset);
+        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
+        for (j=0;j<32;j++)
+          init[j] = temp[0][j];
         // send some pulses
         multi_softgt(NUM_PEDS);
         //now read out the count again to get the rate
-        result = get_cmos_total_count(crate,i,fin,thread_fdset);
+        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
+        for (j=0;j<32;j++)
+          fin[j] = temp[0][j];
         for (j=0;j<32;j++){
           fin[j] -= init[j];
           //pt_printsend("for %d at time %d, got %d of %d\n",j,time,fin[j],2*NUM_PEDS);
@@ -516,9 +515,13 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
           real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
         }
 
-        result = get_cmos_total_count(crate,i,init,thread_fdset);
+        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
+        for (j=0;j<32;j++)
+          init[j] = temp[0][j];
         multi_softgt(NUM_PEDS);
-        result = get_cmos_total_count(crate,i,fin,thread_fdset);
+        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
+        for (j=0;j<32;j++)
+          fin[j] = temp[0][j];
         fin[j] -= init[j];
         if (fin[j] < 2*NUM_PEDS){
           // we didn't get the peds without the other channels enabled
@@ -536,6 +539,7 @@ int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, 
 {
   float real_delay;
   uint32_t init[32],fin[32];
+  uint32_t temp[8][32];
   int i,j,k;
 
   // initialize array
@@ -554,11 +558,15 @@ int disc_check_ttot(int crate, int slot_num, uint32_t chan_mask, int goal_time, 
     }
 
     // get the cmos count before sending pulses
-    result = get_cmos_total_count(crate,slot_num,init,thread_fdset);
+    result = get_cmos_total_count(crate,0x1<<slot_num,temp,thread_fdset);
+    for (j=0;j<32;j++)
+      init[j] = temp[0][j];
     // send some pulses
     multi_softgt(NUM_PEDS);
     // now read out the count again to get the rate
-    result = get_cmos_total_count(crate,slot_num,fin,thread_fdset);
+    result = get_cmos_total_count(crate,0x1<<slot_num,temp,thread_fdset);
+    for (j=0;j<32;j++)
+      fin[j] = temp[0][j];
     for (k=0;k<32;k++){
       fin[k] -= init[k];
       // check if we got all the peds from the TUB too

@@ -158,6 +158,7 @@ void *pt_crate_cbal(void *args)
       pt_printsend("Balancing Crate %d, Slot %d\n",arg.crate_num,i);
 
       // initialize variables
+      int skip_slot = 0;
       iterations = 0;
       num_dacs = 0;
       balanced_chans = 0x0;
@@ -200,283 +201,297 @@ void *pt_crate_cbal(void *args)
       num_dacs++;
       // now lets load these dacs
       if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset) != 0){
-        pt_printsend("Error loading dacs. Exiting\n");
-        free(pmt_buf);
-        unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-        return;
+        pt_printsend("Error loading dacs. Skipping slot\n");
+        for (j=0;j<32;j++)
+          error_flags[j] = 5;
+        skip_slot = 1;
       }
       num_dacs = 0;
 
       // loop over high and low gain
       // first loop balanced qhs with qhl
       // second loop balances qlx (normal) with qlx (LGI set) 
-      int wg;
-      for (wg=0;wg<2;wg++){
-        // initialize
-        active_chans = orig_active_chans;
-        // rezero
-        for (j=0;j<32;j++){
-          f1[j] = 0;
-          f2[j] = 0;
-          x1_bal[j] = low_dac_initial_setting;
-          x2_bal[j] = high_dac_initial_setting;
-        }
-
-
-        // calculate min balance
-        // set dacs to minimum
-        for (j=0;j<32;j++){
-          if ((0x1<<j) & active_chans){
-            if (wg == 0)
-              dac_nums[num_dacs] = d_vbal_hgain[j];
-            else
-              dac_nums[num_dacs] = d_vbal_lgain[j];
-            dac_values[num_dacs] = x1_bal[j];
-            num_dacs++;
+      if (skip_slot == 0){
+        int wg;
+        for (wg=0;wg<2;wg++){
+          // initialize
+          active_chans = orig_active_chans;
+          // rezero
+          for (j=0;j<32;j++){
+            f1[j] = 0;
+            f2[j] = 0;
+            x1_bal[j] = low_dac_initial_setting;
+            x2_bal[j] = high_dac_initial_setting;
           }
-        }
-        if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset)){
-          pt_printsend("Error loading dacs. Exiting\n");
-          free(pmt_buf);
-          unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-          return;
-        }
-        num_dacs = 0;
-        // get pedestal data
-        if (get_pedestal(x1,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-          pt_printsend("Error during pedestal running or reading. Exiting\n");
-          free(pmt_buf);
-          unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-          return;
-        }
-        // if low gain do again with LGI bit set
-        if (wg == 1){
-          xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
-          if (get_pedestal(x1l,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-            pt_printsend("Error during pedestal running or reading. Exiting\n");
-            free(pmt_buf);
-            unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-            return;
+
+
+          // calculate min balance
+          // set dacs to minimum
+          for (j=0;j<32;j++){
+            if ((0x1<<j) & active_chans){
+              if (wg == 0)
+                dac_nums[num_dacs] = d_vbal_hgain[j];
+              else
+                dac_nums[num_dacs] = d_vbal_lgain[j];
+              dac_values[num_dacs] = x1_bal[j];
+              num_dacs++;
+            }
           }
-          xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
-        }
-
-        // calculate max balance
-        // set dacs to maximum
-        for (j=0;j<32;j++){
-          if ((0x1<<j) & active_chans){
-            if (wg == 0)
-              dac_nums[num_dacs] = d_vbal_hgain[j];
-            else
-              dac_nums[num_dacs] = d_vbal_lgain[j];
-            dac_values[num_dacs] = x2_bal[j];
-            num_dacs++;
-          }
-        }
-        if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset)){
-          pt_printsend("Error loading dacs. Exiting\n");
-          free(pmt_buf);
-          unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-          return;
-        }
-        num_dacs = 0;
-        // get pedestal data
-        if (get_pedestal(x2,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-          pt_printsend("Error during pedestal running or reading. Exiting\n");
-          free(pmt_buf);
-          unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-          return;
-        }
-        // if low gain do again with LGI bit set
-        if (wg == 1){
-          xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
-          if (get_pedestal(x2l,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-            pt_printsend("Error during pedestal running or reading. Exiting\n");
-            free(pmt_buf);
-            unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-            return;
-          }
-          xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
-        }
-
-        // end setting initial high and low value
-
-        iterations = 0;
-        balanced_chans = 0x0;
-
-        // we will now loop until we converge and are balanced
-        do{
-          // make sure we arent stuck forever
-          if (iterations++ > max_iterations){
-            pt_printsend("Too many interations, exiting with some channels unbalanced.\n");
-            //pt_printsend("Making best guess for unbalanced channels\n");
+          if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset)){
+            pt_printsend("Error loading dacs. Skipping slot\n");
             for (j=0;j<32;j++)
-              if (wg == 0){
-                if (chan_param[j].hi_balanced == 0)
-                  chan_param[j].high_gain_balance == bestguess_bal[j];
-              }else              
-                if (chan_param[j].low_balanced == 0)
-                  chan_param[j].low_gain_balance == bestguess_bal[j];
+              error_flags[j] = 5;
+            skip_slot = 1;
             break;
           }
+          num_dacs = 0;
+          // get pedestal data
+          if (get_pedestal(x1,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+            pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+            for (j=0;j<32;j++)
+              error_flags[j] = 5;
+            skip_slot = 1;
+            break;
+          }
+          // if low gain do again with LGI bit set
+          if (wg == 1){
+            xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
+            if (get_pedestal(x1l,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+              pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+              for (j=0;j<32;j++)
+                error_flags[j] = 5;
+              skip_slot = 1;
+              break;
+            }
+            xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
+          }
 
-          // loop over channels
+          // calculate max balance
+          // set dacs to maximum
           for (j=0;j<32;j++){
-            // if this channel is active and is not yet balanced
-            int is_balanced = wg == 0 ? chan_param[j].hi_balanced : chan_param[j].low_balanced;
-            if (((0x1<<j) & active_chans) && (is_balanced == 0)){
-              fmean1 = 0;
-              fmean2 = 0;
-              if (wg == 0){
-                // find the average difference between qhl and qhs
-                for (k=0;k<16;k++){
-                  fmean1 += x1[j].thiscell[k].qhlbar-x1[j].thiscell[k].qhsbar;
-                  fmean2 += x2[j].thiscell[k].qhlbar-x2[j].thiscell[k].qhsbar;
-                }
-              }else{
-                // find the average difference between qhl and qhs
-                for (k=0;k<16;k++){
-                  fmean1 += x1[j].thiscell[k].qlxbar-x1l[j].thiscell[k].qlxbar;
-                  fmean2 += x2[j].thiscell[k].qlxbar-x2l[j].thiscell[k].qlxbar;
-                }
-              }
-              f1[j] = fmean1/16;
-              f2[j] = fmean2/16;
-              // make sure we straddle best fit point
-              // i.e. the both have the sign on first run
-              if (((f1[j]*f2[j]) > 0.0) && (iterations == 1)){
-                pt_printsend("Error: channel %d does not appear balanceable. (%f, %f)\n",
-                    j,f1[j],f2[j]);
-                // turn this channel off and go on
-                if (fabs(f1[j]) < fabs(f2[j])){
-                  if (wg == 0)
-                    chan_param[j].high_gain_balance = x1_bal[j];
-                  else
-                    chan_param[j].low_gain_balance = x1_bal[j];
-                }else{
-                  if (wg == 0)
-                    chan_param[j].high_gain_balance = x2_bal[j];
-                  else
-                    chan_param[j].low_gain_balance = x2_bal[j];
-                }
-                active_chans &= ~(0x1<<j);
-                return_value += 100;
-                break;
-              }
-              // check if either high or low was balanced
-              if (fabs(f2[j]) < acceptable_diff){
-                balanced_chans |= 0x1<<j;
-                if (wg == 0){
-                  chan_param[j].hi_balanced = 1;
-                  chan_param[j].high_gain_balance = x2_bal[j];
-                }else{
-                  chan_param[j].low_balanced = 1;
-                  chan_param[j].low_gain_balance = x2_bal[j];
-                }
-                active_chans &= ~(0x1<<j);
-              }else if (fabs(f1[j]) < acceptable_diff){
-                balanced_chans |= 0x1<<j;
-                if (wg == 0){
-                  chan_param[j].hi_balanced = 1;
-                  chan_param[j].high_gain_balance = x1_bal[j];
-                }else{
-                  chan_param[j].low_balanced = 1;
-                  chan_param[j].low_gain_balance = x1_bal[j];
-                }
-                active_chans &= ~(0x1<<j);
-              }else{
-                // still not balanced
-                // pick new points to test
-                tmp_bal[j] = x1_bal[j] + (x2_bal[j]-x1_bal[j])*(f1[j]/(f1[j]-f2[j]));
-
-                // keep track of best guess
-                if (fabs(f1[j] < fabs(f2[j])))
-                  bestguess_bal[j] = x1_bal[j];
-                else
-                  bestguess_bal[j] = x2_bal[j];
-
-                // make sure we arent stuck
-                if (tmp_bal[j] == x2_bal[j]){
-                  pt_printsend("channel %d in local trap. Nudging\n",j);
-                  int kick = (int) (rand()%35) + 150;
-                  tmp_bal[j] = (tmp_bal[j] >= 45) ? (tmp_bal[j]-kick) : (tmp_bal[j] + kick);
-                }
-
-                // make sure we stay withing bounds
-                if (tmp_bal[j] > 255)
-                  tmp_bal[j] = 255;
-                else if (tmp_bal[j] < 0)
-                  tmp_bal[j] = 0;
-
-                if (wg == 0)
-                  dac_nums[num_dacs] = d_vbal_hgain[j];
-                else
-                  dac_nums[num_dacs] = d_vbal_lgain[j];
-                dac_values[num_dacs] = tmp_bal[j];
-                num_dacs++;
-
-                // now we loop through the rest of the channels
-                // and build up all the dac values we are going
-                // to set before running pedestals again
-
-              } // end if balanced or not
-            } // end if active and not balanced
-          } // end loop over channels
-
-          // we have new pedestal values for each channel
-          // lets load them up
+            if ((0x1<<j) & active_chans){
+              if (wg == 0)
+                dac_nums[num_dacs] = d_vbal_hgain[j];
+              else
+                dac_nums[num_dacs] = d_vbal_lgain[j];
+              dac_values[num_dacs] = x2_bal[j];
+              num_dacs++;
+            }
+          }
           if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset)){
-            pt_printsend("Error loading dacs. Exiting\n");
-            free(pmt_buf);
-            unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-            return;
+            pt_printsend("Error loading dacs. Skipping slot\n");
+            for (j=0;j<32;j++)
+              error_flags[j] = 5;
+            skip_slot = 1;
+            break;
           }
           num_dacs = 0;
-
-          // lets do a ped run with the new balance
-          // if there are still channels left to go
-          if (active_chans != 0x0){
-            if (get_pedestal(tmp,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-              pt_printsend("Error during pedestal running or reading. Exiting\n");
-              free(pmt_buf);
-              unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-              return;
+          // get pedestal data
+          if (get_pedestal(x2,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+            pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+            for (j=0;j<32;j++)
+              error_flags[j] = 5;
+            skip_slot = 1;
+            break;
+          }
+          // if low gain do again with LGI bit set
+          if (wg == 1){
+            xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
+            if (get_pedestal(x2l,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+              pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+              for (j=0;j<32;j++)
+                error_flags[j] = 5;
+              skip_slot = 1;
+              break;
             }
+            xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
+          }
 
-            if (wg == 1){
-              xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
-              if (get_pedestal(tmpl,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
-                pt_printsend("Error during pedestal running or reading. Exiting\n");
-                free(pmt_buf);
-                unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
-                return;
-              }
-              xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
-            }
+          // end setting initial high and low value
 
-            // now update the two points
-            for (j=0;j<32;j++){
-              if ((0x1<<j) & active_chans){
+          iterations = 0;
+          balanced_chans = 0x0;
+
+          // we will now loop until we converge and are balanced
+          do{
+            // make sure we arent stuck forever
+            if (iterations++ > max_iterations){
+              pt_printsend("Too many interations, exiting with some channels unbalanced.\n");
+              //pt_printsend("Making best guess for unbalanced channels\n");
+              for (j=0;j<32;j++)
                 if (wg == 0){
-                  x1[j] = x2[j];
-                  x1_bal[j] = x2_bal[j];
-                  x2[j] = tmp[j];
-                  x2_bal[j] = tmp_bal[j];
+                  if (chan_param[j].hi_balanced == 0)
+                    chan_param[j].high_gain_balance == bestguess_bal[j];
+                }else              
+                  if (chan_param[j].low_balanced == 0)
+                    chan_param[j].low_gain_balance == bestguess_bal[j];
+              break;
+            }
+
+            // loop over channels
+            for (j=0;j<32;j++){
+              // if this channel is active and is not yet balanced
+              int is_balanced = wg == 0 ? chan_param[j].hi_balanced : chan_param[j].low_balanced;
+              if (((0x1<<j) & active_chans) && (is_balanced == 0)){
+                fmean1 = 0;
+                fmean2 = 0;
+                if (wg == 0){
+                  // find the average difference between qhl and qhs
+                  for (k=0;k<16;k++){
+                    fmean1 += x1[j].thiscell[k].qhlbar-x1[j].thiscell[k].qhsbar;
+                    fmean2 += x2[j].thiscell[k].qhlbar-x2[j].thiscell[k].qhsbar;
+                  }
                 }else{
-                  x1[j] = x2[j];
-                  x1l[j] = x2l[j];
-                  x1_bal[j] = x2_bal[j];
-                  x2[j] = tmp[j];
-                  x2l[j] = tmpl[j];
-                  x2_bal[j] = tmp_bal[j];
+                  // find the average difference between qhl and qhs
+                  for (k=0;k<16;k++){
+                    fmean1 += x1[j].thiscell[k].qlxbar-x1l[j].thiscell[k].qlxbar;
+                    fmean2 += x2[j].thiscell[k].qlxbar-x2l[j].thiscell[k].qlxbar;
+                  }
+                }
+                f1[j] = fmean1/16;
+                f2[j] = fmean2/16;
+                // make sure we straddle best fit point
+                // i.e. the both have the sign on first run
+                if (((f1[j]*f2[j]) > 0.0) && (iterations == 1)){
+                  pt_printsend("Error: channel %d does not appear balanceable. (%f, %f)\n",
+                      j,f1[j],f2[j]);
+                  // turn this channel off and go on
+                  if (fabs(f1[j]) < fabs(f2[j])){
+                    if (wg == 0)
+                      chan_param[j].high_gain_balance = x1_bal[j];
+                    else
+                      chan_param[j].low_gain_balance = x1_bal[j];
+                  }else{
+                    if (wg == 0)
+                      chan_param[j].high_gain_balance = x2_bal[j];
+                    else
+                      chan_param[j].low_gain_balance = x2_bal[j];
+                  }
+                  active_chans &= ~(0x1<<j);
+                  return_value += 100;
+                  break;
+                }
+                // check if either high or low was balanced
+                if (fabs(f2[j]) < acceptable_diff){
+                  balanced_chans |= 0x1<<j;
+                  if (wg == 0){
+                    chan_param[j].hi_balanced = 1;
+                    chan_param[j].high_gain_balance = x2_bal[j];
+                  }else{
+                    chan_param[j].low_balanced = 1;
+                    chan_param[j].low_gain_balance = x2_bal[j];
+                  }
+                  active_chans &= ~(0x1<<j);
+                }else if (fabs(f1[j]) < acceptable_diff){
+                  balanced_chans |= 0x1<<j;
+                  if (wg == 0){
+                    chan_param[j].hi_balanced = 1;
+                    chan_param[j].high_gain_balance = x1_bal[j];
+                  }else{
+                    chan_param[j].low_balanced = 1;
+                    chan_param[j].low_gain_balance = x1_bal[j];
+                  }
+                  active_chans &= ~(0x1<<j);
+                }else{
+                  // still not balanced
+                  // pick new points to test
+                  tmp_bal[j] = x1_bal[j] + (x2_bal[j]-x1_bal[j])*(f1[j]/(f1[j]-f2[j]));
+
+                  // keep track of best guess
+                  if (fabs(f1[j] < fabs(f2[j])))
+                    bestguess_bal[j] = x1_bal[j];
+                  else
+                    bestguess_bal[j] = x2_bal[j];
+
+                  // make sure we arent stuck
+                  if (tmp_bal[j] == x2_bal[j]){
+                    pt_printsend("channel %d in local trap. Nudging\n",j);
+                    int kick = (int) (rand()%35) + 150;
+                    tmp_bal[j] = (tmp_bal[j] >= 45) ? (tmp_bal[j]-kick) : (tmp_bal[j] + kick);
+                  }
+
+                  // make sure we stay withing bounds
+                  if (tmp_bal[j] > 255)
+                    tmp_bal[j] = 255;
+                  else if (tmp_bal[j] < 0)
+                    tmp_bal[j] = 0;
+
+                  if (wg == 0)
+                    dac_nums[num_dacs] = d_vbal_hgain[j];
+                  else
+                    dac_nums[num_dacs] = d_vbal_lgain[j];
+                  dac_values[num_dacs] = tmp_bal[j];
+                  num_dacs++;
+
+                  // now we loop through the rest of the channels
+                  // and build up all the dac values we are going
+                  // to set before running pedestals again
+
+                } // end if balanced or not
+              } // end if active and not balanced
+            } // end loop over channels
+
+            // we have new pedestal values for each channel
+            // lets load them up
+            if (multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset)){
+              pt_printsend("Error loading dacs. Skipping slot\n");
+              for (j=0;j<32;j++)
+                error_flags[j] = 5;
+              skip_slot = 1;
+              break;
+            }
+            num_dacs = 0;
+
+            // lets do a ped run with the new balance
+            // if there are still channels left to go
+            if (active_chans != 0x0){
+              if (get_pedestal(tmp,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+                pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+                for (j=0;j<32;j++)
+                  error_flags[j] = 5;
+                skip_slot = 1;
+                break;
+              }
+
+              if (wg == 1){
+                xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x1,&result,arg.crate_num,&thread_fdset); 
+                if (get_pedestal(tmpl,chan_param,pmt_buf,arg.crate_num,i,arg.pattern,&thread_fdset)){
+                  pt_printsend("Error during pedestal running or reading. Skipping slot\n");
+                  for (j=0;j<32;j++)
+                    error_flags[j] = 5;
+                  skip_slot = 1;
+                  break;
+                }
+                xl3_rw(CMOS_LGISEL_R + select_reg + WRITE_REG,0x0,&result,arg.crate_num,&thread_fdset); 
+              }
+
+              // now update the two points
+              for (j=0;j<32;j++){
+                if ((0x1<<j) & active_chans){
+                  if (wg == 0){
+                    x1[j] = x2[j];
+                    x1_bal[j] = x2_bal[j];
+                    x2[j] = tmp[j];
+                    x2_bal[j] = tmp_bal[j];
+                  }else{
+                    x1[j] = x2[j];
+                    x1l[j] = x2l[j];
+                    x1_bal[j] = x2_bal[j];
+                    x2[j] = tmp[j];
+                    x2l[j] = tmpl[j];
+                    x2_bal[j] = tmp_bal[j];
+                  }
                 }
               }
-            }
-          } // end if active_chans != 0x0
+            } // end if active_chans != 0x0
 
-        } while (balanced_chans != orig_active_chans); // loop until all balanced
+          } while (balanced_chans != orig_active_chans); // loop until all balanced
 
-      } // end loop over gains
+          if (skip_slot)
+            break;
+
+        } // end loop over gains
+      } // end if skip_slot == 0
 
       active_chans = orig_active_chans;
       pt_printsend("\nFinal VBAL table:\n");
