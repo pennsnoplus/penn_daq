@@ -80,6 +80,7 @@ typedef struct {
 #define CALD_TEST_ID              (0x65) //!< checks adcs with calibration dac
 #define SLOT_NOISE_RATE_ID        (0x66) //!< check the noise rate in a slot      
 #define NOISE_TEST_ID             (0x67)
+#define LOCAL_VMON_ID             (0x68)
 //@}
 
 /*! \name xl3_recv_packet_types
@@ -148,6 +149,10 @@ typedef struct{
 typedef struct{
   float voltages[21];
 } vmon_results_t;
+
+typedef struct{
+  float voltages[8];
+} local_vmon_results_t;
 
 typedef struct{
   uint32_t slot;
