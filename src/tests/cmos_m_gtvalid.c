@@ -202,7 +202,10 @@ void *pt_cmos_m_gtvalid(void *args)
           packet_args->crate_num = arg.crate_num;
           packet_args->select_reg = select_reg;
           for (j=0;j<32;j++){
-            tacbits[j] = 0x77;
+            if (arg.do_twiddle)
+              tacbits[j] = 0x77;
+            else
+              tacbits[j] = 0x00;
             packet_args->tacbits[j] = tacbits[j];
           }
           SwapLongBlock(packet.payload,2);
@@ -550,6 +553,8 @@ void *pt_cmos_m_gtvalid(void *args)
           json_append_member(one_chan,"tac_shift",json_mknumber((double) (tacbits_save[1][j]*16+tacbits_save[0][1])));
           json_append_member(one_chan,"gtvalid0",json_mknumber((double) (gtchan_set[0][j])));
           json_append_member(one_chan,"gtvalid1",json_mknumber((double) (gtchan_set[1][j])));
+          json_append_member(one_chan,"gtvalid0_old",json_mknumber((double) (gt_start[0][j])));
+          json_append_member(one_chan,"gtvalid1_old",json_mknumber((double) (gt_start[0][j])));
           json_append_member(one_chan,"errors",json_mkbool(chan_errors[j]));
           if (chan_errors[j])
             slot_errors |= 0x2;

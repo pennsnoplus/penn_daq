@@ -1,7 +1,7 @@
 /** \file cmos_m_gtvalid.h */
 
-#ifndef __FEC_TEST_H
-#define __FEC_TEST_H
+#ifndef __CMOS_M_GTVALID_H
+#define __CMOS_M_GTVALID_H
 
 #include <stdint.h>
 

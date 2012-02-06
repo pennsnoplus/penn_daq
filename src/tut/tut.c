@@ -116,6 +116,7 @@ COMMAND commands[] = {
     { "crate_cbal", (Function *)NULL, (char *)NULL },
     { "cgt_test", (Function *)NULL, (char *)NULL },
     { "cmos_m_gtvalid", (Function *)NULL, (char *)NULL },
+    { "cmos_m_gtvalid_old", (Function *)NULL, (char *)NULL },
     { "cald_test", (Function *)NULL, (char *)NULL },
     { "get_ttot", (Function *)NULL, (char *)NULL },
     { "set_ttot", (Function *)NULL, (char *)NULL },

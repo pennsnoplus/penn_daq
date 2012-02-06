@@ -35,6 +35,7 @@
 #include "cgt_test.h"
 #include "cald_test.h"
 #include "cmos_m_gtvalid.h"
+#include "cmos_m_gtvalid_old.h"
 #include "ttot.h"
 #include "fifo_test.h"
 #include "disc_check.h"
@@ -314,6 +315,8 @@ int process_control_command(char *buffer)
     result = cgt_test(buffer);
   }else if (strncmp(buffer,"cmos_m_gtvalid",14)==0){
     result = cmos_m_gtvalid(buffer);
+  }else if (strncmp(buffer,"cmos_m_gtvalid_old",18)==0){
+    result = cmos_m_gtvalid_old(buffer);
   }else if (strncmp(buffer,"cald_test",9)==0){
     result = cald_test(buffer);
   }else if (strncmp(buffer,"get_ttot",8)==0){

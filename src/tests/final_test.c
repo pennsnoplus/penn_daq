@@ -68,7 +68,7 @@ void *pt_final_test(void *args)
   final_test_t arg = *(final_test_t *) args; 
   free(args);
 
-  int i;
+  int i,j;
   int result;
   // once this is set we can no longer send other commands
   running_final_test = 1;
@@ -548,6 +548,35 @@ void *pt_final_test(void *args)
   // update the database
   for (i=0;i<16;i++){
     if ((0x1<<i) & arg.slot_mask){
+
+      // need to find out if the test passed or failed
+      int passed = 1;
+      char get_db_address[500];
+      sprintf(get_db_address,"%s/%s/_design/debugdb/_views/final_test?startkey=[\"%s\",1]&endkey=[\"%s\",1]",DB_SERVER,DB_BASE_NAME,ft_ids[i],ft_ids[i]);
+      pouch_request *response = pr_init();
+      pr_set_method(response, GET);
+      pr_set_url(response, get_db_address);
+      pr_do(response);
+      if (response->httpresponse != 200){
+        pt_printsend("Unable to connect to database. error code %d\n",(int)response->httpresponse);
+        running_final_test = 0;
+        unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num); 
+        return;
+      }
+      JsonNode *all_test_doc = json_decode(response->resp.data);
+      JsonNode *rows = json_find_member(all_test_doc,"rows");
+      JsonNode* totalrows = json_find_member(all_test_doc,"total_rows");
+      for (j=0;j<json_get_number(totalrows);j++){ 
+        JsonNode* next_row = json_find_element(rows,i);
+        JsonNode* value = json_find_member(next_row,"value");
+        JsonNode* passfail = json_find_member(value,"pass");
+        if (!json_get_bool(passfail)){
+          passed = 0;
+        }
+      }
+      json_append_member(ft_docs[i],"pass",json_mkbool(passed));
+
+
       json_append_member(ft_docs[i],"type",json_mkstring("final_test"));
       pthread_mutex_lock(&socket_lock);
       xl3_lock[arg.crate_num] = 1; // we gotta lock this shit down before we call post_doc
