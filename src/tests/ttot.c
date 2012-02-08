@@ -279,7 +279,7 @@ void *pt_set_ttot(void *args)
 
       chips_not_finished = 0xFF;
       while (chips_not_finished){
-        result = disc_m_ttot(arg.crate_num,i,0xFF,150,alltimes,&thread_fdset);
+        result = disc_m_ttot(arg.crate_num,0x1<<i,150,alltimes,&thread_fdset);
         if (result){
           printf("error in disc_m_ttot\n");
         }
@@ -288,105 +288,44 @@ void *pt_set_ttot(void *args)
         for (j=0;j<8;j++){
           // loop over chans
           for (k=0;k<4;k++){
-            diff[4*j+k] = times[i*32+j*4+k] - arg.target_time; 
+            diff[4*j+k] = alltimes[i*32+j*4+k] - arg.target_time; 
           }
 
           if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0) && (diff[4*j+3] > 0) && (chips_not_finished & (0x1 << j))){
             chips_not_finished &= ~(0x1<<j);
             printf("Fit Ch %2d RMP/VSI %3d %3d Times: ",j,rmp[j],vsi[j]);
             for (k=0;k<4;k++){
+              printf("\t%3d",alltimes[i*32+j*4+k]);
+            }
+            printf("\n");
+
+            allrmps[i][j] = rmp[j];
+            allvsis[i][j] = vsi[j];
+
+          }else{
+            // if not done, try to adjust DAC voltages
+            if (rmp[j] <= MAX_RMP_VALUE && vsi[j] > MIN_VSI_VALUE && (chips_not_finished & (0x1<<j)))
+              rmp[j]++;
+            if (rmp[j] > MAX_RMP_VALUE && vsi[j] > MIN_VSI_VALUE && (chips_not_finished & (0x1<<j))){
+              rmp[j] = RMP_DEFAULT - 10;
+              vsi[j]-= 2;
+            }
+            if (vsi[j] <= MIN_VSI_VALUE && (chips_not_finished & (0x1<<j))){
+              printf("RMP/VSI is too big (%d %d %d)\n",j,rmp[j],vsi[j]);
+              printf("Aborting slot %d setup\n",i);
+              for (l=0;l<8;l++){
+                if (chips_not_finished & (0x1<<l)){
+                  printf("Slot %d chip %d, RMP/VSI: %d %d (unfinished)\n",i,l,rmp[l],vsi[l]);
+                  rmp[l] = RMP_DEFAULT;
+                  vsi[l] = VSI_DEFAULT;
+                  allrmps[i][l] = rmp[l];
+                  allvsis[i][l] = vsi[l];
+                }
+              }
+              chips_not_finished = 0x0;
             }
           }
-
         }
-      }
-
-
-
-
-
-      for (k=0;k<32;k++){
-        result = disc_check_ttot(arg.crate_num,i,(0x1<<k),MAX_TIME,diff,&thread_fdset);
-        tot_errors[i][k] = 0;
-        if (diff[k] == 1){
-          pt_printsend("Error - Not getting TUB triggers on channel %d!\n",k);
-          tot_errors[i][k] = 2;
-        }
-      }
-
-      // load default values
-      num_dacs = 0;
-      for (j=0;j<8;j++){
-        dac_nums[num_dacs] = d_rmp[j];
-        dac_values[num_dacs] = rmp[j];
-        num_dacs++;
-        dac_nums[num_dacs] = d_vsi[j];
-        dac_values[num_dacs] = vsi[j];
-        num_dacs++;
-      }
-      multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
-
-      pt_printsend("Setting ttot for crate/board %d %d, target time %d\n",arg.crate_num,i,arg.target_time);
-      chips_not_finished = 0xFF;
-
-      // loop until all ttot measurements are larger than target ttime
-      while(chips_not_finished){
-
-        // measure ttot for all chips
-        result = disc_check_ttot(arg.crate_num,i,0xFFFFFFFF,arg.target_time,diff,&thread_fdset);
-
-        // loop over disc chips
-        for (j=0;j<8;j++){
-          if ((0x1<<j) & chips_not_finished){
-
-            // check if above or below
-            if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0)
-                && (diff[4*j+3] > 0)){
-              //pt_printsend("above\n");
-              rmp_high[j] = rmp[j];
-
-              // if we have narrowed it down to the first setting that works, we are done
-              if ((rmp[j] - rmp_low[j]) == 1){
-                pt_printsend("Chip %d finished\n",j);
-                chips_not_finished &= ~(0x1<<j);
-                allrmps[i][j] = rmp[j];
-                allvsis[i][j] = vsi[j];
-              }
-            }else{
-              //pt_printsend("below\n");
-              rmp_low[j] = rmp[j];
-              if (rmp[j] == MAX_RMP_VALUE){
-                if (vsi[j] > MIN_VSI_VALUE){
-                  rmp_high[j] = MAX_RMP_VALUE;
-                  rmp_low[j] = RMP_DEFAULT-10;
-                  vsi[j] -= 2;
-                  //pt_printsend("%d - vsi: %d\n",j,vsi[j]);
-                }else{
-                  // out of bounds, end loop with error
-                  pt_printsend("RMP/VSI is too big for disc chip %d! (%d %d)\n",j,rmp[j],vsi[j]);
-                  pt_printsend("Aborting slot %d setup.\n",i);
-                  tot_errors[i][j*4+0] = 1;
-                  tot_errors[i][j*4+1] = 1;
-                  tot_errors[i][j*4+2] = 1;
-                  tot_errors[i][j*4+3] = 1;
-                  for (l=0;l<8;l++)
-                    if (chips_not_finished & (0x1<<l)){
-                      pt_printsend("Slot %d Chip %d\tRMP/VSI: %d %d <- unfinished\n",i,l,rmp[l],vsi[l]);
-                      allrmps[i][l] = rmp[l];
-                      allvsis[i][l] = vsi[l];
-                    }
-                  chips_not_finished = 0x0;
-                }
-              }else if (rmp[j] == rmp_high[j]){
-                // in case it screws up and fails after it succeeded already
-                rmp_high[j]++;
-              }
-            }
-
-            rmp[j] = (int) ((float) (rmp_high[j] + rmp_low[j])/2.0 + 0.5);
-
-          } // end if this chip not finished
-        } // end loop over disc chips
 
         // load new values
         num_dacs = 0;
@@ -399,34 +338,13 @@ void *pt_set_ttot(void *args)
           num_dacs++;
         }
         multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
-
-      } // end while chips_not_finished
-
-      // now get the final timing measurements
-      num_dacs = 0;
-      for (j=0;j<8;j++){
-        dac_nums[num_dacs] = d_rmp[j];
-        dac_values[num_dacs] = allrmps[i][j];
-        num_dacs++;
-        dac_nums[num_dacs] = d_vsi[j];
-        dac_values[num_dacs] = allvsis[i][j];
-        num_dacs++;
       }
-      multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
 
-      result = disc_m_ttot(arg.crate_num,(0x1<<i),150,alltimes,&thread_fdset);
-
-      pt_printsend("Final timing measurements:\n");
-      for (j=0;j<8;j++){
-        pt_printsend("Chip %d (RMP/VSI %d %d) Times:\t%d\t%d\t%d\t%d\n",
-            j,rmp[j],vsi[j],alltimes[i*32+j*4+0],alltimes[i*32+j*4+1],
-            alltimes[i*32+j*4+2],alltimes[i*32+j*4+3]);
-      }
 
       if (arg.update_db){
         pt_printsend("updating the database\n");
         JsonNode *newdoc = json_mkobject();
-        json_append_member(newdoc,"type",json_mkstring("set_ttot"));
+        json_append_member(newdoc,"type",json_mkstring("set_ttot_old"));
         json_append_member(newdoc,"targettime",json_mknumber((double)arg.target_time));
 
         JsonNode *all_chips = json_mkarray();
@@ -469,7 +387,6 @@ void *pt_set_ttot(void *args)
 
   unthread_and_unlock(1,(0x1<<arg.crate_num),arg.thread_num);
 }
-
 
 int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_times, fd_set *thread_fdset)
 {
