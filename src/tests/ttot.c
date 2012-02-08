@@ -257,12 +257,9 @@ void *pt_set_ttot(void *args)
         rmpup[j] = RMPUP_DEFAULT;
         vsi[j] = VSI_DEFAULT;
         vli[j] = VLI_DEFAULT;
-        rmp_high[j] = MAX_RMP_VALUE;
-        rmp_low[j] = RMP_DEFAULT-10;
-        rmp[j] = (int) (rmp_high[j] + rmp_low[j])/2;
+        rmp[j] = RMP_DEFAULT - 10;
       }
 
-      // first check that if we make ttot as short as possible, triggers show up 
       num_dacs = 0;
       for (j=0;j<8;j++){
         dac_nums[num_dacs] = d_rmpup[j];
@@ -272,13 +269,41 @@ void *pt_set_ttot(void *args)
         dac_values[num_dacs] = vli[j];
         num_dacs++;
         dac_nums[num_dacs] = d_rmp[j];
-        dac_values[num_dacs] = rmp_low[j];
+        dac_values[num_dacs] = rmp[j];
         num_dacs++;
         dac_nums[num_dacs] = d_vsi[j];
         dac_values[num_dacs] = vsi[j];
         num_dacs++;
       }
       multi_loadsDac(num_dacs,dac_nums,dac_values,arg.crate_num,i,&thread_fdset);
+
+      chips_not_finished = 0xFF;
+      while (chips_not_finished){
+        result = disc_m_ttot(arg.crate_num,i,0xFF,150,alltimes,&thread_fdset);
+        if (result){
+          printf("error in disc_m_ttot\n");
+        }
+        
+        // loop over discs
+        for (j=0;j<8;j++){
+          // loop over chans
+          for (k=0;k<4;k++){
+            diff[4*j+k] = times[i*32+j*4+k] - arg.target_time; 
+          }
+
+          if ((diff[4*j+0] > 0) && (diff[4*j+1] > 0) && (diff[4*j+2] > 0) && (diff[4*j+3] > 0) && (chips_not_finished & (0x1 << j))){
+            chips_not_finished &= ~(0x1<<j);
+            printf("Fit Ch %2d RMP/VSI %3d %3d Times: ",j,rmp[j],vsi[j]);
+            for (k=0;k<4;k++){
+            }
+          }
+
+        }
+      }
+
+
+
+
 
       for (k=0;k<32;k++){
         result = disc_check_ttot(arg.crate_num,i,(0x1<<k),MAX_TIME,diff,&thread_fdset);
