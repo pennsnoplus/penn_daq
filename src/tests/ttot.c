@@ -17,7 +17,7 @@
 #include "ttot.h"
 
 #define MAX_TIME 1100
-#define NUM_PEDS 500
+#define NUM_PEDS 20
 #define TUB_DELAY 60
 
 #define RMP_DEFAULT 120
@@ -399,80 +399,37 @@ int disc_m_ttot(int crate, uint32_t slot_mask, int start_time, uint16_t *disc_ti
   uint32_t temp[8][32];
   int i,j,k;
 
+  for (i=0;i<16;i++)
+    for (j=0;j<32;j++)
+      disc_times[i*16+j] = 0;
+
   for (i=0;i<16;i++){
     if ((0x1<<i) & slot_mask){
       int result = set_crate_pedestals(crate,0x1<<i,0xFFFFFFFF,thread_fdset);
       chan_done_mask = 0x0;
-      time = start_time;
-      while (chan_done_mask != 0xFFFFFFFF){
-        // set up gt delay
+      for (time = start_time;time<=MAX_TIME;time += increment){
         real_delay = set_gt_delay((float) time);
-        while ((real_delay > (float) time) || ((real_delay + (float) increment) < (float) time)){
-          printf("got %f instead of %f, trying again\n",real_delay,(float) time);
-          real_delay = set_gt_delay((float) time);
-        }
-        // get the cmos count before sending pulses
         result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
         for (j=0;j<32;j++)
           init[j] = temp[0][j];
-        // send some pulses
+
+        // send pulses
         multi_softgt(NUM_PEDS);
-        //now read out the count again to get the rate
+
         result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
         for (j=0;j<32;j++)
           fin[j] = temp[0][j];
+
         for (j=0;j<32;j++){
           fin[j] -= init[j];
-          //pt_printsend("for %d at time %d, got %d of %d\n",j,time,fin[j],2*NUM_PEDS);
-          // check if we got all the pedestals from the TUB too
-          if ((fin[j] >= 2*NUM_PEDS) && ((0x1<<j) & ~chan_done_mask)){
-            chan_done_mask |= (0x1<<j); 
-            disc_times[i*32+j] = (int)real_delay+TUB_DELAY;
+          if ((fin[j] >= 2*NUM_PEDS) && !(chan_done_mask & 0x1<<j)){
+            chan_done_mask |= 0x1 << j;
+            disc_times[i*32+j] = time + TUB_DELAY;
           }
         }
-        if (chan_done_mask == 0xFFFFFFFF)
+        if (chan_done_mask = 0xFFFFFFFF)
           break;
-        if (time >= MAX_TIME){
-          for (k=0;k<32;k++){
-            if ((0x1<<k) & ~chan_done_mask)
-              disc_times[i*32+k] = time+TUB_DELAY;
-            chan_done_mask = 0xFFFFFFFF;
-          }
-        }else{
-          if (((int) (real_delay + 0.5) + increment) > time)
-            time = (int) (real_delay + 0.5) + increment;
-          if (time > MAX_TIME)
-            time = MAX_TIME;
-        }
-      } // for time<=MAX_TIME
-
-      // now that we got our times, check each channel one by one to ensure it was
-      // working on its own
-      for (j=0;j<32;j++){
-        result = set_crate_pedestals(crate,0x1<<i,0x1<<j,thread_fdset);
-        // if it worked before at time-tub_delay, it should work for time-tub_delay+50
-        real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
-        while (real_delay < ((float) disc_times[i*32+j] - TUB_DELAY + 50 - 5))
-        {
-          printf("2 - got %f instead of %f, trying again\n",real_delay,(float) disc_times[i*32+j] - TUB_DELAY + 50);
-          real_delay = set_gt_delay((float) disc_times[i*32+j]-TUB_DELAY+50);
-        }
-
-        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
-        for (j=0;j<32;j++)
-          init[j] = temp[0][j];
-        multi_softgt(NUM_PEDS);
-        result = get_cmos_total_count(crate,0x1<<i,temp,thread_fdset);
-        for (j=0;j<32;j++)
-          fin[j] = temp[0][j];
-        fin[j] -= init[j];
-        if (fin[j] < 2*NUM_PEDS){
-          // we didn't get the peds without the other channels enabled
-          pt_printsend("Error channel %d - pedestals went away after other channels turned off!\n",j);
-          disc_times[i*32+j] = 9999;
-        }
       }
-
     } // end if slot mask
   } // end loop over slots
   return 0;
