@@ -151,6 +151,8 @@ void *pt_crate_cbal(void *args)
   int i,j,k;
   for (i=0;i<16;i++){
     if ((0x1<<i) & arg.slot_mask){
+      for (j=0;j<32;j++)
+        error_flags[j] = 0;
       uint32_t select_reg = FEC_SEL*i;
       xl3_rw(GENERAL_CSR_R + select_reg + WRITE_REG,0xF,&result,arg.crate_num,&thread_fdset);
 
@@ -568,9 +570,7 @@ void *pt_crate_cbal(void *args)
           json_append_member(one_chan,"vbal_low",
               json_mknumber((double)chan_param[j].low_gain_balance));
           json_append_member(one_chan,"errors",json_mkbool(error_flags[j]));
-          if (error_flags[j] == 0)
-            json_append_member(one_chan,"error_flags",json_mkstring("none"));
-          else if (error_flags[j] == 1)
+          if (error_flags[j] == 1)
             json_append_member(one_chan,"error_flags",json_mkstring("Extreme balance set to 150"));
           else if (error_flags[j] == 2)
             json_append_member(one_chan,"error_flags",json_mkstring("Extreme balance values"));
@@ -578,14 +578,17 @@ void *pt_crate_cbal(void *args)
             json_append_member(one_chan,"error_flags",json_mkstring("Partially balanced"));
           else if (error_flags[j] == 4)
             json_append_member(one_chan,"error_flags",json_mkstring("Unbalanced, set to 150"));
+          else if (error_flags[j] == 5)
+            json_append_member(one_chan,"error_flags",json_mkstring("Failed setting up slot"));
+          else
+            json_append_member(one_chan,"error_flags",json_mkstring("none"));
+
           if (error_flags[j] != 0)
             pass_flag = 0;
           json_append_element(channels,one_chan);
         }
         json_append_member(newdoc,"channels",channels);
 
-        if (return_value != 0)
-          pass_flag = 0;
         json_append_member(newdoc,"pass",json_mkbool(pass_flag));
 
         if (arg.final_test)

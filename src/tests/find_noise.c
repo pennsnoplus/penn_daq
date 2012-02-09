@@ -144,6 +144,10 @@ void *pt_find_noise(void *args)
   find_noise_t arg = *(find_noise_t *) args; 
   free(args);
 
+  int backcounts = 6;
+  int maxcounts = 30;
+  int totcounts = backcounts+maxcounts+1;
+
   int i,j,k;
   fd_set thread_fdset;
   FD_ZERO(&thread_fdset);
@@ -161,6 +165,7 @@ void *pt_find_noise(void *args)
 
   // get vthr zeros
   uint32_t *vthr_zeros = malloc(sizeof(uint32_t) * 10000);
+  int *vthr_zerosoffset = malloc(sizeof(int) * 10000);
   char get_db_address[500];
   if (arg.use_debug){
     // use zdisc debug values
@@ -320,21 +325,35 @@ void *pt_find_noise(void *args)
   noise_test_args_t *packet_args = (noise_test_args_t *) packet.payload;
   noise_test_results_t *packet_results = (noise_test_results_t *) packet.payload;
 
+  printf("       [--------------------------------]\n");
+
   // loop over slots
   for (j=0;j<16;j++){
-    printf("slot %d\n",j);
     int any_crates = 0;
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask)
-        if ((0x1<<j) & arg.slot_mask[i])
-	  any_crates = 1;
+        if ((0x1<<j) & arg.slot_mask[i]){
+	        any_crates = 1;
+        }
     }
     if (any_crates == 0)
       continue;
+    else{
+      printf("slot %d: ",j);
+      fflush(stdout);
+    }
     // loop over channels
     for (k=0;k<32;k++){
-      printf("chan %d\n",k);
-      int threshabovezero = -2;
+      printf(".");
+      fflush(stdout);
+
+      int maxnoise[20];
+      int maxnoisecounts[20];
+      for (i=0;i<19;i++){
+        maxnoise[i] = -1;
+        maxnoisecounts[i] = 0;
+      }
+      int threshabovezero = -1*backcounts;
       uint32_t found_noise = 0x0;
       uint32_t done_mask = 0x0;
       for (i=0;i<19;i++){
@@ -361,15 +380,19 @@ void *pt_find_noise(void *args)
             SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
             do_xl3_cmd(&packet,i,&thread_fdset);
             SwapLongBlock(packet_results,sizeof(noise_test_results_t)/sizeof(uint32_t));
-
-            base_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->basenoise;
-            readout_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->readoutnoise;
-
+            int index = i*(16*32*totcounts)+j*(32*totcounts)+k*(totcounts)+threshabovezero+backcounts;
+            base_noise[index] = packet_results->basenoise;
+            readout_noise[index] = packet_results->readoutnoise;
+            printf("%d, %d - %d\n",base_noise[index],maxnoise[i],index);
+            if ((int) base_noise[index] > maxnoise[i]){
+              maxnoise[i] = (int) base_noise[index];
+              maxnoisecounts[i] = threshabovezero;
+              vthr_zerosoffset[i*16*32+j*32+k] = maxnoisecounts[i];
+              printf("offset is now %d\n",maxnoisecounts[i]);
+            }
             if (packet_results->readoutnoise == 0){
-              if ((0x1<<i) & found_noise)
+              if (threshabovezero > 0)
                 done_mask |= 0x1<<i;
-              else
-                found_noise |= 0x1<<i;
             }
           }
         }
@@ -377,88 +400,15 @@ void *pt_find_noise(void *args)
         if (done_mask == arg.crate_mask)
           break;
 
-      }while((++threshabovezero) <= 30);
+      }while((++threshabovezero) <= maxcounts);
 
       for (i=0;i<19;i++)
         if ((0x1<<i) & arg.crate_mask)
           loadsDac(d_vthr[k],255,i,j,&thread_fdset);
 
     } // end loop over channels
+    printf("\n");
   } // end loop over slots
-
-
-  /*
-
-  // begin loop over all crates, all slots
-  for (i=0;i<19;i++){
-  if ((0x1<<i) & arg.crate_mask){
-  for (j=0;j<16;j++){
-  if ((0x1<<j) & arg.slot_mask[i]){
-
-  // make sure threshold set to 255
-  if (multi_loadsDac(32,dac_nums,dac_values,i,j,&thread_fdset) != 0){
-  pt_printsend("Error loading dacs. Exiting\n");
-  unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
-  free(base_noise);
-  free(readout_noise);
-  free(vthr_zeros);
-  return;
-  }
-
-  // clear pedestal mask
-  xl3_rw(PED_ENABLE_R + FEC_SEL*j + WRITE_REG,0x0,&result,i,&thread_fdset);
-
-  // loop over channels
-  for (k=0;k<32;k++){
-  //FIXME if no known zero, skip it 
-  int chanzero = 115; //FIXME
-
-
-  int threshabovezero = -2;
-  int found_noise = 0;
-
-  XL3_Packet packet;
-  packet.cmdHeader.packet_type = NOISE_TEST_ID;
-  noise_test_args_t *packet_args = (noise_test_args_t *) packet.payload;
-  noise_test_results_t *packet_results = (noise_test_results_t *) packet.payload;
-
-  // enable pedestal for just that channel
-  xl3_rw(PED_ENABLE_R + FEC_SEL*j + WRITE_REG,(0x1<<k),&result,i,&thread_fdset);
-
-  // find top of noise, loop until 30 counts above zero
-  do{
-  // send some peds
-  multi_softgt(5000);
-
-  // do the rest on XL3
-  packet_args->slot_num = j;
-  packet_args->chan_num = k;
-  packet_args->chan_zero = chanzero+threshabovezero;
-  SwapLongBlock(packet_args,sizeof(noise_test_args_t)/sizeof(uint32_t));
-  do_xl3_cmd(&packet,i,&thread_fdset);
-  SwapLongBlock(packet_results,sizeof(noise_test_results_t)/sizeof(uint32_t));
-
-  if (packet_results->readoutnoise == 0){
-  if (found_noise)
-  break;
-  else
-  found_noise = 1;
-  }
-
-  }while((++threshabovezero) <= 50);
-
-  loadsDac(d_vthr[k],255,i,j,&thread_fdset);
-
-  } // end loop over channels
-
-
-
-  } // if slot_mask
-  } // end loop over slots
-  } // if crate mask
-  } // end loop over crates
-
-*/
 
   if (arg.update_db){
     pt_printsend("updating the database\n");
@@ -472,22 +422,22 @@ void *pt_find_noise(void *args)
             for (k=0;k<32;k++){
               JsonNode *one_chan = json_mkobject();
               json_append_member(one_chan,"id",json_mknumber(k));
-              json_append_member(one_chan,"zero_used",json_mknumber(vthr_zeros[i*32*16+j*32+k]));
+              json_append_member(one_chan,"zero_used",json_mknumber(vthr_zeros[i*32*16+j*32+k]+vthr_zerosoffset[i*32*16+j*32+k]));
 
               JsonNode *points = json_mkarray();
               int l;
               int finished = 0;
-              for (l=0;l<33;l++){
+              for (l=0;l<totcounts;l++){
                 JsonNode *one_point = json_mkobject();
-                json_append_member(one_point,"thresh_above_zero",json_mknumber(l-2));
-                json_append_member(one_point,"base_noise",json_mknumber(base_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
-                json_append_member(one_point,"readout_noise",json_mknumber(readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
-                json_append_element(points,one_point);
-                if (readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l] == 0){
-                  if (finished)
-                    break;
-                  else
-                    finished ++;
+                if (l-backcounts-vthr_zerosoffset[i*32*16+j*32+k] > -3){
+                  json_append_member(one_point,"thresh_above_zero",json_mknumber(l-backcounts-vthr_zerosoffset[i*32*16+j*32+k]));
+                  json_append_member(one_point,"base_noise",json_mknumber(base_noise[i*(16*32*totcounts) + j*(32*totcounts) + k*(totcounts) + l]));
+                  json_append_member(one_point,"readout_noise",json_mknumber(readout_noise[i*(16*32*totcounts) + j*(32*totcounts) + k*(totcounts) + l]));
+                  json_append_element(points,one_point);
+                  if (readout_noise[i*(16*32*totcounts) + j*(32*totcounts) + k*(totcounts) + l] == 0){
+                    if (l-backcounts-vthr_zerosoffset[i*32*16+j*32+k] > 0)
+                      break;
+                  }
                 }
               }
               json_append_member(one_chan,"points",points);

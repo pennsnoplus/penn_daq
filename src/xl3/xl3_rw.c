@@ -28,7 +28,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   int sent_command_number = command_number[xl3num];
   command_number[xl3num]++;
 
-  fd_set readable_fdset = *(thread_fdset);
+  fd_set readable_fdset;
 
   struct timeval delay_value;
   if (sent_packet_type == MEM_TEST_ID || sent_packet_type == ZDISC_ID)
@@ -39,6 +39,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   // lets get a response back from the xl3
   while (1){
     memset(packet,'\0',MAX_PACKET_SIZE);
+    readable_fdset = *(thread_fdset);
     int data = select(fdmax+1,&readable_fdset,NULL,NULL,&delay_value);
     // check for errors
     if (data == -1){

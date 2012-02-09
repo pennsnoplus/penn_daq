@@ -279,6 +279,7 @@ void *pt_set_ttot(void *args)
 
       chips_not_finished = 0xFF;
       while (chips_not_finished){
+        printf("loop - %2x - %d %d\n",chips_not_finished,rmp[0],vsi[0]);
         result = disc_m_ttot(arg.crate_num,0x1<<i,150,alltimes,&thread_fdset);
         if (result){
           printf("error in disc_m_ttot\n");
