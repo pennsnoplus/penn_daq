@@ -211,6 +211,7 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc)
   int i,j;
   // lets pull out what we need from the configuration document
   JsonNode *time_stamp = json_find_member(ecal_doc,"formatted_timestamp");
+  JsonNode *ecal_id = json_find_member(ecal_doc,"_id");
 
   time_t curtime = time(NULL);
   struct tm *loctime = localtime(&curtime);
@@ -249,9 +250,11 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc)
   json_append_member(doc,"card",json_mknumber(card));
 
 
-  json_append_member(doc,"time_stamp",json_mkstring(json_get_string(time_stamp)));
-  json_append_member(doc,"generated",generated);
+  json_append_member(doc,"timestamp_ecal",json_mkstring(json_get_string(time_stamp)));
+  json_append_member(doc,"timestamp_generated",generated);
   json_append_member(doc,"approved",json_mkbool(0));
+  
+  json_append_member(doc,"ecal_id",ecal_id);
 
   json_append_member(doc,"board_id",json_mkstring(json_get_string(json_find_member(config,"mb_id"))));
   
@@ -290,6 +293,13 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc)
   json_append_member(channel,"problem",chan_problem);
   json_append_member(doc,"channel",channel);
 
+
+  JsonNode *relays = json_mkarray();
+  for (i=0;i<4;i++){
+    json_append_element(relays,json_mknumber(1));
+  }
+  json_append_member(doc,"relay_on",relays);
+
   JsonNode *comment = json_mkarray();
   json_append_member(doc,"comment",comment);
 
@@ -305,7 +315,21 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
   char type[50];
   JsonNode *hw = json_find_member(fec_doc,"hw");
   JsonNode *test = json_find_member(fec_doc,"test");
-  JsonNode *channel_status = json_find_member(fec_doc,"channel_status");
+
+
+
+  JsonNode *channel_status = json_find_member(fec_doc,"channel");
+  json_remove_from_parent(channel_status);
+  JsonNode *chan_problems = json_find_member(channel_status,"problem");
+  uint32_t chan_prob_array = 0x0;
+  for (i=0;i<32;i++)
+    if ((int) json_get_number(json_find_element(chan_problems,i)) != 0)
+      chan_prob_array |= (0x1<<i);
+
+  JsonNode *relays = json_find_member(fec_doc,"relay_on");
+  json_remove_from_parent(relays);
+
+
   sprintf(type,"%s",json_get_string(json_find_member(test_doc,"type")));
   JsonNode *test_entry = json_mkobject();
   json_append_member(test_entry,"test_id",json_mkstring(json_get_string(json_find_member(test_doc,"_id"))));
@@ -324,6 +348,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
     json_append_element(vbal,high);
     json_append_element(vbal,low);
     json_append_member(hw,"vbal",vbal);
+
   }else if (strcmp(type,"zdisc") == 0){
     JsonNode *vthr_zero = json_mkarray();
     JsonNode *vals = json_find_member(test_doc,"zero_dac");
@@ -331,6 +356,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
       json_append_element(vthr_zero,json_mknumber(json_get_number(json_find_element(vals,i))));
     }
     json_append_member(hw,"vthr_zero",vthr_zero);
+
   }else if (strcmp(type,"set_ttot") == 0){
    JsonNode *tdisc = json_mkobject();
    JsonNode *rmp = json_mkarray();
@@ -343,9 +369,9 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
      JsonNode *channels = json_find_member(one_chip,"channels");
      for (j=0;j<4;j++){
       JsonNode *one_chan = json_find_element(channels,j);
-      JsonNode *one_chan_stat = json_find_element(channel_status,j);     
-      if (json_get_number(json_find_member(one_chan,"errors")) == 2){
-        one_chan_stat = json_mknumber(0);
+      JsonNode *one_chan_stat = json_find_element(chan_problems,j);     
+      if ((int)json_get_number(json_find_member(one_chan,"errors")) == 2){
+        chan_prob_array |= (0x1<<(i*4+j));
       }
      }
      json_append_element(rmp,json_mknumber(json_get_number(json_find_member(one_chip,"rmp"))));
@@ -358,6 +384,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
    json_append_member(tdisc,"vsi",vsi);
    json_append_member(tdisc,"vli",vli);
    json_append_member(hw,"tdisc",tdisc);
+   
   }else if (strcmp(type,"cmos_m_gtvalid") == 0){
     JsonNode *tcmos = json_mkobject();
     json_append_member(tcmos,"vmax",json_mknumber(json_get_number(json_find_member(test_doc,"vmax"))));
@@ -377,10 +404,14 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
     JsonNode *tac_trim = json_mkarray();
     for (i=0;i<32;i++){
       JsonNode *one_chan = json_find_element(channels,i);
+      if (json_get_bool(json_find_member(one_chan,"errors"))){
+        chan_prob_array |= (0x1<<i);
+      }
       json_append_element(tac_trim,json_mknumber(json_get_number(json_find_member(one_chan,"tac_shift"))));
     }
     json_append_member(tcmos,"tac_trim",tac_trim);
     json_append_member(hw,"tcmos",tcmos);
+
   }else if (strcmp(type,"find_noise") == 0){
     JsonNode *vthr = json_mkarray();
     JsonNode *channels = json_find_member(test_doc,"channels");
@@ -394,15 +425,88 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
       json_append_element(vthr,json_mknumber(zero_used+readout_dac));
     }
     json_append_member(hw,"vthr",vthr);
+  
+  }else if (strcmp(type,"ped_run") == 0){
+    JsonNode *errors = json_find_member(test_doc,"error_flags");
+    for (i=0;i<32;i++){
+      if (((int)json_get_number(json_find_element(errors,i)) == 3) || ((int)json_get_number(json_find_element(errors,i)) == 1)){
+        chan_prob_array |= (0x1<<i);
+      }
+    }
+
+  }else if (strcmp(type,"cgt_test") == 0){
+    JsonNode *errors = json_find_member(test_doc,"errors");
+    for (i=0;i<32;i++){
+      if (json_get_bool(json_find_element(errors,i))){
+        chan_prob_array |= (0x1<<i);
+      }
+    }
+
+  }else if (strcmp(type,"get_ttot") == 0){
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    for (i=0;i<32;i++){
+      JsonNode *onechan = json_find_element(channels,i);
+      int chan_num = (int) json_get_number(json_find_member(onechan,"id"));
+      if ((int) json_get_number(json_find_member(onechan,"errors")) == 1){
+        chan_prob_array |= (0x1<<chan_num);
+      }
+    }
+
+  }else if (strcmp(type,"disc_check") == 0){
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    for (i=0;i<32;i++){
+      JsonNode *onechan = json_find_element(channels,i);
+      int chan_num = (int) json_get_number(json_find_member(onechan,"id"));
+      if ((int) json_get_number(json_find_member(onechan,"count_minus_peds")) > 10000 || (int) json_get_number(json_find_member(onechan,"count_minus_peds")) < -10000){
+        chan_prob_array |= (0x1<<chan_num);
+      }
+    }
+
+  }else if (strcmp(type,"cmos_m_gtvalid") == 0){
+    JsonNode *channels = json_find_member(test_doc,"channels");
+    for (i=0;i<32;i++){
+      JsonNode *onechan = json_find_element(channels,i);
+      int chan_num = (int) json_get_number(json_find_member(onechan,"id"));
+      if (json_get_bool(json_find_member(onechan,"errors"))){
+        chan_prob_array |= (0x1<<chan_num);
+      }
+    }
+
+
+
   }
+
+  JsonNode *new_channel = json_mkobject();
+  JsonNode *new_chan_problems = json_mkarray();
+  for (i=0;i<32;i++){
+    if ((0x1<<i) & chan_prob_array)
+      json_append_element(new_chan_problems,json_mknumber(1));
+    else
+      json_append_element(new_chan_problems,json_mknumber(0));
+  }
+  json_append_member(new_channel,"problem",new_chan_problems);
+  json_append_member(fec_doc,"channel",new_channel);
+
+  JsonNode *new_relays = json_mkarray();
+  for (i=0;i<4;i++){
+    if (((0xFF<<(i*8)) & chan_prob_array) == 0xFF || (int)json_get_number(json_find_element(relays,i)) == 0)
+      json_append_element(new_relays,json_mknumber(0));
+    else
+      json_append_element(new_relays,json_mknumber(1));
+  }
+  json_append_member(fec_doc,"relay_on",new_relays);
+
   return 0;
 }
 
 int post_fec_db_doc(int crate, int slot, JsonNode *doc){
+  char new_id[500];
+  get_new_id(new_id);
+
   char put_db_address[500];
-  sprintf(put_db_address,"%s/%s",FECDB_SERVER,FECDB_BASE_NAME);
+  sprintf(put_db_address,"%s/%s/%s",FECDB_SERVER,FECDB_BASE_NAME,new_id);
   pouch_request *post_response = pr_init();
-  pr_set_method(post_response, POST);
+  pr_set_method(post_response, PUT);
   pr_set_url(post_response, put_db_address);
   char *data = json_encode(doc);
   pr_set_data(post_response, data);
@@ -416,6 +520,7 @@ int post_fec_db_doc(int crate, int slot, JsonNode *doc){
   if(*data){
     free(data);
   }
+  printf("Document posted to %s\n",put_db_address);
   return ret;
 }
 
