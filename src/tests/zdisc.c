@@ -160,6 +160,7 @@ void *pt_zdisc(void *args)
         json_append_member(newdoc,"lower_dac",lowerdacnode);
         json_append_member(newdoc,"upper_dac",upperdacnode);
         json_append_member(newdoc,"zero_dac",zerodacnode);
+        json_append_member(newdoc,"target_rate",json_mknumber(arg.rate));
         json_append_member(newdoc,"errors",errorsnode);
         json_append_member(newdoc,"pass",json_mkbool(1));//FIXME
         if (arg.final_test)

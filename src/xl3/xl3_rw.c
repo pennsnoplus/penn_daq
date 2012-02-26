@@ -32,7 +32,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
 
   struct timeval delay_value;
   if (sent_packet_type == MEM_TEST_ID || sent_packet_type == ZDISC_ID)
-    delay_value.tv_sec = 30;
+    delay_value.tv_sec = 60;
   else
     delay_value.tv_sec = 10;
   delay_value.tv_usec = 0;

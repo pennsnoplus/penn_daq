@@ -366,10 +366,8 @@ void *pt_find_noise(void *args)
             readout_noise[i*(16*32*33)+j*(32*33)+k*(33)+threshabovezero+2] = packet_results->readoutnoise;
 
             if (packet_results->readoutnoise == 0){
-              if ((0x1<<i) & found_noise)
+              if (threshabovezero > 0)
                 done_mask |= 0x1<<i;
-              else
-                found_noise |= 0x1<<i;
             }
           }
         }
@@ -484,10 +482,8 @@ void *pt_find_noise(void *args)
                 json_append_member(one_point,"readout_noise",json_mknumber(readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l]));
                 json_append_element(points,one_point);
                 if (readout_noise[i*(16*32*33) + j*(32*33) + k*(33) + l] == 0){
-                  if (finished)
+                  if (l-2 > 0)
                     break;
-                  else
-                    finished ++;
                 }
               }
               json_append_member(one_chan,"points",points);

@@ -45,6 +45,7 @@
 #include "see_refl.h"
 #include "find_noise.h"
 #include "ecal.h"
+#include "ecal_to_fec.h"
 #include "process_packet.h"
 
 int read_xl3_packet(int fd)
@@ -332,6 +333,8 @@ int process_control_command(char *buffer)
     result = final_test(buffer);
   }else if (strncmp(buffer,"find_noise",10)==0){
     result = find_noise(buffer);
+  }else if (strncmp(buffer,"ecal_to_fec",11)==0){
+    result = ecal_to_fec(buffer);
   }else if (strncmp(buffer,"ecal",4)==0){
     result = ecal(buffer);
   }

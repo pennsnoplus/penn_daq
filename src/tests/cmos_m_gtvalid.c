@@ -202,7 +202,10 @@ void *pt_cmos_m_gtvalid(void *args)
           packet_args->crate_num = arg.crate_num;
           packet_args->select_reg = select_reg;
           for (j=0;j<32;j++){
-            tacbits[j] = 0x77;
+            if (arg.do_twiddle)
+              tacbits[j] = 0x77;
+            else
+              tacbits[j] = 0x00;
             packet_args->tacbits[j] = tacbits[j];
           }
           SwapLongBlock(packet.payload,2);

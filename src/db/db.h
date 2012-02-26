@@ -20,7 +20,7 @@ int parse_fec_debug(JsonNode* value,mb_t* mb);
 int swap_fec_db(mb_t* mb);
 int parse_mtc(JsonNode* value,mtc_t* mtc);
 
-int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc, fd_set *thread_fdset);
+int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc);
 int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc);
 int post_fec_db_doc(int crate, int slot, JsonNode *doc);
 int update_fec_db_doc(JsonNode *doc);

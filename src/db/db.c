@@ -206,11 +206,18 @@ int swap_fec_db(mb_t* mb)
     return 0;
 }
 
-int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc, fd_set *thread_fdset)
+int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc)
 {
   int i,j;
   // lets pull out what we need from the configuration document
   JsonNode *time_stamp = json_find_member(ecal_doc,"formatted_timestamp");
+
+  time_t curtime = time(NULL);
+  struct tm *loctime = localtime(&curtime);
+  char generated_ts[500];
+  strftime(generated_ts,256,"%Y-%m-%dT%H:%M:%S",loctime);
+  JsonNode *generated = json_mkstring(generated_ts);
+
   JsonNode *config;
   JsonNode *crates = json_find_member(ecal_doc,"crates");
   int found_it = 0;
@@ -236,12 +243,14 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
 
   JsonNode *doc = json_mkobject();
 
+
   json_append_member(doc,"name",json_mkstring("FEC"));
   json_append_member(doc,"crate",json_mknumber(crate));
   json_append_member(doc,"card",json_mknumber(card));
 
 
   json_append_member(doc,"time_stamp",json_mkstring(json_get_string(time_stamp)));
+  json_append_member(doc,"generated",generated);
   json_append_member(doc,"approved",json_mkbool(0));
 
   json_append_member(doc,"board_id",json_mkstring(json_get_string(json_find_member(config,"mb_id"))));
@@ -273,6 +282,14 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc,
   json_append_member(tube,"cable_link",json_mkstring("0")); //FIXME
   json_append_member(doc,"tube",tube);
 
+
+  JsonNode *channel = json_mkobject();
+  JsonNode *chan_problem = json_mkarray();
+  for (i=0;i<32;i++)
+    json_append_element(chan_problem,json_mknumber(0));
+  json_append_member(channel,"problem",chan_problem);
+  json_append_member(doc,"channel",channel);
+
   JsonNode *comment = json_mkarray();
   json_append_member(doc,"comment",comment);
 
@@ -288,6 +305,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
   char type[50];
   JsonNode *hw = json_find_member(fec_doc,"hw");
   JsonNode *test = json_find_member(fec_doc,"test");
+  JsonNode *channel_status = json_find_member(fec_doc,"channel_status");
   sprintf(type,"%s",json_get_string(json_find_member(test_doc,"type")));
   JsonNode *test_entry = json_mkobject();
   json_append_member(test_entry,"test_id",json_mkstring(json_get_string(json_find_member(test_doc,"_id"))));
@@ -322,6 +340,14 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
    JsonNode *chips = json_find_member(test_doc,"chips");
    for (i=0;i<8;i++){
      JsonNode *one_chip = json_find_element(chips,i);
+     JsonNode *channels = json_find_member(one_chip,"channels");
+     for (j=0;j<4;j++){
+      JsonNode *one_chan = json_find_element(channels,j);
+      JsonNode *one_chan_stat = json_find_element(channel_status,j);     
+      if (json_get_number(json_find_member(one_chan,"errors")) == 2){
+        one_chan_stat = json_mknumber(0);
+      }
+     }
      json_append_element(rmp,json_mknumber(json_get_number(json_find_member(one_chip,"rmp"))));
      json_append_element(vsi,json_mknumber(json_get_number(json_find_member(one_chip,"vsi"))));
      json_append_element(rmpup,json_mknumber(115)); //FIXME`

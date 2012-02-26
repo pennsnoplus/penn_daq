@@ -627,7 +627,7 @@ void *pt_ecal(void *args)
     for (i=0;i<19;i++){
       if ((0x1<<i) & arg.crate_mask){
         do {
-          sprintf(command_buffer,"zdisc -c %d -s %04x -o 0 -r 100 -d -E %s",i,arg.slot_mask[i],ecal_id);
+          sprintf(command_buffer,"zdisc -c %d -s %04x -o 0 -r 10000 -d -E %s",i,arg.slot_mask[i],ecal_id);
           result = zdisc(command_buffer);
           if (result == -2 || result == -3){
             running_ecal = 0;
@@ -705,7 +705,7 @@ void *pt_ecal(void *args)
 
             // lets generate the fec document
             JsonNode *doc;
-            create_fec_db_doc(i,j,&doc,ecalconfig_doc,&thread_fdset);
+            create_fec_db_doc(i,j,&doc,ecalconfig_doc);
 
             int k;
             for (k=0;k<total_rows;k++){
