@@ -8,6 +8,7 @@
 typedef struct{
   int thread_num;
   char ecal_id[50];
+  uint32_t testmask;
 } ecal_to_fec_t;
 
 int ecal_to_fec(char *buffer);

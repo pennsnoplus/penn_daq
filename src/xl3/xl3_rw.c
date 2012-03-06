@@ -34,7 +34,7 @@ int do_xl3_cmd(XL3_Packet *packet,int xl3num, fd_set *thread_fdset)
   if (sent_packet_type == MEM_TEST_ID || sent_packet_type == ZDISC_ID)
     delay_value.tv_sec = 60;
   else
-    delay_value.tv_sec = 10;
+    delay_value.tv_sec = 30;
   delay_value.tv_usec = 0;
   // lets get a response back from the xl3
   while (1){
@@ -560,3 +560,77 @@ int read_from_tut(char *result, fd_set *thread_fdset)
   return 0;
 }
 */
+
+int xl3_wait(long int total_time, fd_set *thread_fdset)
+{
+
+  fd_set readable_fdset = *(thread_fdset);
+  XL3_Packet apacket;
+  XL3_Packet *packet = &apacket;
+
+  struct timeval delay_value;
+
+  long int start_time,end_time;
+
+  struct timeval start,end;
+  gettimeofday(&start,0);
+  start_time = start.tv_sec*1000000 + start.tv_usec;
+  int n;
+
+  // lets get a response back from the xl3
+  while (1){
+    delay_value.tv_usec = total_time%1000000;
+    delay_value.tv_sec = (total_time - delay_value.tv_usec)/1000000;
+    memset(packet,'\0',MAX_PACKET_SIZE);
+    int data = select(fdmax+1,&readable_fdset,NULL,NULL,&delay_value);
+    // check for errors
+    if (data == -1){
+      pt_printsend("do_xl3_cmd: Error in select\n");
+      return -2;
+    }else if (data == 0){
+      return 0;
+    }
+    // lets see whats readable
+    int i;
+    for (i=0;i<MAX_XL3_CON;i++){
+      if (rw_xl3_fd[i] > 0){
+        if (FD_ISSET(rw_xl3_fd[i],&readable_fdset)){
+          n = recv(rw_xl3_fd[i],(char *)packet,MAX_PACKET_SIZE,0); 
+
+          if (n < 0){
+            pt_printsend("do_xl3_cmd: Error receiving data from XL3 #%d. Closing connection\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }else if (n == 0){
+            pt_printsend("Got a zero byte packet, Closing XL3 #%d\n",i);
+            pthread_mutex_lock(&main_fdset_lock);
+            FD_CLR(rw_xl3_fd[i],&xl3_fdset);
+            FD_CLR(rw_xl3_fd[i],&main_fdset);
+            close(rw_xl3_fd[i]);
+            rw_xl3_fd[i] = -1;
+            pthread_mutex_unlock(&main_fdset_lock);
+            return -1;
+          }
+
+        } // end if this xl3 is readable 
+      } // end if this xl3 is connected
+    } // end loop on xl3 fds
+
+  gettimeofday(&end,0);
+  end_time = end.tv_sec*1000000 + end.tv_usec;
+  total_time -= (end_time - start_time);
+  start_time = end_time;
+  if (total_time <= 0)
+    break;
+  } // end while loop
+
+  // should never get here
+  return 0;
+}
+
+

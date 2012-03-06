@@ -41,4 +41,5 @@ int wait_for_multifc_results(int num_cmds, int packet_num, int xl3num, uint32_t 
 int wait_for_cald_test_results(int xl3num, uint16_t *point_buf, uint16_t *adc_buf, fd_set *thread_fdset);
 //int read_from_tut(char *result, fd_set *thread_fdset);
 
+int xl3_wait(long int total_time, fd_set *thread_fdset);
 #endif

@@ -77,6 +77,7 @@ int get_cmos_total_count(int crate,uint16_t slot_mask, uint32_t total_count[][32
 int multi_loadsDac(int num_dacs, uint32_t *dac_nums, uint32_t *dac_values, int crate_num, int slot_num, fd_set *thread_fdset)
 {
   XL3_Packet packet;
+  memset(&packet,'\0',MAX_PACKET_SIZE);
   packet.cmdHeader.packet_type = MULTI_LOADSDAC_ID;
   multi_loadsdac_args_t *packet_args = (multi_loadsdac_args_t *) packet.payload;
   multi_loadsdac_results_t *packet_results = (multi_loadsdac_results_t *) packet.payload;
@@ -92,6 +93,28 @@ int multi_loadsDac(int num_dacs, uint32_t *dac_nums, uint32_t *dac_values, int c
   SwapLongBlock(packet_results,sizeof(multi_loadsdac_results_t)/sizeof(uint32_t));
   return packet_results->error_flags;
 }
+
+int multislot_loadsDac(int num_dacs, uint32_t *dac_nums, uint32_t *dac_values, uint32_t *slot_nums,int crate_num, fd_set *thread_fdset)
+{
+  XL3_Packet packet;
+  memset(&packet,'\0',MAX_PACKET_SIZE);
+  packet.cmdHeader.packet_type = MULTI_LOADSDAC_ID;
+  multi_loadsdac_args_t *packet_args = (multi_loadsdac_args_t *) packet.payload;
+  multi_loadsdac_results_t *packet_results = (multi_loadsdac_results_t *) packet.payload;
+  packet_args->num_dacs = num_dacs;
+  int j;
+  for (j=0;j<num_dacs;j++){
+    packet_args->dacs[j].slot_num = slot_nums[j];
+    packet_args->dacs[j].dac_num = dac_nums[j];
+    packet_args->dacs[j].dac_value = (dac_values[j] < 256 && dac_values[j] >= 0) ? dac_values[j] : 255;
+  }
+  SwapLongBlock(packet_args,num_dacs*3+1);
+  do_xl3_cmd(&packet,crate_num,thread_fdset);
+  SwapLongBlock(packet_results,sizeof(multi_loadsdac_results_t)/sizeof(uint32_t));
+  return packet_results->error_flags;
+}
+
+
 
 int loadsDac(uint32_t dac_num, uint32_t dac_value, int crate_num, int slot_num, fd_set *thread_fdset)
 {
