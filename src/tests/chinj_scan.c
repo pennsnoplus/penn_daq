@@ -187,7 +187,7 @@ void *pt_chinj_scan(void *args)
   }
   int dac_iter;
 
-  for (dac_iter=0;dac_iter<26;dac_iter++){
+  for (dac_iter=5;dac_iter<6;dac_iter++){
 
     dacvalue = dac_iter*10;
 
