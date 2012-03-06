@@ -253,6 +253,7 @@ void *pt_find_noise(void *args)
 
 
   uint32_t result;
+  uint32_t slot_nums[50];
   uint32_t dac_nums[50];
   uint32_t dac_values[50];
   for (i=0;i<32;i++){
@@ -296,91 +297,241 @@ void *pt_find_noise(void *args)
     if ((0x1<<i) & arg.crate_mask)
       set_crate_pedestals(i,0xFFFF,0xFFFFFFFF,&thread_fdset);
 
-  uint32_t total_count[8][32];
+  uint32_t done_mask[19*16];
+  uint32_t total_count1[8][32];
+  uint32_t total_count2[8][32];
   uint32_t mycount[3];
   int crate,slot,chan;
   int threshabovezero;
   int chanzero;
   int readoutmax;
-  uint16_t existmask;
+  uint16_t existmask[19];
+  uint16_t ordslotmask = 0x0;
   for (crate=0;crate<19;crate++){
     if ((0x1<<crate) & arg.crate_mask){
-      existmask = arg.slot_mask[crate];
+      ordslotmask |= arg.slot_mask[crate];
+      existmask[crate] = arg.slot_mask[crate];
       for (slot=0;slot<16;slot++){
         xl3_rw(PED_ENABLE_R + FEC_SEL*slot + WRITE_REG,0xFFFFFFFF,&result,crate,&thread_fdset);
         if (result == 0x0001ABCD)
-          existmask |= 0x1<<slot;
+          existmask[crate] |= 0x1<<slot;
       }
-      for (slot=0;slot<16;slot++){
 
-        if ((0x1<<slot) & arg.slot_mask[crate]){
-          XL3_Packet packet;
-          packet.cmdHeader.packet_type = RESET_FIFOS_ID;
-          reset_fifos_args_t *packet_args = (reset_fifos_args_t *) packet.payload;
-          packet_args->slot_mask = existmask;
-          SwapLongBlock(packet_args,sizeof(reset_fifos_args_t)/sizeof(uint32_t));
-          do_xl3_cmd(&packet,crate,&thread_fdset);
-          usleep(500000);
-  
-          for (chan=0;chan<32;chan++){
-            // set pedestal masks (remove just the channel we are working on)
-            xl3_rw(PED_ENABLE_R + FEC_SEL*slot + WRITE_REG,~(0x1<<chan),&result,crate,&thread_fdset);
-            printf("chan %d - ",chan);
 
-            change_mode(NORMAL_MODE, existmask,crate,&thread_fdset);
-            threshabovezero = -2;
-            chanzero = vthr_zeros[crate*16*32+slot*32+chan];
-            do{
-              loadsDac(d_vthr[chan],chanzero+threshabovezero,crate,slot,&thread_fdset);
-              get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-              mycount[0] = total_count[0][chan];
-              usleep(5000);
-              get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-              mycount[1] = total_count[0][chan];
+      XL3_Packet packet;
+      packet.cmdHeader.packet_type = RESET_FIFOS_ID;
+      reset_fifos_args_t *packet_args = (reset_fifos_args_t *) packet.payload;
+      packet_args->slot_mask = existmask[crate];
+      SwapLongBlock(packet_args,sizeof(reset_fifos_args_t)/sizeof(uint32_t));
+      do_xl3_cmd(&packet,crate,&thread_fdset);
+    }
+  }
 
-              readout_noise[crate*(16*32*33) + slot*(32*33) + chan*(33) + threshabovezero+2] = mycount[1]-mycount[0];
-              if (((mycount[1]-mycount[0]) == 0) && threshabovezero > 0){
-                get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-                mycount[0] = total_count[0][chan];
-                for (i=0;i<10;i++)
-                  usleep(500000);
-                get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-                mycount[1] = total_count[0][chan];
-                readout_noise[crate*(16*32*33) + slot*(32*33) + chan*(33) + threshabovezero+2] = mycount[1]-mycount[0];
-                if (((mycount[1]-mycount[0]) == 0) && threshabovezero > 0){
-                  break;
+  xl3_wait(5000,&thread_fdset);
+
+  for (chan=0;chan<32;chan++){
+    for (i=0;i<19*16;i++)
+      done_mask[i] = 0x0;
+    // set pedestal masks (remove just the channel we are working on)
+    printf("chan %d\n",chan);
+    for (crate=0;crate<19;crate++){
+      if ((0x1<<crate) & arg.crate_mask){
+        set_crate_pedestals(crate,0xFFFF,~(0x1<<chan),&thread_fdset);
+        change_mode(NORMAL_MODE, existmask[crate],crate,&thread_fdset);
+      }
+    }
+    threshabovezero = -2;
+    uint32_t cratedone_mask = 0x0;
+    do{
+      for (crate=0;crate<19;crate++){
+        if ((0x1<<crate) & arg.crate_mask){
+          int num_dacs = 0;
+          for (slot=0;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              slot_nums[num_dacs] = slot;
+              dac_nums[num_dacs] = d_vthr[chan];
+              dac_values[num_dacs] = vthr_zeros[crate*16*32+slot*32+chan]+threshabovezero;
+              num_dacs++;
+            }
+          }
+          if (multislot_loadsDac(num_dacs,dac_nums,dac_values,slot_nums,crate,&thread_fdset) != 0){
+            pt_printsend("Error loading dacs. Exiting\n");
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+            free(base_noise);
+            free(readout_noise);
+            free(vthr_zeros);
+            return;
+          }
+
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF,total_count1,&thread_fdset);
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF00,total_count2,&thread_fdset);
+          int slot_iter = 0;
+          for (slot=0;slot<8;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan];
+              }
+              slot_iter++;
+            }
+          }
+          slot_iter = 0;
+          for (slot=8;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan];
+              }
+              slot_iter++;
+            }
+          }
+        }
+      }
+
+      xl3_wait(1000000,&thread_fdset);
+
+      for (crate=0;crate<19;crate++){
+        if ((0x1<<crate) & arg.crate_mask){
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF,total_count1,&thread_fdset);
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF00,total_count2,&thread_fdset);
+          int slot_iter = 0;
+          for (slot=0;slot<8;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan] - readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2];
+                if (readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] == 0 && threshabovezero > 0){
+                  done_mask[crate*16+slot] |= (0x1<<chan);
+                  printf("%d %d %d: zero:%d, above:%d, tot:%d\n",crate,slot,chan,vthr_zeros[crate*16*32+slot*32+chan],threshabovezero,vthr_zeros[crate*16*32+slot*32+chan]+threshabovezero);
                 }
               }
-            }while((++threshabovezero) <= 30);
-            readoutmax = threshabovezero;
-            printf("zero: %d above: %d, total: %d\n",chanzero,readoutmax,chanzero+readoutmax);
-
-
-            // now again with readout off
-            change_mode(INIT_MODE,0x0,crate,&thread_fdset);
-            threshabovezero = -2;
-            do{
-              loadsDac(d_vthr[chan],chanzero+threshabovezero,crate,slot,&thread_fdset);
-              get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-              mycount[0] = total_count[0][chan];
-              usleep(5000);
-              get_cmos_total_count(crate,(0x1<<slot),total_count,&thread_fdset);
-              mycount[1] = total_count[0][chan];
-
-              base_noise[crate*(16*32*33) + slot*(32*33) + chan*(33) + threshabovezero+2] = mycount[1]-mycount[0];
-            }while((++threshabovezero) <= readoutmax);
-
-            loadsDac(d_vthr[chan],255,crate,slot,&thread_fdset);
-          } // end loop over channels
-
-          // now turn all channels back on in this slot
-          xl3_rw(PED_ENABLE_R + FEC_SEL*slot + WRITE_REG,0xFFFFFFFF,&result,crate,&thread_fdset);
+              slot_iter++;
+            }
+          }
+          slot_iter = 0;
+          for (slot=8;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan] - readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2];
+                if (readout_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] == 0 && threshabovezero > 0){
+                  done_mask[crate*16+slot] |= (0x1<<chan);
+                  printf("%d %d %d: zero:%d, above:%d, tot:%d\n",crate,slot,chan,vthr_zeros[crate*16*32+slot*32+chan],threshabovezero,vthr_zeros[crate*16*32+slot*32+chan]+threshabovezero);
+                }
+              }
+              slot_iter++;
+            }
+          }
         }
+        uint32_t slotdone_mask = 0x0;
+        for (slot=0;slot<16;slot++){
+          if ((0x1<<slot) & arg.slot_mask[crate]){
+            if (done_mask[crate*16+slot] == 0xFFFFFFFF)
+              slotdone_mask |= (0x1<<slot);
+          }
+        }
+        if (slotdone_mask == arg.slot_mask[crate])
+          cratedone_mask |= (0x1<<crate);
+      }
+
+    }while((++threshabovezero <= 30) && cratedone_mask != arg.crate_mask);
 
 
-      } // end loop over slots
+    for (i=0;i<19*16;i++)
+      done_mask[i] = 0x0;
+    // now again with init mode
+    for (crate=0;crate<19;crate++){
+      if ((0x1<<crate) & arg.crate_mask){
+        change_mode(INIT_MODE, existmask[crate],crate,&thread_fdset);
+      }
     }
-  } // end loop over crates
+    threshabovezero = -2;
+    cratedone_mask = 0x0;
+    do{
+      for (crate=0;crate<19;crate++){
+        if ((0x1<<crate) & arg.crate_mask){
+          int num_dacs = 0;
+          for (slot=0;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              slot_nums[num_dacs] = slot;
+              dac_nums[num_dacs] = d_vthr[chan];
+              dac_values[num_dacs] = vthr_zeros[crate*16*32+slot*32+chan]+threshabovezero;
+              num_dacs++;
+            }
+          }
+          if (multislot_loadsDac(num_dacs,dac_nums,dac_values,slot_nums,crate,&thread_fdset) != 0){
+            pt_printsend("Error loading dacs. Exiting\n");
+            unthread_and_unlock(1,arg.crate_mask,arg.thread_num);
+            free(base_noise);
+            free(readout_noise);
+            free(vthr_zeros);
+            return;
+          }
+
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF,total_count1,&thread_fdset);
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF00,total_count2,&thread_fdset);
+          int slot_iter = 0;
+          for (slot=0;slot<8;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan];
+              }
+              slot_iter++;
+            }
+          }
+          slot_iter = 0;
+          for (slot=8;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan];
+              }
+              slot_iter++;
+            }
+          }
+        }
+      }
+
+      xl3_wait(5000,&thread_fdset);
+
+      for (crate=0;crate<19;crate++){
+        if ((0x1<<crate) & arg.crate_mask){
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF,total_count1,&thread_fdset);
+          get_cmos_total_count(crate,arg.slot_mask[crate] & 0xFF00,total_count2,&thread_fdset);
+          int slot_iter = 0;
+          for (slot=0;slot<8;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan] - base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2];
+                if (base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] == 0 && threshabovezero > 0)
+                  done_mask[crate*16+slot] |= (0x1<<chan);
+              }
+              slot_iter++;
+            }
+          }
+          slot_iter = 0;
+          for (slot=8;slot<16;slot++){
+            if ((0x1<<slot) & arg.slot_mask[crate]){
+              if (!((0x1<<chan) & done_mask[crate*16+slot])){
+                base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] = total_count1[slot_iter][chan] - base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2];
+                if (base_noise[crate*(16*32*33)+slot*(32*33)+chan*(33)+threshabovezero+2] == 0 && threshabovezero > 0)
+                  done_mask[crate*16+slot] |= (0x1<<chan);
+              }
+              slot_iter++;
+            }
+          }
+        }
+        uint32_t slotdone_mask = 0x0;
+        for (slot=0;slot<16;slot++){
+          if ((0x1<<slot) & arg.slot_mask[crate]){
+            if (done_mask[crate*16+slot] = 0xFFFFFFFF)
+              slotdone_mask |= (0x1<<slot);
+          }
+        }
+        if (slotdone_mask == arg.slot_mask[crate])
+          cratedone_mask |= (0x1<<crate);
+      }
+
+    }while((++threshabovezero <= 30) && cratedone_mask != arg.crate_mask);
+  }
+
+
+
 
 
   if (arg.update_db){

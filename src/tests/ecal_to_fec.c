@@ -19,6 +19,7 @@ int ecal_to_fec(char *buffer)
 {
   ecal_to_fec_t *args;
   args = malloc(sizeof(ecal_to_fec_t));
+  args->testmask = 0x0;
 
   char *words,*words2;
   words = strtok(buffer," ");
@@ -28,8 +29,12 @@ int ecal_to_fec(char *buffer)
         if ((words2 = strtok(NULL," ")) != NULL){
           strcpy(args->ecal_id,words2);
         }
+      }else if (words[1] == 't'){
+        if ((words2 = strtok(NULL," ")) != NULL)
+          args->testmask = strtoul(words2,(char**)NULL,16);
       }else if (words[1] == 'h'){
         pt_printsend("Usage: ecal_to_fec -# [ecal id (hex)]\n");
+        pt_printsend("use -t [test mask (hex)] to ignore a certain test in the ecal and use the most recent one instead. 0x1 = cmos, 0x2 = zdisc, 0x4 = cbal, 0x8 = ttot, 0x10 = noise\n");
         free(args);
         return 0;
       }
@@ -143,6 +148,31 @@ void *pt_ecal_to_fec(void *args)
             JsonNode *config = json_find_member(test_doc,"config");
             if ((json_get_number(json_find_member(config,"crate_id")) == i) && (json_get_number(json_find_member(config,"slot")) == j)){
               printf("test type is %s\n",json_get_string(json_find_member(test_doc,"type")));
+              if ((arg.testmask & 0x1 && strcmp(json_get_string(json_find_member(test_doc,"type")),"cmos_m_gtvalid") == 0) || 
+                  (arg.testmask & 0x2 && strcmp(json_get_string(json_find_member(test_doc,"type")),"zdisc") == 0) ||
+                  (arg.testmask & 0x4 && strcmp(json_get_string(json_find_member(test_doc,"type")),"crate_cbal") == 0) ||
+                  (arg.testmask & 0x8 && strcmp(json_get_string(json_find_member(test_doc,"type")),"set_ttot") == 0) ||
+                  (arg.testmask & 0x10 && strcmp(json_get_string(json_find_member(test_doc,"type")),"find_noise") == 0))
+              {
+                char new_addr[500];
+                sprintf(new_addr,"%s/%s/%s/get_test_by_cc?startkey=[%d,%d,\"%s\"]&endkey=[%d,%d,\"%s\",0]",DB_SERVER,DB_BASE_NAME,FECDB_VIEWDOC,i,j,json_get_string(json_find_member(test_doc,"type")),i,j,json_get_string(json_find_member(test_doc,"type")));
+                pouch_request *newtest_response = pr_init();
+                pr_set_method(newtest_response, GET);
+                pr_set_url(newtest_response, new_address);
+                pr_do(newtest_response);
+                if (newtest_response->httpresponse != 200){
+                  pt_printsend("Unable to connect to database. error code %d\n",(int)newtest_response->httpresponse);
+                }else{
+                  JsonNode *newtest_view = json_decode(newtest_response->resp.data);
+                  JsonNode *newtest_rows = json_find_member(newtest_view,"rows");
+                  int n = json_get_num_mems(newtest_rows);
+                  if (n == 0){
+                    pt_printsend("Warning: Crate %d Slot %d: No new %s documents. Continuing with default ecal tests.\n",i,j,json_get_string(json_find_member(test_doc,"type")));
+                  }else{
+                    test_doc = json_find_member(json_find_element(newtest_rows,0),"value");
+                  }
+                }
+              }
               add_ecal_test_results(doc,test_doc);
             }
           }
