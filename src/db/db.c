@@ -254,7 +254,7 @@ int create_fec_db_doc(int crate, int card, JsonNode** doc_p, JsonNode *ecal_doc)
   json_append_member(doc,"timestamp_generated",generated);
   json_append_member(doc,"approved",json_mkbool(0));
   
-  json_append_member(doc,"ecal_id",ecal_id);
+  json_append_member(doc,"ecal_id",json_mkstring(json_get_string(ecal_id)));
 
   json_append_member(doc,"board_id",json_mkstring(json_get_string(json_find_member(config,"mb_id"))));
   
@@ -489,7 +489,7 @@ int add_ecal_test_results(JsonNode *fec_doc, JsonNode *test_doc)
 
   JsonNode *new_relays = json_mkarray();
   for (i=0;i<4;i++){
-    if (((0xFF<<(i*8)) & chan_prob_array) == 0xFF || (int)json_get_number(json_find_element(relays,i)) == 0)
+    if (((0xFF<<(i*8)) & chan_prob_array) == (0xFF<<(i*8)) || (int)json_get_number(json_find_element(relays,i)) == 0)
       json_append_element(new_relays,json_mknumber(0));
     else
       json_append_element(new_relays,json_mknumber(1));

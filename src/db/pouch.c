@@ -227,8 +227,8 @@ pouch_request *pr_do(pouch_request *pr){
         // setup the CURL object/request
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "pouch/0.1");				// add user-agent
         curl_easy_setopt(curl, CURLOPT_URL, pr->url);						// where to send this request
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 2);					// Timeouts
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);					// Timeouts
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_data_callback);	// where to store the response
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pr);
