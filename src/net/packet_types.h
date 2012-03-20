@@ -97,6 +97,17 @@ typedef struct {
 //@}
 
 typedef struct {
+  uint32_t info;
+  uint32_t passcur;
+  uint32_t xl3clock;
+} MegaBundleHeader;
+
+typedef struct {
+  uint32_t info;
+} MiniBundleHeader;
+
+
+typedef struct {
     uint32_t word1;
     uint32_t word2;
     uint32_t word3;

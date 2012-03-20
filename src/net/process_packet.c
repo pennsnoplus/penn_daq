@@ -368,7 +368,7 @@ int process_xl3_packet(char *buffer, int xl3num)
     }
   }else{
     // got the wrong type of ack packet
-    pt_printsend("process_xl3_packet: Got unexpected packet type in main loop: %08x\n",packet->cmdHeader.packet_type);
+    pt_printsend("process_xl3_packet: Got unexpected packet type in main loop: %02x %08x\n",packet->cmdHeader.packet_type,*(uint32_t *) packet);
     pt_printsend("lock is %d\n",xl3_lock[xl3num]);
   } // end switch on packet type
   return 0;
@@ -386,23 +386,48 @@ int store_mega_bundle(XL3_Packet *packet)
   gettimeofday(&end,0);
   end_time = end.tv_sec*1000000 + end.tv_usec;
   long int avg_dt = end_time - start_time;
-  megabundle_count++;
   int num_bundles = packet->cmdHeader.num_bundles;
-  recv_bytes += num_bundles*12;
-  recv_fake_bytes += (120-num_bundles)*12;
-  if (megabundle_count%BUNDLE_PRINT == 0){
-    long int inst_dt = end_time - last_print_time;
-    last_print_time = end_time;
-    pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake) (gtid: %6x)\n",
-        (float) (recv_bytes*8/(float)avg_dt),
-        (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
-        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0,current_gtid);
-//    pt_printsend("recv %i \t %i \t %i \t %i \t average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
-//        megabundle_count,num_bundles,(int) recv_bytes, (int) avg_dt,
-//        (float) (recv_bytes*8/(float)avg_dt),
-//        (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
-//        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
-    recv_fake_bytes = 0;
+
+  if (num_bundles == 0){
+
+    MegaBundleHeader *megabh = (MegaBundleHeader *) packet->payload;
+    SwapLongBlock(megabh,3);
+    MiniBundleHeader *minibh = (MiniBundleHeader *) (packet->payload+sizeof(MegaBundleHeader));
+    int num_longwords = megabh->info & 0xFFFFFF;
+    int crate = (megabh->info & 0x1F000000) >> 24;
+    SwapLongBlock(megabh+1,num_longwords);
+    while (num_longwords > 0){
+      if (minibh->info & 0x80000000){
+        uint32_t passcur = *(uint32_t *) (minibh + 1);
+      }else{
+        num_bundles += (minibh->info & 0xFFFFFF)/3;
+        int card = (minibh->info & 0x0F000000) >> 24;
+      }
+      int minisize = (minibh->info & 0xFFFFFF);
+      minibh += 1+ minisize;
+      num_longwords -= 1 + minisize;
+    }
+  }
+
+  if (num_bundles > 0){
+    recv_bytes += num_bundles*12;
+    recv_fake_bytes += (120-num_bundles)*12;
+    megabundle_count++;
+
+    if (megabundle_count%BUNDLE_PRINT == 0){
+      long int inst_dt = end_time - last_print_time;
+      last_print_time = end_time;
+      pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake) (gtid: %6x)\n",
+          (float) (recv_bytes*8/(float)avg_dt),
+          (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
+          recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0,current_gtid);
+      //    pt_printsend("recv %i \t %i \t %i \t %i \t average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
+      //        megabundle_count,num_bundles,(int) recv_bytes, (int) avg_dt,
+      //        (float) (recv_bytes*8/(float)avg_dt),
+      //        (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
+      //        recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0);
+      recv_fake_bytes = 0;
+    }
   }
   return 0;
 }
@@ -457,7 +482,7 @@ int inspect_bundles(XL3_Packet *packet)
     uint16_t board = UNPK_BOARD_ID(&one_bundle->word1);
     uint16_t channel = UNPK_CHANNEL_ID(&one_bundle->word1);
     if (((gtid > current_gtid) && ((gtid-current_gtid) > 0x10000)) || ((gtid < current_gtid) && (current_gtid-gtid) > 0x10000) || ((gtid & 0xFFF) == 0x0)){
-     printf("CCC - %u %u %u - Bad gtid! Expecting ~%06x, got %06x\n",crate,board,channel,current_gtid,gtid);
+      printf("CCC - %u %u %u - Bad gtid! Expecting ~%06x, got %06x\n",crate,board,channel,current_gtid,gtid);
     }else{
       current_gtid = gtid;
     }
