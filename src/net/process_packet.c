@@ -389,21 +389,31 @@ int store_mega_bundle(XL3_Packet *packet)
   int num_bundles = packet->cmdHeader.num_bundles;
 
   if (num_bundles == 0){
+    printf("New packet, \n");
 
     MegaBundleHeader *megabh = (MegaBundleHeader *) packet->payload;
     SwapLongBlock(megabh,3);
     MiniBundleHeader *minibh = (MiniBundleHeader *) (packet->payload+sizeof(MegaBundleHeader));
     int num_longwords = megabh->info & 0xFFFFFF;
+    printf("%d longwords:\n",num_longwords);
     int crate = (megabh->info & 0x1F000000) >> 24;
+    if (num_longwords > 359) num_longwords = 359;
     SwapLongBlock(megabh+1,num_longwords);
     while (num_longwords > 0){
       if (minibh->info & 0x80000000){
         uint32_t passcur = *(uint32_t *) (minibh + 1);
+        printf("Passcur minibundle, %d, ",passcur);
       }else{
         num_bundles += (minibh->info & 0xFFFFFF)/3;
         int card = (minibh->info & 0x0F000000) >> 24;
+        printf("Normal minibundle, %d bundles, ",(minibh->info & 0xFFFFFF)/3);
       }
       int minisize = (minibh->info & 0xFFFFFF);
+      printf("%d longwords:\n",minisize);
+      if ((minibh->info & 0xFFFFFF)/3 > 2){
+        uint32_t *p = (uint32_t *) (minibh+1);
+        printf("first bundle: %08x %08x %08x\n",*p,*(p+1),*(p+2));
+      }
       minibh += 1+ minisize;
       num_longwords -= 1 + minisize;
     }
@@ -417,10 +427,10 @@ int store_mega_bundle(XL3_Packet *packet)
     if (megabundle_count%BUNDLE_PRINT == 0){
       long int inst_dt = end_time - last_print_time;
       last_print_time = end_time;
-      pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake) (gtid: %6x)\n",
+      pt_printsend("recv average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake) (time: %2.4f us/bundle)\n",
           (float) (recv_bytes*8/(float)avg_dt),
           (float)(num_bundles*12*8*BUNDLE_PRINT/(float)inst_dt),
-          recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0,current_gtid);
+          recv_fake_bytes/(float)(BUNDLE_PRINT*120*12)*100.0,1.0/(float)(recv_bytes*8/(float)avg_dt)*96);
       //    pt_printsend("recv %i \t %i \t %i \t %i \t average: %8.2f Mb/s \t d/dt: %8.2f Mb/s (%.1f %% fake)\n",
       //        megabundle_count,num_bundles,(int) recv_bytes, (int) avg_dt,
       //        (float) (recv_bytes*8/(float)avg_dt),
@@ -439,7 +449,7 @@ int handle_error_packet(XL3_Packet *packet, int xl3num)
   if (errors->cmd_in_rejected)
     pt_printsend("\tCommand in rejected\n");
   if (errors->transfer_error)
-    pt_printsend("\tTransfer error: %d\n",errors->transfer_error);
+    pt_printsend("\tTransfer error: %u\n",errors->transfer_error);
   if (errors->xl3_data_avail_unknown)
     pt_printsend("\tXL3 data available unknown\n");
   if (errors->bundle_read_error)
